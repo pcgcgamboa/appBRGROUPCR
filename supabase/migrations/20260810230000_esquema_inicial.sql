@@ -131,7 +131,7 @@ create table public.solicitudes (
   actualizado_en timestamptz not null default now(),
   check ((prioridad is null) = (sla_horas is null)),
   check ((sla_horas is null) = (sla_vence_en is null)),
-  check (estado = 'creada' or prioridad is not null),
+  check (estado in ('creada', 'rechazada', 'cancelada') or prioridad is not null),
   check (estado not in ('asignada', 'en_atencion', 'en_espera_materiales', 'atendida', 'cerrada') or operador_id is not null),
   check (estado not in ('rechazada', 'cancelada') or motivo_rechazo_cancelacion is not null)
 );
