@@ -149,7 +149,7 @@ export function RouteControlForm({
           </Select>
         </label>
         <label className="grid gap-2 text-sm font-medium">
-          Checkpoint de ubicación
+          Chequo ubicación
           <Select
             value={values.estado_checkpoint}
             onChange={(event) =>
