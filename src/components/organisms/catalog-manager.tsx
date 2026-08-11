@@ -1,5 +1,12 @@
 import { Pencil, Plus, Trash2, X } from 'lucide-react'
-import { type FormEvent, type ReactNode, useMemo, useState } from 'react'
+import {
+  type Dispatch,
+  type FormEvent,
+  type ReactNode,
+  type SetStateAction,
+  useMemo,
+  useState,
+} from 'react'
 import { Button } from '@/components/atoms/button'
 import { Input } from '@/components/atoms/input'
 import { Select } from '@/components/atoms/select'
@@ -19,7 +26,9 @@ interface CatalogManagerProps<T> {
   fields: CampoCatalogo[]
   columns: string[]
   columnLabels: Record<string, string>
-  extraFormContent?: ReactNode
+  extraFormContent?:
+    | ReactNode
+    | ((values: DatosFormulario, setValues: Dispatch<SetStateAction<DatosFormulario>>) => ReactNode)
   onOpenNew?: () => void
   onOpenEdit?: (item: T) => void
   onSaved?: (id: string | number) => Promise<void>
@@ -190,7 +199,9 @@ export function CatalogManager<T extends EntidadBase>({
               )}
             </label>
           ))}
-          {extraFormContent}
+          {typeof extraFormContent === 'function'
+            ? extraFormContent(values, setValues)
+            : extraFormContent}
           <div className="flex gap-3 sm:col-span-2">
             <Button type="submit" disabled={guardar.isPending}>
               {guardar.isPending ? 'Guardando…' : 'Guardar'}

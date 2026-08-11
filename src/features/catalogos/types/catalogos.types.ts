@@ -19,6 +19,8 @@ export interface Ubicacion extends EntidadBase {
   canton: string
   distrito: string
   otras_senas: string | null
+  latitud: number | null
+  longitud: number | null
   activa: boolean
 }
 
