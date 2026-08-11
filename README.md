@@ -34,3 +34,4 @@ La especificación funcional se encuentra en `docs/requerimientos-sistema-solici
 - `docs/fase-4-control-ruta.md`: asignación de ruta, estados y mapa OpenStreetMap.
 - `docs/fase-5-operador.md`: atención móvil, avances, materiales y adjuntos.
 - `docs/fase-6-cliente-notificaciones.md`: validación de cierre y correo SMTP.
+- `docs/fase-7-reportes.md`: indicadores operativos y gráficos de gestión.

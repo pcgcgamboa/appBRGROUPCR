@@ -1,13 +1,16 @@
-import { Bell, ClipboardList, MapPinned } from 'lucide-react'
+import { Bell, ChartPie, ClipboardList, MapPinned } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/atoms/button'
 import { LogoutButton } from '@/components/molecules/logout-button'
 import { BandejaEncargadoPage } from '@/components/pages/encargado/bandeja-encargado-page'
 import { ControlRutasPage } from '@/components/pages/encargado/control-rutas-page'
 import { NotificacionesPage } from '@/components/pages/encargado/notificaciones-page'
+import { ReportesPage } from '@/components/pages/reportes/reportes-page'
 
 export function EncargadoDashboardPage() {
-  const [section, setSection] = useState<'solicitudes' | 'rutas' | 'notificaciones'>('solicitudes')
+  const [section, setSection] = useState<'solicitudes' | 'rutas' | 'notificaciones' | 'reportes'>(
+    'solicitudes',
+  )
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -36,6 +39,13 @@ export function EncargadoDashboardPage() {
             <Bell className="mr-2 size-4" />
             Notificaciones
           </Button>
+          <Button
+            variant={section === 'reportes' ? 'default' : 'outline'}
+            onClick={() => setSection('reportes')}
+          >
+            <ChartPie className="mr-2 size-4" />
+            Reportes
+          </Button>
         </nav>
         <LogoutButton />
       </div>
@@ -43,8 +53,10 @@ export function EncargadoDashboardPage() {
         <BandejaEncargadoPage />
       ) : section === 'rutas' ? (
         <ControlRutasPage />
-      ) : (
+      ) : section === 'notificaciones' ? (
         <NotificacionesPage />
+      ) : (
+        <ReportesPage />
       )}
     </div>
   )

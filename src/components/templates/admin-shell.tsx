@@ -1,6 +1,7 @@
 import {
   Boxes,
   Bell,
+  ChartPie,
   Building2,
   Car,
   ClipboardList,
@@ -18,6 +19,7 @@ export type AdminSection =
   | 'solicitudes'
   | 'rutas'
   | 'notificaciones'
+  | 'reportes'
   | 'clientes'
   | 'ubicaciones'
   | 'tipos'
@@ -30,6 +32,7 @@ const navigation: { id: AdminSection; label: string; icon: typeof Boxes }[] = [
   { id: 'solicitudes', label: 'Solicitudes', icon: ClipboardList },
   { id: 'rutas', label: 'Control de ruta', icon: MapPin },
   { id: 'notificaciones', label: 'Notificaciones', icon: Bell },
+  { id: 'reportes', label: 'Reportes', icon: ChartPie },
   { id: 'clientes', label: 'Clientes', icon: Building2 },
   { id: 'ubicaciones', label: 'Ubicaciones', icon: MapPin },
   { id: 'tipos', label: 'Tipos', icon: Tags },
