@@ -22,6 +22,15 @@ export interface SolicitudAdmin {
   tipo_solicitud_id: string
   cliente: { nombre: string } | null
   tipo: { nombre: string } | null
+  ubicacion: {
+    nombre: string
+    provincia: string
+    canton: string
+    distrito: string
+    latitud: number | null
+    longitud: number | null
+  } | null
+  ruta: { latitud: number | null; longitud: number | null } | null
   operador: { nombre_completo: string } | null
   validacion: { satisfecho: boolean; comentario: string | null; validado_en: string } | null
 }

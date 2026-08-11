@@ -1,4 +1,4 @@
-import { Plus, X } from 'lucide-react'
+import { List, Map, Plus, X } from 'lucide-react'
 import { useState } from 'react'
 import { Badge } from '@/components/atoms/badge'
 import { Button } from '@/components/atoms/button'
@@ -6,6 +6,7 @@ import { Select } from '@/components/atoms/select'
 import { Textarea } from '@/components/atoms/textarea'
 import { PageHeader } from '@/components/molecules/page-header'
 import { SolicitudForm } from '@/components/organisms/solicitud-form'
+import { SolicitudesMap } from '@/components/organisms/solicitudes-map'
 import { SlaBadge } from '@/components/molecules/sla-badge'
 import { useGestionarSolicitud } from '@/features/solicitudes/hooks/use-gestionar-solicitud'
 import { useOperadores } from '@/features/solicitudes/hooks/use-operadores'
@@ -41,6 +42,7 @@ export function BandejaEncargadoPage() {
   const [estado, setEstado] = useState<EstadoSolicitud>('asignada')
   const [motivo, setMotivo] = useState('')
   const [creando, setCreando] = useState(false)
+  const [vista, setVista] = useState<'lista' | 'mapa'>('lista')
 
   function abrir(item: SolicitudAdmin) {
     setSeleccionada(item)
@@ -67,10 +69,33 @@ export function BandejaEncargadoPage() {
           title="Bandeja de solicitudes"
           description="Revise, priorice, asigne y controle el flujo de atención."
         />
-        <Button onClick={() => setCreando((actual) => !actual)}>
-          {creando ? <X className="mr-2 size-4" /> : <Plus className="mr-2 size-4" />}
-          {creando ? 'Cerrar formulario' : 'Nueva solicitud'}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <div
+            className="flex rounded-lg border bg-white p-1 shadow-sm"
+            aria-label="Vista de solicitudes"
+          >
+            <Button
+              variant={vista === 'lista' ? 'default' : 'outline'}
+              className={vista === 'lista' ? 'h-9' : 'h-9 border-0 shadow-none'}
+              onClick={() => setVista('lista')}
+            >
+              <List className="mr-2 size-4" />
+              Lista
+            </Button>
+            <Button
+              variant={vista === 'mapa' ? 'default' : 'outline'}
+              className={vista === 'mapa' ? 'h-9' : 'h-9 border-0 shadow-none'}
+              onClick={() => setVista('mapa')}
+            >
+              <Map className="mr-2 size-4" />
+              Ver mapa
+            </Button>
+          </div>
+          <Button onClick={() => setCreando((actual) => !actual)}>
+            {creando ? <X className="mr-2 size-4" /> : <Plus className="mr-2 size-4" />}
+            {creando ? 'Cerrar formulario' : 'Nueva solicitud'}
+          </Button>
+        </div>
       </div>
       {creando && session && (
         <SolicitudForm
@@ -85,64 +110,68 @@ export function BandejaEncargadoPage() {
           {(solicitudes.error ?? operadores.error ?? gestionar.error)?.message}
         </p>
       )}
-      <div className="overflow-x-auto rounded-lg border bg-white shadow-sm">
-        <table className="w-full min-w-[900px] text-left text-sm">
-          <thead className="bg-muted">
-            <tr>
-              <th className="px-4 py-3">Número</th>
-              <th className="px-4 py-3">Solicitud</th>
-              <th className="px-4 py-3">Cliente</th>
-              <th className="px-4 py-3">Prioridad</th>
-              <th className="px-4 py-3">Estado</th>
-              <th className="px-4 py-3">SLA</th>
-              <th className="px-4 py-3"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {ordenadas.length ? (
-              ordenadas.map((item) => (
-                <tr
-                  key={item.id}
-                  className={
-                    item.prioridad === 'alta' || item.prioridad === 'urgente'
-                      ? 'border-t bg-amber-50/50'
-                      : 'border-t'
-                  }
-                >
-                  <td className="px-4 py-3">#{item.numero}</td>
-                  <td className="px-4 py-3">
-                    <div className="font-medium">{item.nombre}</div>
-                    <div className="text-xs text-muted-foreground">{item.tipo?.nombre}</div>
-                  </td>
-                  <td className="px-4 py-3">{item.cliente?.nombre}</td>
-                  <td className="px-4 py-3">
-                    <Badge>{item.prioridad ?? 'Por definir'}</Badge>
-                  </td>
-                  <td className="px-4 py-3">{item.estado.replace(/_/g, ' ')}</td>
-                  <td className="px-4 py-3">
-                    <SlaBadge
-                      venceEn={item.sla_vence_en}
-                      estado={item.estado}
-                      prioridad={item.prioridad}
-                    />
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Button variant="outline" onClick={() => abrir(item)}>
-                      Gestionar
-                    </Button>
+      {vista === 'mapa' ? (
+        <SolicitudesMap solicitudes={ordenadas} onSelect={abrir} />
+      ) : (
+        <div className="overflow-x-auto rounded-lg border bg-white shadow-sm">
+          <table className="w-full min-w-[900px] text-left text-sm">
+            <thead className="bg-muted">
+              <tr>
+                <th className="px-4 py-3">Número</th>
+                <th className="px-4 py-3">Solicitud</th>
+                <th className="px-4 py-3">Cliente</th>
+                <th className="px-4 py-3">Prioridad</th>
+                <th className="px-4 py-3">Estado</th>
+                <th className="px-4 py-3">SLA</th>
+                <th className="px-4 py-3"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {ordenadas.length ? (
+                ordenadas.map((item) => (
+                  <tr
+                    key={item.id}
+                    className={
+                      item.prioridad === 'alta' || item.prioridad === 'urgente'
+                        ? 'border-t bg-amber-50/50'
+                        : 'border-t'
+                    }
+                  >
+                    <td className="px-4 py-3">#{item.numero}</td>
+                    <td className="px-4 py-3">
+                      <div className="font-medium">{item.nombre}</div>
+                      <div className="text-xs text-muted-foreground">{item.tipo?.nombre}</div>
+                    </td>
+                    <td className="px-4 py-3">{item.cliente?.nombre}</td>
+                    <td className="px-4 py-3">
+                      <Badge>{item.prioridad ?? 'Por definir'}</Badge>
+                    </td>
+                    <td className="px-4 py-3">{item.estado.replace(/_/g, ' ')}</td>
+                    <td className="px-4 py-3">
+                      <SlaBadge
+                        venceEn={item.sla_vence_en}
+                        estado={item.estado}
+                        prioridad={item.prioridad}
+                      />
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <Button variant="outline" onClick={() => abrir(item)}>
+                        Gestionar
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
+                    No hay solicitudes.
                   </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
-                  No hay solicitudes.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {seleccionada && (
         <div className="rounded-lg border bg-white p-5 shadow-sm">

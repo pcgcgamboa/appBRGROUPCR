@@ -21,7 +21,7 @@ export function useSolicitudesAdmin() {
       const { data, error } = await supabase
         .from('solicitudes')
         .select(
-          'id, numero, nombre, prioridad, estado, operador_id, motivo_rechazo_cancelacion, sla_horas, sla_vence_en, creado_en, tipo_solicitud_id, cliente:clientes(nombre), tipo:tipos_solicitud(nombre), operador:usuarios!solicitudes_operador_id_fkey(nombre_completo), validacion:validaciones_cierre(satisfecho, comentario, validado_en)',
+          'id, numero, nombre, prioridad, estado, operador_id, motivo_rechazo_cancelacion, sla_horas, sla_vence_en, creado_en, tipo_solicitud_id, cliente:clientes(nombre), tipo:tipos_solicitud(nombre), ubicacion:ubicaciones(nombre, provincia, canton, distrito, latitud, longitud), ruta:rutas(latitud, longitud), operador:usuarios!solicitudes_operador_id_fkey(nombre_completo), validacion:validaciones_cierre(satisfecho, comentario, validado_en)',
         )
         .order('creado_en', { ascending: false })
       if (error) throw error
