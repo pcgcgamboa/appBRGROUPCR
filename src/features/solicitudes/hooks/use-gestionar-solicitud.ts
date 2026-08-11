@@ -19,7 +19,17 @@ export function useGestionarSolicitud() {
       const { data, error } = await supabase.functions.invoke('gestionar-solicitud', {
         body: input,
       })
-      if (error) throw error
+      if (error) {
+        const contexto = 'context' in error ? error.context : null
+        if (contexto instanceof Response) {
+          const detalle = (await contexto
+            .clone()
+            .json()
+            .catch(() => null)) as { error?: string } | null
+          if (detalle?.error) throw new Error(detalle.error)
+        }
+        throw error
+      }
       if (data?.error) throw new Error(data.error as string)
       return data as { solicitud_id: string }
     },

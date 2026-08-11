@@ -62,7 +62,9 @@ Deno.serve(async (request) => {
         )
       const { data: operadorValido } = await caller
         .from('usuario_roles')
-        .select('rol:roles!inner(codigo), usuario:usuarios!inner(activo)')
+        .select(
+          'rol:roles!inner(codigo), usuario:usuarios!usuario_roles_usuario_id_fkey!inner(activo)',
+        )
         .eq('usuario_id', payload.operador_id)
         .eq('rol.codigo', 'operador')
         .eq('usuario.activo', true)
