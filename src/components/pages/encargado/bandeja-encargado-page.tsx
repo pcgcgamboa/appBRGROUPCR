@@ -20,6 +20,13 @@ const transiciones: Partial<Record<EstadoSolicitud, EstadoSolicitud[]>> = {
   atendida: ['cerrada', 'en_atencion', 'cancelada'],
 }
 
+function transicionesDisponibles(solicitud: SolicitudAdmin) {
+  const disponibles = transiciones[solicitud.estado] ?? []
+  return solicitud.estado === 'atendida' && !solicitud.validacion
+    ? disponibles.filter((estado) => estado !== 'cerrada')
+    : disponibles
+}
+
 export function BandejaEncargadoPage() {
   const { solicitudes } = useSolicitudesAdmin()
   const operadores = useOperadores()
@@ -34,7 +41,7 @@ export function BandejaEncargadoPage() {
     setSeleccionada(item)
     setPrioridad(item.prioridad ?? 'media')
     setOperadorId(item.operador_id ?? '')
-    setEstado(transiciones[item.estado]?.[0] ?? item.estado)
+    setEstado(transicionesDisponibles(item)[0] ?? item.estado)
     setMotivo('')
   }
 
@@ -200,15 +207,20 @@ export function BandejaEncargadoPage() {
                 Reabrir solicitud
               </Button>
             </div>
-          ) : transiciones[seleccionada.estado] ? (
+          ) : transicionesDisponibles(seleccionada).length ? (
             <div className="mt-4 grid gap-4">
+              {seleccionada.estado === 'atendida' && !seleccionada.validacion && (
+                <p className="rounded-md bg-amber-50 p-3 text-sm text-amber-900">
+                  El Cliente debe validar la atención antes de habilitar el cierre.
+                </p>
+              )}
               <label className="grid gap-2 text-sm font-medium">
                 Nuevo estado
                 <Select
                   value={estado}
                   onChange={(event) => setEstado(event.target.value as EstadoSolicitud)}
                 >
-                  {transiciones[seleccionada.estado]?.map((item) => (
+                  {transicionesDisponibles(seleccionada).map((item) => (
                     <option key={item} value={item}>
                       {item.replace(/_/g, ' ')}
                     </option>
@@ -237,6 +249,10 @@ export function BandejaEncargadoPage() {
                 Aplicar cambio
               </Button>
             </div>
+          ) : seleccionada.estado === 'atendida' && !seleccionada.validacion ? (
+            <p className="mt-4 rounded-md bg-amber-50 p-3 text-sm text-amber-900">
+              El Cliente debe validar la atención antes del cierre.
+            </p>
           ) : (
             <p className="mt-4 text-sm text-muted-foreground">
               Este estado no admite acciones adicionales.

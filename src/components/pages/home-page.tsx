@@ -7,6 +7,7 @@ import { AdminDashboardPage } from '@/components/pages/admin/admin-dashboard-pag
 import { EncargadoDashboardPage } from '@/components/pages/encargado/encargado-dashboard-page'
 import { SolicitantePage } from '@/components/pages/solicitante/solicitante-page'
 import { OperadorPage } from '@/components/pages/operador/operador-page'
+import { ClientePage } from '@/components/pages/cliente/cliente-page'
 import { AppShell } from '@/components/templates/app-shell'
 import { usePerfilActual } from '@/features/auth/hooks/use-perfil-actual'
 import { useSession } from '@/features/auth/hooks/use-session'
@@ -18,7 +19,7 @@ export function HomePage() {
   const [rolSeleccionado, setRolSeleccionado] = useState<string | null>(null)
   const rolesDisponibles =
     perfil.data?.roles.filter((rol) =>
-      ['administrador', 'encargado', 'solicitante', 'operador'].includes(rol),
+      ['administrador', 'encargado', 'solicitante', 'operador', 'cliente'].includes(rol),
     ) ?? []
   const rolActivo =
     rolSeleccionado && rolesDisponibles.includes(rolSeleccionado)
@@ -57,6 +58,15 @@ export function HomePage() {
       <AppShell>
         <RoleSwitcher roles={rolesDisponibles} active={rolActivo} onChange={setRolSeleccionado} />
         <OperadorPage usuarioId={session.user.id} />
+      </AppShell>
+    )
+  }
+
+  if (session && rolActivo === 'cliente') {
+    return (
+      <AppShell>
+        <RoleSwitcher roles={rolesDisponibles} active={rolActivo} onChange={setRolSeleccionado} />
+        <ClientePage clienteId={perfil.data?.cliente_id ?? null} />
       </AppShell>
     )
   }

@@ -5,6 +5,7 @@ const labels: Record<string, string> = {
   encargado: 'Gestión de solicitudes',
   solicitante: 'Mis solicitudes',
   operador: 'Atención de servicios',
+  cliente: 'Validación de servicios',
 }
 
 export function RoleSwitcher({

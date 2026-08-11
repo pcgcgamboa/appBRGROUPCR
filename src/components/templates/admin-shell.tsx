@@ -1,5 +1,6 @@
 import {
   Boxes,
+  Bell,
   Building2,
   Car,
   ClipboardList,
@@ -16,6 +17,7 @@ import { LogoutButton } from '@/components/molecules/logout-button'
 export type AdminSection =
   | 'solicitudes'
   | 'rutas'
+  | 'notificaciones'
   | 'clientes'
   | 'ubicaciones'
   | 'tipos'
@@ -27,6 +29,7 @@ export type AdminSection =
 const navigation: { id: AdminSection; label: string; icon: typeof Boxes }[] = [
   { id: 'solicitudes', label: 'Solicitudes', icon: ClipboardList },
   { id: 'rutas', label: 'Control de ruta', icon: MapPin },
+  { id: 'notificaciones', label: 'Notificaciones', icon: Bell },
   { id: 'clientes', label: 'Clientes', icon: Building2 },
   { id: 'ubicaciones', label: 'Ubicaciones', icon: MapPin },
   { id: 'tipos', label: 'Tipos', icon: Tags },

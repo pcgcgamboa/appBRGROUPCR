@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4'
 import { corsHeaders } from '../_shared/cors.ts'
+import { notificarEstado } from '../_shared/notificaciones.ts'
 
 type Prioridad = 'baja' | 'media' | 'alta' | 'urgente'
 type Estado =
@@ -91,6 +92,8 @@ Deno.serve(async (request) => {
         })
         .eq('id', payload.solicitud_id)
       if (error) throw error
+      if (solicitud.estado !== 'asignada')
+        await notificarEstado(payload.solicitud_id, 'asignada').catch(console.error)
       return respuesta({
         solicitud_id: payload.solicitud_id,
         sla_horas: horas,
@@ -109,6 +112,7 @@ Deno.serve(async (request) => {
         .update({ estado: 'rechazada', motivo_rechazo_cancelacion: payload.motivo.trim() })
         .eq('id', payload.solicitud_id)
       if (error) throw error
+      await notificarEstado(payload.solicitud_id, 'rechazada').catch(console.error)
       return respuesta({ solicitud_id: payload.solicitud_id })
     }
 
@@ -123,6 +127,7 @@ Deno.serve(async (request) => {
         .update({ estado: 'asignada' })
         .eq('id', payload.solicitud_id)
       if (error) throw error
+      await notificarEstado(payload.solicitud_id, 'asignada').catch(console.error)
       return respuesta({ solicitud_id: payload.solicitud_id })
     }
 
@@ -141,6 +146,8 @@ Deno.serve(async (request) => {
         })
         .eq('id', payload.solicitud_id)
       if (error) throw error
+      if (payload.estado !== solicitud.estado)
+        await notificarEstado(payload.solicitud_id, payload.estado).catch(console.error)
       return respuesta({ solicitud_id: payload.solicitud_id })
     }
 

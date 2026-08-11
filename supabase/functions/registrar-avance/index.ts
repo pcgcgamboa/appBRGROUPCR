@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4'
 import { corsHeaders } from '../_shared/cors.ts'
+import { notificarEstado } from '../_shared/notificaciones.ts'
 
 function respuesta(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -20,6 +21,12 @@ Deno.serve(async (request) => {
       { global: { headers: { Authorization: authorization } } },
     )
     const payload = await request.json()
+    const { data: solicitudActual, error: solicitudError } = await supabase
+      .from('solicitudes')
+      .select('estado')
+      .eq('id', payload.solicitud_id)
+      .single()
+    if (solicitudError) throw solicitudError
     const { data, error } = await supabase.rpc('registrar_avance_operador', {
       p_solicitud_id: payload.solicitud_id,
       p_horas_trabajadas: payload.horas_trabajadas,
@@ -30,6 +37,8 @@ Deno.serve(async (request) => {
       p_adjuntos: payload.adjuntos ?? [],
     })
     if (error) throw error
+    if (solicitudActual.estado !== payload.estado_nuevo)
+      await notificarEstado(payload.solicitud_id, payload.estado_nuevo).catch(console.error)
     return respuesta({ avance_id: data }, 201)
   } catch (error) {
     return respuesta({ error: error instanceof Error ? error.message : 'Error inesperado.' }, 400)

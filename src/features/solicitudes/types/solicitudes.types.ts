@@ -23,6 +23,7 @@ export interface SolicitudAdmin {
   cliente: { nombre: string } | null
   tipo: { nombre: string } | null
   operador: { nombre_completo: string } | null
+  validacion: { satisfecho: boolean; comentario: string | null; validado_en: string } | null
 }
 
 export interface OperadorResumen {
