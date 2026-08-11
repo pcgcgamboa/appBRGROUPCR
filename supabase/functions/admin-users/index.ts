@@ -50,7 +50,9 @@ Deno.serve(async (request) => {
           admin.auth.admin.listUsers({ page: 1, perPage: 1000 }),
           admin
             .from('usuarios')
-            .select('id, nombre_completo, telefono, cliente_id, activo, usuario_roles(rol_id)'),
+            .select(
+              'id, nombre_completo, telefono, cliente_id, activo, usuario_roles!usuario_roles_usuario_id_fkey(rol_id)',
+            ),
         ])
       if (authError || perfilesError) throw authError ?? perfilesError
       const emails = new Map(authData.users.map((usuario) => [usuario.id, usuario.email]))

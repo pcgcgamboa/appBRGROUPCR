@@ -9,7 +9,9 @@ export function useOperadores() {
       if (!supabase) throw new Error('Supabase no está configurado.')
       const { data, error } = await supabase
         .from('usuarios')
-        .select('id, nombre_completo, usuario_roles!inner(roles!inner(codigo))')
+        .select(
+          'id, nombre_completo, usuario_roles!usuario_roles_usuario_id_fkey!inner(roles!inner(codigo))',
+        )
         .eq('activo', true)
         .eq('usuario_roles.roles.codigo', 'operador')
         .order('nombre_completo')
