@@ -1,21 +1,74 @@
-import { MessageSquare } from 'lucide-react'
+import { ClipboardCheck, FilePlus2, MessageSquare } from 'lucide-react'
 import { useState } from 'react'
 import { Badge } from '@/components/atoms/badge'
 import { Button } from '@/components/atoms/button'
 import { PageHeader } from '@/components/molecules/page-header'
 import { ClientValidationForm } from '@/components/organisms/client-validation-form'
+import { SolicitantePage } from '@/components/pages/solicitante/solicitante-page'
 import { useSolicitudesCliente } from '@/features/cliente/hooks/use-cliente'
 import type { SolicitudCliente } from '@/features/cliente/types/cliente.types'
+import { useI18n } from '@/lib/i18n'
 
-export function ClientePage({ clienteId }: { clienteId: string | null }) {
+export function ClientePage({
+  usuarioId,
+  clienteId,
+}: {
+  usuarioId: string
+  clienteId: string | null
+}) {
+  const { t } = useI18n()
   const solicitudes = useSolicitudesCliente(clienteId)
   const [seleccionada, setSeleccionada] = useState<SolicitudCliente | null>(null)
+  const [seccion, setSeccion] = useState<'solicitudes' | 'validaciones'>('solicitudes')
   if (!clienteId)
     return (
       <p className="rounded-md bg-amber-50 p-4 text-sm text-amber-900">
         Su usuario necesita estar asociado a un cliente.
       </p>
     )
+  return (
+    <section className="space-y-6">
+      <nav
+        className="flex w-fit flex-wrap gap-2 rounded-xl border bg-white p-2 shadow-sm"
+        aria-label={t('serviceValidation')}
+      >
+        <Button
+          variant={seccion === 'solicitudes' ? 'default' : 'outline'}
+          onClick={() => setSeccion('solicitudes')}
+        >
+          <FilePlus2 className="mr-2 size-4" />
+          {t('myRequests')}
+        </Button>
+        <Button
+          variant={seccion === 'validaciones' ? 'default' : 'outline'}
+          onClick={() => setSeccion('validaciones')}
+        >
+          <ClipboardCheck className="mr-2 size-4" />
+          {t('serviceValidation')}
+        </Button>
+      </nav>
+      {seccion === 'solicitudes' ? (
+        <SolicitantePage usuarioId={usuarioId} clienteId={clienteId} />
+      ) : (
+        <ValidacionesCliente
+          solicitudes={solicitudes}
+          seleccionada={seleccionada}
+          setSeleccionada={setSeleccionada}
+        />
+      )}
+    </section>
+  )
+}
+
+function ValidacionesCliente({
+  solicitudes,
+  seleccionada,
+  setSeleccionada,
+}: {
+  solicitudes: ReturnType<typeof useSolicitudesCliente>
+  seleccionada: SolicitudCliente | null
+  setSeleccionada: (solicitud: SolicitudCliente | null) => void
+}) {
   return (
     <section className="space-y-6">
       <div>

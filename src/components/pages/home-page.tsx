@@ -94,7 +94,7 @@ export function HomePage() {
     return (
       <AppShell>
         <SessionToolbar roles={rolesDisponibles} active={rolActivo} onChange={setRolSeleccionado} />
-        <ClientePage clienteId={perfil.data?.cliente_id ?? null} />
+        <ClientePage usuarioId={session.user.id} clienteId={perfil.data?.cliente_id ?? null} />
       </AppShell>
     )
   }
