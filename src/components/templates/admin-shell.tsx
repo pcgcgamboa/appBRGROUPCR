@@ -53,18 +53,21 @@ export function AdminShell({
 }) {
   const { t } = useI18n()
   return (
-    <div className="grid gap-8 lg:grid-cols-[220px_1fr]">
-      <aside>
-        <div className="mb-3 flex items-center gap-2 font-semibold">
+    <div className="grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-8">
+      <aside className="lg:sticky lg:top-24 lg:self-start">
+        <div className="mb-3 flex items-center gap-2 px-1 text-sm font-bold uppercase tracking-wider text-muted-foreground">
           <Boxes className="size-5 text-primary" />
           {t('administration')}
         </div>
-        <nav className="flex gap-2 overflow-x-auto pb-2 lg:grid" aria-label={t('administration')}>
+        <nav
+          className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-2 lg:mx-0 lg:grid lg:px-0"
+          aria-label={t('administration')}
+        >
           {navigation.map(({ id, label, icon: Icon }) => (
             <Button
               key={id}
               variant={section === id ? 'default' : 'outline'}
-              className="shrink-0 justify-start"
+              className="shrink-0 justify-start lg:w-full"
               onClick={() => onSectionChange(id)}
             >
               <Icon className="mr-2 size-4" />

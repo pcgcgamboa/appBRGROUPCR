@@ -31,7 +31,7 @@ export default defineConfig({
             id.includes('/reselect/') ||
             id.includes('/immer/')
           ) {
-            return 'graficas-estado'
+            return 'graficas'
           }
           if (id.includes('/@supabase/')) return 'supabase'
           if (

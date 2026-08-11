@@ -5,14 +5,19 @@ import { useI18n } from '@/lib/i18n'
 export function AppShell({ children }: PropsWithChildren) {
   const { t } = useI18n()
   return (
-    <div className="min-h-screen">
-      <header className="border-b bg-white">
-        <div className="container flex h-16 items-center justify-between gap-4 font-semibold">
-          {t('appName')}
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.07),_transparent_32rem)]">
+      <header className="sticky top-0 z-40 border-b bg-white/90 backdrop-blur-xl">
+        <div className="container flex h-16 items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3 font-bold tracking-tight">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-sm text-primary-foreground shadow-sm">
+              CS
+            </span>
+            <span className="truncate">{t('appName')}</span>
+          </div>
           <LanguageSwitcher />
         </div>
       </header>
-      <main className="container py-12">{children}</main>
+      <main className="container py-6 sm:py-10">{children}</main>
     </div>
   )
 }
