@@ -6,6 +6,7 @@ import {
   Car,
   ClipboardList,
   MapPin,
+  Palette,
   Package,
   PanelLeftClose,
   PanelLeftOpen,
@@ -31,6 +32,7 @@ export type AdminSection =
   | 'vehiculos'
   | 'usuarios'
   | 'roles'
+  | 'marca'
 
 const navigation: { id: AdminSection; label: ClaveTraduccion; icon: typeof Boxes }[] = [
   { id: 'solicitudes', label: 'requests', icon: ClipboardList },
@@ -44,6 +46,7 @@ const navigation: { id: AdminSection; label: ClaveTraduccion; icon: typeof Boxes
   { id: 'vehiculos', label: 'vehicles', icon: Car },
   { id: 'usuarios', label: 'users', icon: Users },
   { id: 'roles', label: 'roles', icon: Shield },
+  { id: 'marca', label: 'branding', icon: Palette },
 ]
 
 export function AdminShell({

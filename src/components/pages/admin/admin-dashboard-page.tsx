@@ -11,6 +11,7 @@ import { TiposPage } from '@/components/pages/admin/tipos-page'
 import { UbicacionesPage } from '@/components/pages/admin/ubicaciones-page'
 import { UsuariosPage } from '@/components/pages/admin/usuarios-page'
 import { VehiculosPage } from '@/components/pages/admin/vehiculos-page'
+import { MarcaPage } from '@/components/pages/admin/marca-page'
 
 const pages: Record<AdminSection, () => React.JSX.Element> = {
   solicitudes: BandejaEncargadoPage,
@@ -24,6 +25,7 @@ const pages: Record<AdminSection, () => React.JSX.Element> = {
   vehiculos: VehiculosPage,
   usuarios: UsuariosPage,
   roles: RolesPage,
+  marca: MarcaPage,
 }
 
 export function AdminDashboardPage() {
