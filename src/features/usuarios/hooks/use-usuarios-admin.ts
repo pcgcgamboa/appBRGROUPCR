@@ -7,7 +7,17 @@ async function invocar(accion: string, usuario?: Partial<DatosUsuarioAdmin>) {
   const { data, error } = await supabase.functions.invoke('admin-users', {
     body: { accion, usuario },
   })
-  if (error) throw error
+  if (error) {
+    const contexto = 'context' in error ? error.context : null
+    if (contexto instanceof Response) {
+      const detalle = (await contexto
+        .clone()
+        .json()
+        .catch(() => null)) as { error?: string } | null
+      if (detalle?.error) throw new Error(detalle.error)
+    }
+    throw error
+  }
   if (data?.error) throw new Error(data.error as string)
   return data as { usuarios?: UsuarioAdmin[] }
 }
