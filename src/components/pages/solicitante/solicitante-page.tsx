@@ -1,6 +1,5 @@
 import { Badge } from '@/components/atoms/badge'
 import { PageHeader } from '@/components/molecules/page-header'
-import { LogoutButton } from '@/components/molecules/logout-button'
 import { SolicitudForm } from '@/components/organisms/solicitud-form'
 import { useMisSolicitudes } from '@/features/solicitudes/hooks/use-mis-solicitudes'
 
@@ -21,12 +20,11 @@ export function SolicitantePage({
 
   return (
     <section className="space-y-8">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div>
         <PageHeader
           title="Mis solicitudes"
           description="Cree una solicitud y consulte su estado de atención."
         />
-        <LogoutButton />
       </div>
       <SolicitudForm usuarioId={usuarioId} clienteId={clienteId} />
       <div className="overflow-x-auto rounded-lg border bg-white shadow-sm">

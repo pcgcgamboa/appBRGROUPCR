@@ -1,7 +1,6 @@
 import { Bell, ChartPie, ClipboardList, MapPinned } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/atoms/button'
-import { LogoutButton } from '@/components/molecules/logout-button'
 import { BandejaEncargadoPage } from '@/components/pages/encargado/bandeja-encargado-page'
 import { ControlRutasPage } from '@/components/pages/encargado/control-rutas-page'
 import { NotificacionesPage } from '@/components/pages/encargado/notificaciones-page'
@@ -47,7 +46,6 @@ export function EncargadoDashboardPage() {
             Reportes
           </Button>
         </nav>
-        <LogoutButton />
       </div>
       {section === 'solicitudes' ? (
         <BandejaEncargadoPage />

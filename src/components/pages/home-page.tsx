@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { RoleSwitcher } from '@/components/molecules/role-switcher'
+import { SessionToolbar } from '@/components/organisms/session-toolbar'
 import { LoginForm } from '@/components/organisms/login-form'
 import { SessionPanel } from '@/components/organisms/session-panel'
 import { SetupOverview } from '@/components/organisms/setup-overview'
@@ -29,7 +29,7 @@ export function HomePage() {
   if (session && rolActivo === 'administrador') {
     return (
       <AppShell>
-        <RoleSwitcher roles={rolesDisponibles} active={rolActivo} onChange={setRolSeleccionado} />
+        <SessionToolbar roles={rolesDisponibles} active={rolActivo} onChange={setRolSeleccionado} />
         <AdminDashboardPage />
       </AppShell>
     )
@@ -38,7 +38,7 @@ export function HomePage() {
   if (session && rolActivo === 'encargado') {
     return (
       <AppShell>
-        <RoleSwitcher roles={rolesDisponibles} active={rolActivo} onChange={setRolSeleccionado} />
+        <SessionToolbar roles={rolesDisponibles} active={rolActivo} onChange={setRolSeleccionado} />
         <EncargadoDashboardPage />
       </AppShell>
     )
@@ -47,7 +47,7 @@ export function HomePage() {
   if (session && rolActivo === 'solicitante') {
     return (
       <AppShell>
-        <RoleSwitcher roles={rolesDisponibles} active={rolActivo} onChange={setRolSeleccionado} />
+        <SessionToolbar roles={rolesDisponibles} active={rolActivo} onChange={setRolSeleccionado} />
         <SolicitantePage usuarioId={session.user.id} clienteId={perfil.data?.cliente_id ?? null} />
       </AppShell>
     )
@@ -56,7 +56,7 @@ export function HomePage() {
   if (session && rolActivo === 'operador') {
     return (
       <AppShell>
-        <RoleSwitcher roles={rolesDisponibles} active={rolActivo} onChange={setRolSeleccionado} />
+        <SessionToolbar roles={rolesDisponibles} active={rolActivo} onChange={setRolSeleccionado} />
         <OperadorPage usuarioId={session.user.id} />
       </AppShell>
     )
@@ -65,7 +65,7 @@ export function HomePage() {
   if (session && rolActivo === 'cliente') {
     return (
       <AppShell>
-        <RoleSwitcher roles={rolesDisponibles} active={rolActivo} onChange={setRolSeleccionado} />
+        <SessionToolbar roles={rolesDisponibles} active={rolActivo} onChange={setRolSeleccionado} />
         <ClientePage clienteId={perfil.data?.cliente_id ?? null} />
       </AppShell>
     )

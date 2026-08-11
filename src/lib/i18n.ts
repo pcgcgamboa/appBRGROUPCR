@@ -52,6 +52,11 @@ const mensajes = {
     noClient: 'Sin cliente',
     actions: 'Acciones',
     active: 'Activo',
+    module: 'Módulo',
+    requestManagement: 'Gestión de solicitudes',
+    myRequests: 'Mis solicitudes',
+    serviceAttention: 'Atención de servicios',
+    serviceValidation: 'Validación de servicios',
   },
   en: {
     appName: 'Service requests',
@@ -103,6 +108,11 @@ const mensajes = {
     noClient: 'No client',
     actions: 'Actions',
     active: 'Active',
+    module: 'Module',
+    requestManagement: 'Request management',
+    myRequests: 'My requests',
+    serviceAttention: 'Service delivery',
+    serviceValidation: 'Service validation',
   },
 } as const
 

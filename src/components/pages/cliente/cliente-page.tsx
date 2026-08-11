@@ -2,7 +2,6 @@ import { MessageSquare } from 'lucide-react'
 import { useState } from 'react'
 import { Badge } from '@/components/atoms/badge'
 import { Button } from '@/components/atoms/button'
-import { LogoutButton } from '@/components/molecules/logout-button'
 import { PageHeader } from '@/components/molecules/page-header'
 import { ClientValidationForm } from '@/components/organisms/client-validation-form'
 import { useSolicitudesCliente } from '@/features/cliente/hooks/use-cliente'
@@ -19,12 +18,11 @@ export function ClientePage({ clienteId }: { clienteId: string | null }) {
     )
   return (
     <section className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div>
         <PageHeader
           title="Validación de servicios"
           description="Indique su satisfacción o comentarios para completar el cierre."
         />
-        <LogoutButton />
       </div>
       {solicitudes.error && (
         <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-800">

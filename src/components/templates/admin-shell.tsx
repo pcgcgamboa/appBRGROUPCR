@@ -13,7 +13,6 @@ import {
 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Button } from '@/components/atoms/button'
-import { LogoutButton } from '@/components/molecules/logout-button'
 import { useI18n, type ClaveTraduccion } from '@/lib/i18n'
 
 export type AdminSection =
@@ -73,9 +72,6 @@ export function AdminShell({
             </Button>
           ))}
         </nav>
-        <div className="mt-5">
-          <LogoutButton />
-        </div>
       </aside>
       <div className="min-w-0">{children}</div>
     </div>

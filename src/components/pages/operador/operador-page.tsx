@@ -2,7 +2,6 @@ import { ClipboardCheck, MapPin } from 'lucide-react'
 import { useState } from 'react'
 import { Badge } from '@/components/atoms/badge'
 import { Button } from '@/components/atoms/button'
-import { LogoutButton } from '@/components/molecules/logout-button'
 import { PageHeader } from '@/components/molecules/page-header'
 import { OperatorProgressForm } from '@/components/organisms/operator-progress-form'
 import { ProgressHistory } from '@/components/organisms/progress-history'
@@ -19,7 +18,6 @@ export function OperadorPage({ usuarioId }: { usuarioId: string }) {
           title="Atención de servicios"
           description="Registre el trabajo realizado desde el sitio de atención."
         />
-        <LogoutButton />
       </div>
       {solicitudes.error && (
         <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-800">
