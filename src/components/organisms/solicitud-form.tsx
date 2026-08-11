@@ -68,7 +68,7 @@ export function SolicitudForm({
   return (
     <form
       onSubmit={handleSubmit(enviar)}
-      className="grid max-w-5xl gap-5 rounded-2xl border bg-white p-5 shadow-sm sm:grid-cols-2 sm:p-7"
+      className="mx-auto grid w-full max-w-5xl gap-5 rounded-2xl border bg-white p-5 shadow-sm sm:grid-cols-2 sm:p-7"
     >
       <div className="border-b pb-5 sm:col-span-2">
         <div className="flex items-center gap-3">
