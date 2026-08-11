@@ -94,6 +94,10 @@ export function HomePage() {
             <SessionPanel session={session} />
             {perfil.isLoading ? (
               <p className="text-sm text-muted-foreground">Cargando permisos…</p>
+            ) : perfil.error ? (
+              <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-800">
+                No fue posible consultar el perfil: {perfil.error.message}
+              </p>
             ) : (
               <p className="rounded-md bg-blue-50 p-3 text-sm text-blue-900">
                 La sesión no tiene el rol Administrador. Los demás módulos se habilitarán en sus

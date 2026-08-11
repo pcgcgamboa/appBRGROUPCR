@@ -23,7 +23,9 @@ export function usePerfilActual(usuarioId?: string) {
       if (!supabase || !usuarioId) throw new Error('No hay una sesión activa.')
       const { data, error } = await supabase
         .from('usuarios')
-        .select('id, nombre_completo, cliente_id, usuario_roles(roles(codigo))')
+        .select(
+          'id, nombre_completo, cliente_id, usuario_roles!usuario_roles_usuario_id_fkey(roles(codigo))',
+        )
         .eq('id', usuarioId)
         .single()
       if (error) throw error
