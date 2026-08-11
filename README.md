@@ -32,3 +32,4 @@ La especificación funcional se encuentra en `docs/requerimientos-sistema-solici
 - `docs/configuracion-supabase.md`: preparación del proyecto remoto y primer administrador.
 - `docs/fase-3-solicitudes-sla.md`: creación, asignación, estados y cálculo de SLA.
 - `docs/fase-4-control-ruta.md`: asignación de ruta, estados y mapa OpenStreetMap.
+- `docs/fase-5-operador.md`: atención móvil, avances, materiales y adjuntos.

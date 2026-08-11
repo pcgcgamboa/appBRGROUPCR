@@ -17,17 +17,19 @@ set search_path = '' as $$
 declare
   v_operario jsonb;
   v_operario_id uuid;
+  v_operador_principal uuid;
   v_estado public.estado_operario_ruta;
 begin
   if not public.es_gestor() then
     raise exception 'Solo un administrador o encargado puede gestionar rutas';
   end if;
 
-  if not exists (
-    select 1 from public.solicitudes s
+  select s.operador_id into v_operador_principal
+    from public.solicitudes s
     where s.id = p_solicitud_id
-      and s.estado in ('asignada', 'en_atencion', 'en_espera_materiales', 'atendida')
-  ) then
+      and s.estado in ('asignada', 'en_atencion', 'en_espera_materiales', 'atendida');
+
+  if not found then
     raise exception 'La solicitud no admite control de ruta en su estado actual';
   end if;
 
@@ -40,6 +42,13 @@ begin
   if jsonb_typeof(coalesce(p_operarios, '[]'::jsonb)) <> 'array'
     or jsonb_array_length(coalesce(p_operarios, '[]'::jsonb)) = 0 then
     raise exception 'Debe asignar al menos un operario';
+  end if;
+
+  if not exists (
+    select 1 from jsonb_array_elements(p_operarios) item
+    where item ->> 'operario_id' = v_operador_principal::text
+  ) then
+    raise exception 'El operador principal debe formar parte de la ruta';
   end if;
 
   if length(trim(p_provincia)) = 0 or length(trim(p_canton)) = 0

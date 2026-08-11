@@ -36,3 +36,6 @@ verify_jwt = true
 
 [functions.gestionar-solicitud]
 verify_jwt = true
+
+[functions.registrar-avance]
+verify_jwt = true

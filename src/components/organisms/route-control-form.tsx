@@ -30,11 +30,14 @@ interface FormState {
 
 function stateFromSolicitud(solicitud: SolicitudParaRuta): FormState {
   const ruta = solicitud.ruta
-  const operarios = ruta?.ruta_operarios.length
+  const operarios: Record<string, EstadoOperarioRuta> = ruta?.ruta_operarios.length
     ? Object.fromEntries(ruta.ruta_operarios.map((item) => [item.operario_id, item.estado]))
     : solicitud.operador_id
       ? { [solicitud.operador_id]: 'disponible' as EstadoOperarioRuta }
       : {}
+  if (solicitud.operador_id && !operarios[solicitud.operador_id]) {
+    operarios[solicitud.operador_id] = 'disponible'
+  }
   return {
     vehiculo_id: ruta?.vehiculo_id ?? '',
     provincia: ruta?.provincia ?? solicitud.ubicacion?.provincia ?? '',
@@ -174,9 +177,11 @@ export function RouteControlForm({
                   type="checkbox"
                   className="size-5"
                   checked={Boolean(seleccionado)}
+                  disabled={operador.id === solicitud.operador_id}
                   onChange={(event) => toggleOperario(operador.id, event.target.checked)}
                 />
                 {operador.nombre_completo}
+                {operador.id === solicitud.operador_id ? ' (principal)' : ''}
               </label>
               {seleccionado && (
                 <Select
