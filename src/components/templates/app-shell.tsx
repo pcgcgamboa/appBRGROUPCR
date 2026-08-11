@@ -1,5 +1,6 @@
 import type { PropsWithChildren } from 'react'
 import { LanguageSwitcher } from '@/components/molecules/language-switcher'
+import { AccountMenu } from '@/components/molecules/account-menu'
 import { useI18n } from '@/lib/i18n'
 
 export function AppShell({ children }: PropsWithChildren) {
@@ -14,7 +15,10 @@ export function AppShell({ children }: PropsWithChildren) {
             </span>
             <span className="truncate">{t('appName')}</span>
           </div>
-          <LanguageSwitcher />
+          <div className="flex items-center gap-2">
+            <LanguageSwitcher />
+            <AccountMenu />
+          </div>
         </div>
       </header>
       <main className="container py-3 sm:py-5">{children}</main>

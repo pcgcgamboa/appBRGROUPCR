@@ -57,12 +57,7 @@ export function HomePage() {
   if (session && rolActivo === 'administrador') {
     return (
       <AppShell>
-        <SessionToolbar
-          roles={rolesDisponibles}
-          active={rolActivo}
-          onChange={setRolSeleccionado}
-          showLogout={false}
-        />
+        <SessionToolbar roles={rolesDisponibles} active={rolActivo} onChange={setRolSeleccionado} />
         <AdminDashboardPage />
       </AppShell>
     )
