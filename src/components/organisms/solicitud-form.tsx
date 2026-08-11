@@ -7,40 +7,58 @@ import { Input } from '@/components/atoms/input'
 import { Select } from '@/components/atoms/select'
 import { Textarea } from '@/components/atoms/textarea'
 import { useCatalogo } from '@/features/catalogos/hooks/use-catalogo'
-import type { TipoSolicitud, Ubicacion } from '@/features/catalogos/types/catalogos.types'
+import type { Cliente, TipoSolicitud, Ubicacion } from '@/features/catalogos/types/catalogos.types'
 import { useCrearSolicitud } from '@/features/solicitudes/hooks/use-crear-solicitud'
 import {
   solicitudSchema,
   type SolicitudFormData,
 } from '@/features/solicitudes/schemas/solicitud.schema'
 
-export function SolicitudForm({ usuarioId, clienteId }: { usuarioId: string; clienteId: string }) {
+export function SolicitudForm({
+  usuarioId,
+  clienteId,
+  comoGestor = false,
+  onCreated,
+}: {
+  usuarioId: string
+  clienteId: string | null
+  comoGestor?: boolean
+  onCreated?: () => void
+}) {
+  const { listado: clientes } = useCatalogo<Cliente>('clientes')
   const { listado: tipos } = useCatalogo<TipoSolicitud>('tipos_solicitud')
   const { listado: ubicaciones } = useCatalogo<Ubicacion>('ubicaciones')
   const crear = useCrearSolicitud()
+  const [clienteSeleccionado, setClienteSeleccionado] = useState(clienteId ?? '')
   const [archivos, setArchivos] = useState<File[]>([])
   const archivoInput = useRef<HTMLInputElement>(null)
   const disponibles = useMemo(
-    () => ubicaciones.data?.filter((item) => item.cliente_id === clienteId && item.activa) ?? [],
-    [ubicaciones.data, clienteId],
+    () =>
+      ubicaciones.data?.filter((item) => item.cliente_id === clienteSeleccionado && item.activa) ??
+      [],
+    [ubicaciones.data, clienteSeleccionado],
   )
   const {
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<SolicitudFormData>({ resolver: zodResolver(solicitudSchema) })
 
   async function enviar(values: SolicitudFormData) {
+    if (!clienteSeleccionado) return
     await crear.mutateAsync({
       ...values,
-      cliente_id: clienteId,
+      cliente_id: clienteSeleccionado,
       solicitante_id: usuarioId,
       archivos,
+      como_gestor: comoGestor,
     })
     reset()
     setArchivos([])
     if (archivoInput.current) archivoInput.current.value = ''
+    onCreated?.()
   }
 
   function quitarArchivo(indice: number) {
@@ -65,6 +83,31 @@ export function SolicitudForm({ usuarioId, clienteId }: { usuarioId: string; cli
           </div>
         </div>
       </div>
+      {comoGestor && (
+        <label className="grid gap-2 text-sm font-medium sm:col-span-2">
+          Cliente
+          <Select
+            required
+            value={clienteSeleccionado}
+            onChange={(event) => {
+              setClienteSeleccionado(event.target.value)
+              setValue('ubicacion_id', '')
+            }}
+          >
+            <option value="">Seleccione un cliente…</option>
+            {clientes.data
+              ?.filter((cliente) => cliente.activo)
+              .map((cliente) => (
+                <option key={cliente.id} value={cliente.id}>
+                  {cliente.nombre}
+                </option>
+              ))}
+          </Select>
+          <span className="text-xs font-normal text-muted-foreground">
+            La solicitud quedará registrada para la organización seleccionada.
+          </span>
+        </label>
+      )}
       <label className="grid gap-2 text-sm font-medium">
         Título de la solicitud
         <Input
@@ -174,7 +217,10 @@ export function SolicitudForm({ usuarioId, clienteId }: { usuarioId: string; cli
         </p>
       )}
       <div className="flex justify-end border-t pt-5 sm:col-span-2">
-        <Button type="submit" disabled={crear.isPending || !disponibles.length}>
+        <Button
+          type="submit"
+          disabled={crear.isPending || !clienteSeleccionado || !disponibles.length}
+        >
           {crear.isPending && <LoaderCircle className="mr-2 size-4 animate-spin" />}
           {crear.isPending ? 'Creando…' : 'Crear solicitud'}
         </Button>

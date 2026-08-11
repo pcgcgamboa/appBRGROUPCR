@@ -6,6 +6,7 @@ interface CrearSolicitudInput extends SolicitudFormData {
   cliente_id: string
   solicitante_id: string
   archivos: File[]
+  como_gestor?: boolean
 }
 
 const tiposPermitidos = new Set(['image/jpeg', 'image/png', 'image/webp', 'application/pdf'])
@@ -23,7 +24,7 @@ function tipoArchivo(archivo: File) {
 export function useCrearSolicitud() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ archivos, ...values }: CrearSolicitudInput) => {
+    mutationFn: async ({ archivos, como_gestor, ...values }: CrearSolicitudInput) => {
       if (!supabase) throw new Error('Supabase no está configurado.')
       for (const archivo of archivos) {
         if (!tiposPermitidos.has(tipoArchivo(archivo)))
@@ -31,12 +32,18 @@ export function useCrearSolicitud() {
         if (archivo.size > 10 * 1024 * 1024)
           throw new Error(`${archivo.name} supera el límite de 10 MB.`)
       }
-      const { data, error } = await supabase.rpc('crear_solicitud_portal', {
+      const parametros = {
         p_nombre: values.nombre,
         p_tipo_solicitud_id: values.tipo_solicitud_id,
         p_ubicacion_id: values.ubicacion_id,
         p_detalle: values.detalle,
-      })
+      }
+      const { data, error } = como_gestor
+        ? await supabase.rpc('crear_solicitud_gestor', {
+            ...parametros,
+            p_cliente_id: values.cliente_id,
+          })
+        : await supabase.rpc('crear_solicitud_portal', parametros)
       if (error) throw error
       const solicitud = data as { id: string; numero: number }
 
@@ -71,6 +78,10 @@ export function useCrearSolicitud() {
       }
       return solicitud
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['mis-solicitudes'] }),
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['mis-solicitudes'] }),
+        queryClient.invalidateQueries({ queryKey: ['solicitudes-admin'] }),
+      ]),
   })
 }

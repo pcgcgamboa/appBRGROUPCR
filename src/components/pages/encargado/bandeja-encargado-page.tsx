@@ -1,9 +1,11 @@
+import { Plus, X } from 'lucide-react'
 import { useState } from 'react'
 import { Badge } from '@/components/atoms/badge'
 import { Button } from '@/components/atoms/button'
 import { Select } from '@/components/atoms/select'
 import { Textarea } from '@/components/atoms/textarea'
 import { PageHeader } from '@/components/molecules/page-header'
+import { SolicitudForm } from '@/components/organisms/solicitud-form'
 import { SlaBadge } from '@/components/molecules/sla-badge'
 import { useGestionarSolicitud } from '@/features/solicitudes/hooks/use-gestionar-solicitud'
 import { useOperadores } from '@/features/solicitudes/hooks/use-operadores'
@@ -12,6 +14,7 @@ import type {
   EstadoSolicitud,
   SolicitudAdmin,
 } from '@/features/solicitudes/types/solicitudes.types'
+import { useSession } from '@/features/auth/hooks/use-session'
 
 const transiciones: Partial<Record<EstadoSolicitud, EstadoSolicitud[]>> = {
   asignada: ['en_atencion', 'cancelada'],
@@ -28,6 +31,7 @@ function transicionesDisponibles(solicitud: SolicitudAdmin) {
 }
 
 export function BandejaEncargadoPage() {
+  const { session } = useSession()
   const { solicitudes } = useSolicitudesAdmin()
   const operadores = useOperadores()
   const gestionar = useGestionarSolicitud()
@@ -36,6 +40,7 @@ export function BandejaEncargadoPage() {
   const [operadorId, setOperadorId] = useState('')
   const [estado, setEstado] = useState<EstadoSolicitud>('asignada')
   const [motivo, setMotivo] = useState('')
+  const [creando, setCreando] = useState(false)
 
   function abrir(item: SolicitudAdmin) {
     setSeleccionada(item)
@@ -57,10 +62,24 @@ export function BandejaEncargadoPage() {
 
   return (
     <section className="space-y-6">
-      <PageHeader
-        title="Bandeja de solicitudes"
-        description="Revise, priorice, asigne y controle el flujo de atención."
-      />
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <PageHeader
+          title="Bandeja de solicitudes"
+          description="Revise, priorice, asigne y controle el flujo de atención."
+        />
+        <Button onClick={() => setCreando((actual) => !actual)}>
+          {creando ? <X className="mr-2 size-4" /> : <Plus className="mr-2 size-4" />}
+          {creando ? 'Cerrar formulario' : 'Nueva solicitud'}
+        </Button>
+      </div>
+      {creando && session && (
+        <SolicitudForm
+          usuarioId={session.user.id}
+          clienteId={null}
+          comoGestor
+          onCreated={() => setCreando(false)}
+        />
+      )}
       {(solicitudes.error ?? operadores.error ?? gestionar.error) && (
         <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-800">
           {(solicitudes.error ?? operadores.error ?? gestionar.error)?.message}
