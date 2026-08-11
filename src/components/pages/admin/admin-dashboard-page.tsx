@@ -17,7 +17,7 @@ const pages: Record<AdminSection, () => React.JSX.Element> = {
   solicitudes: BandejaEncargadoPage,
   rutas: ControlRutasPage,
   notificaciones: NotificacionesPage,
-  reportes: ReportesPage,
+  reportes: () => <ReportesPage />,
   clientes: ClientesPage,
   ubicaciones: UbicacionesPage,
   tipos: TiposPage,
@@ -33,7 +33,11 @@ export function AdminDashboardPage() {
   const Page = pages[section]
   return (
     <AdminShell section={section} onSectionChange={setSection}>
-      <Page />
+      {section === 'reportes' ? (
+        <ReportesPage onOpenSolicitudes={() => setSection('solicitudes')} />
+      ) : (
+        <Page />
+      )}
     </AdminShell>
   )
 }

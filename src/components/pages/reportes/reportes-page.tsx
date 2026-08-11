@@ -5,7 +5,7 @@ import { PageHeader } from '@/components/molecules/page-header'
 import { DashboardCharts } from '@/components/organisms/dashboard-charts'
 import { useDashboardSolicitudes } from '@/features/reportes/hooks/use-dashboard'
 
-export function ReportesPage() {
+export function ReportesPage({ onOpenSolicitudes }: { onOpenSolicitudes?: () => void }) {
   const dashboard = useDashboardSolicitudes()
   return (
     <section className="space-y-6">
@@ -42,25 +42,29 @@ export function ReportesPage() {
               label="Solicitudes totales"
               value={dashboard.data.totales.total}
               icon={ClipboardList}
+              onClick={onOpenSolicitudes}
             />
             <MetricCard
               label="Solicitudes activas"
               value={dashboard.data.totales.activas}
               icon={Clock3}
+              onClick={onOpenSolicitudes}
             />
             <MetricCard
               label="Solicitudes urgentes"
               value={dashboard.data.totales.urgentes}
               icon={AlertTriangle}
+              onClick={onOpenSolicitudes}
             />
             <MetricCard
               label="SLA vencidas"
               value={dashboard.data.totales.sla_vencidas}
               icon={AlertTriangle}
               alert
+              onClick={onOpenSolicitudes}
             />
           </div>
-          <DashboardCharts data={dashboard.data} />
+          <DashboardCharts data={dashboard.data} onOpenSolicitudes={onOpenSolicitudes} />
         </>
       )}
     </section>

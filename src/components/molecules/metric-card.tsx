@@ -1,29 +1,52 @@
-import type { LucideIcon } from 'lucide-react'
+import { ArrowUpRight, type LucideIcon } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 export function MetricCard({
   label,
   value,
   icon: Icon,
   alert = false,
+  onClick,
 }: {
   label: string
   value: number
   icon: LucideIcon
   alert?: boolean
+  onClick?: () => void
 }) {
-  return (
-    <article
-      className={
-        alert && value > 0
-          ? 'rounded-lg border border-red-200 bg-red-50 p-5 shadow-sm'
-          : 'rounded-lg border bg-white p-5 shadow-sm'
-      }
-    >
+  const className = cn(
+    'w-full rounded-lg border p-5 text-left shadow-sm',
+    alert && value > 0 ? 'border-red-200 bg-red-50' : 'bg-white',
+    onClick &&
+      'group cursor-pointer transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
+  )
+  const content = (
+    <>
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm font-medium text-muted-foreground">{label}</p>
-        <Icon className={alert && value > 0 ? 'size-5 text-red-700' : 'size-5 text-primary'} />
+        <div className="flex items-center gap-2">
+          <Icon className={alert && value > 0 ? 'size-5 text-red-700' : 'size-5 text-primary'} />
+          {onClick && (
+            <ArrowUpRight className="size-4 text-muted-foreground transition group-hover:text-primary" />
+          )}
+        </div>
       </div>
       <p className="mt-3 text-3xl font-bold">{value}</p>
-    </article>
+      {onClick && <p className="mt-2 text-xs text-muted-foreground">Ver solicitudes</p>}
+    </>
   )
+
+  if (onClick)
+    return (
+      <button
+        type="button"
+        className={className}
+        onClick={onClick}
+        aria-label={`${label}: ${value}. Ver solicitudes`}
+      >
+        {content}
+      </button>
+    )
+
+  return <article className={className}>{content}</article>
 }

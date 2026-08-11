@@ -54,7 +54,7 @@ export function EncargadoDashboardPage() {
       ) : section === 'notificaciones' ? (
         <NotificacionesPage />
       ) : (
-        <ReportesPage />
+        <ReportesPage onOpenSolicitudes={() => setSection('solicitudes')} />
       )}
     </div>
   )

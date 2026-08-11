@@ -1,3 +1,4 @@
+import { ArrowUpRight } from 'lucide-react'
 import {
   Bar,
   BarChart,
@@ -26,16 +27,47 @@ const colores = [
 const etiqueta = (value: string) =>
   value.replace(/_/g, ' ').replace(/^./, (letter) => letter.toUpperCase())
 
-function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
+function ChartCard({
+  title,
+  children,
+  onClick,
+}: {
+  title: string
+  children: React.ReactNode
+  onClick?: () => void
+}) {
   return (
-    <section className="min-w-0 rounded-lg border bg-white p-4 shadow-sm sm:p-5">
-      <h2 className="mb-5 font-semibold">{title}</h2>
+    <section
+      className="group min-w-0 cursor-pointer rounded-lg border bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 sm:p-5"
+      role="link"
+      tabIndex={0}
+      aria-label={`${title}. Ver solicitudes`}
+      onClick={onClick}
+      onKeyDown={(event) => {
+        if (onClick && (event.key === 'Enter' || event.key === ' ')) {
+          event.preventDefault()
+          onClick()
+        }
+      }}
+    >
+      <div className="mb-5 flex items-center justify-between gap-3">
+        <h2 className="font-semibold">{title}</h2>
+        <span className="flex items-center gap-1 text-xs text-muted-foreground transition group-hover:text-primary">
+          Ver solicitudes <ArrowUpRight className="size-4" />
+        </span>
+      </div>
       <div className="h-80">{children}</div>
     </section>
   )
 }
 
-export function DashboardCharts({ data }: { data: DashboardSolicitudes }) {
+export function DashboardCharts({
+  data,
+  onOpenSolicitudes,
+}: {
+  data: DashboardSolicitudes
+  onOpenSolicitudes?: () => void
+}) {
   const estados = data.por_estado.map((item) => ({ ...item, etiqueta: etiqueta(item.nombre) }))
   const prioridades = data.por_prioridad.map((item) => ({
     ...item,
@@ -44,7 +76,7 @@ export function DashboardCharts({ data }: { data: DashboardSolicitudes }) {
   const urgencia = data.por_urgencia.map((item) => ({ ...item, etiqueta: etiqueta(item.nombre) }))
   return (
     <div className="grid gap-6 xl:grid-cols-2">
-      <ChartCard title="Solicitudes por estado">
+      <ChartCard title="Solicitudes por estado" onClick={onOpenSolicitudes}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={estados} margin={{ left: 0, right: 10, bottom: 60 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -62,7 +94,7 @@ export function DashboardCharts({ data }: { data: DashboardSolicitudes }) {
           </BarChart>
         </ResponsiveContainer>
       </ChartCard>
-      <ChartCard title="Solicitudes por prioridad">
+      <ChartCard title="Solicitudes por prioridad" onClick={onOpenSolicitudes}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={prioridades} layout="vertical" margin={{ left: 20, right: 20 }}>
             <CartesianGrid strokeDasharray="3 3" horizontal={false} />
@@ -73,7 +105,7 @@ export function DashboardCharts({ data }: { data: DashboardSolicitudes }) {
           </BarChart>
         </ResponsiveContainer>
       </ChartCard>
-      <ChartCard title="Solicitudes por urgencia">
+      <ChartCard title="Solicitudes por urgencia" onClick={onOpenSolicitudes}>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
