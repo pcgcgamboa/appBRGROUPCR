@@ -4,7 +4,6 @@ import { Button } from '@/components/atoms/button'
 import { Select } from '@/components/atoms/select'
 import { Textarea } from '@/components/atoms/textarea'
 import { PageHeader } from '@/components/molecules/page-header'
-import { LogoutButton } from '@/components/molecules/logout-button'
 import { SlaBadge } from '@/components/molecules/sla-badge'
 import { useGestionarSolicitud } from '@/features/solicitudes/hooks/use-gestionar-solicitud'
 import { useOperadores } from '@/features/solicitudes/hooks/use-operadores'
@@ -51,13 +50,10 @@ export function BandejaEncargadoPage() {
 
   return (
     <section className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <PageHeader
-          title="Bandeja de solicitudes"
-          description="Revise, priorice, asigne y controle el flujo de atención."
-        />
-        <LogoutButton />
-      </div>
+      <PageHeader
+        title="Bandeja de solicitudes"
+        description="Revise, priorice, asigne y controle el flujo de atención."
+      />
       {(solicitudes.error ?? operadores.error ?? gestionar.error) && (
         <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-800">
           {(solicitudes.error ?? operadores.error ?? gestionar.error)?.message}

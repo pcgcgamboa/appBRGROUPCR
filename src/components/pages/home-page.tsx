@@ -4,7 +4,7 @@ import { LoginForm } from '@/components/organisms/login-form'
 import { SessionPanel } from '@/components/organisms/session-panel'
 import { SetupOverview } from '@/components/organisms/setup-overview'
 import { AdminDashboardPage } from '@/components/pages/admin/admin-dashboard-page'
-import { BandejaEncargadoPage } from '@/components/pages/encargado/bandeja-encargado-page'
+import { EncargadoDashboardPage } from '@/components/pages/encargado/encargado-dashboard-page'
 import { SolicitantePage } from '@/components/pages/solicitante/solicitante-page'
 import { AppShell } from '@/components/templates/app-shell'
 import { usePerfilActual } from '@/features/auth/hooks/use-perfil-actual'
@@ -37,7 +37,7 @@ export function HomePage() {
     return (
       <AppShell>
         <RoleSwitcher roles={rolesDisponibles} active={rolActivo} onChange={setRolSeleccionado} />
-        <BandejaEncargadoPage />
+        <EncargadoDashboardPage />
       </AppShell>
     )
   }

@@ -4,6 +4,7 @@ import { ClientesPage } from '@/components/pages/admin/clientes-page'
 import { MaterialesPage } from '@/components/pages/admin/materiales-page'
 import { RolesPage } from '@/components/pages/admin/roles-page'
 import { BandejaEncargadoPage } from '@/components/pages/encargado/bandeja-encargado-page'
+import { ControlRutasPage } from '@/components/pages/encargado/control-rutas-page'
 import { TiposPage } from '@/components/pages/admin/tipos-page'
 import { UbicacionesPage } from '@/components/pages/admin/ubicaciones-page'
 import { UsuariosPage } from '@/components/pages/admin/usuarios-page'
@@ -11,6 +12,7 @@ import { VehiculosPage } from '@/components/pages/admin/vehiculos-page'
 
 const pages: Record<AdminSection, () => React.JSX.Element> = {
   solicitudes: BandejaEncargadoPage,
+  rutas: ControlRutasPage,
   clientes: ClientesPage,
   ubicaciones: UbicacionesPage,
   tipos: TiposPage,
