@@ -4,6 +4,7 @@ import { useUiStore, type Idioma } from '@/stores/ui.store'
 const mensajes = {
   es: {
     appName: 'Solicitudes de servicio',
+    configuration: 'Configuración',
     language: 'Idioma',
     spanish: 'Español',
     english: 'English',
@@ -80,6 +81,7 @@ const mensajes = {
   },
   en: {
     appName: 'Service requests',
+    configuration: 'Configuration',
     language: 'Language',
     spanish: 'Español',
     english: 'English',

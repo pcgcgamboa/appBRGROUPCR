@@ -4,6 +4,7 @@ import {
   ChartPie,
   Building2,
   Car,
+  ChevronDown,
   ClipboardList,
   MapPin,
   Palette,
@@ -11,10 +12,11 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Shield,
+  Settings,
   Tags,
   Users,
 } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { type ReactNode, useState } from 'react'
 import { Button } from '@/components/atoms/button'
 import { useI18n, type ClaveTraduccion } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
@@ -39,10 +41,17 @@ const navigation: { id: AdminSection; label: ClaveTraduccion; icon: typeof Boxes
   { id: 'notificaciones', label: 'notifications', icon: Bell },
   { id: 'reportes', label: 'reports', icon: ChartPie },
   { id: 'clientes', label: 'clients', icon: Building2 },
-  { id: 'tipos', label: 'types', icon: Tags },
   { id: 'materiales', label: 'materials', icon: Package },
   { id: 'vehiculos', label: 'vehicles', icon: Car },
   { id: 'usuarios', label: 'users', icon: Users },
+]
+
+const configurationNavigation: {
+  id: AdminSection
+  label: ClaveTraduccion
+  icon: typeof Boxes
+}[] = [
+  { id: 'tipos', label: 'types', icon: Tags },
   { id: 'roles', label: 'roles', icon: Shield },
   { id: 'marca', label: 'branding', icon: Palette },
 ]
@@ -59,6 +68,8 @@ export function AdminShell({
   const { t } = useI18n()
   const menuColapsado = useUiStore((state) => state.menuColapsado)
   const cambiarMenuColapsado = useUiStore((state) => state.cambiarMenuColapsado)
+  const configuracionActiva = configurationNavigation.some((item) => item.id === section)
+  const [configuracionAbierta, setConfiguracionAbierta] = useState(configuracionActiva)
   return (
     <div
       className={cn(
@@ -105,6 +116,47 @@ export function AdminShell({
               <span className={cn(menuColapsado && 'lg:sr-only')}>{t(label)}</span>
             </Button>
           ))}
+          <div className="flex shrink-0 gap-2 lg:grid lg:gap-1">
+            <Button
+              variant="outline"
+              className={cn(
+                'shrink-0 justify-start lg:w-full',
+                configuracionActiva && 'border-primary/40 bg-blue-50 text-primary',
+                menuColapsado && 'lg:px-0',
+              )}
+              onClick={() => setConfiguracionAbierta((actual) => !actual)}
+              aria-expanded={configuracionAbierta}
+              title={menuColapsado ? t('configuration') : undefined}
+            >
+              <Settings className={cn('size-4 shrink-0', !menuColapsado && 'mr-2')} />
+              <span className={cn('flex-1 text-left', menuColapsado && 'lg:sr-only')}>
+                {t('configuration')}
+              </span>
+              <ChevronDown
+                className={cn(
+                  'ml-2 size-4 transition-transform',
+                  configuracionAbierta && 'rotate-180',
+                  menuColapsado && 'lg:hidden',
+                )}
+              />
+            </Button>
+            {configuracionAbierta &&
+              configurationNavigation.map(({ id, label, icon: Icon }) => (
+                <Button
+                  key={id}
+                  variant={section === id ? 'default' : 'outline'}
+                  className={cn(
+                    'shrink-0 justify-start lg:w-full lg:border-l-2 lg:pl-6',
+                    menuColapsado && 'lg:px-0',
+                  )}
+                  onClick={() => onSectionChange(id)}
+                  title={menuColapsado ? t(label) : undefined}
+                >
+                  <Icon className={cn('size-4 shrink-0', !menuColapsado && 'mr-2')} />
+                  <span className={cn(menuColapsado && 'lg:sr-only')}>{t(label)}</span>
+                </Button>
+              ))}
+          </div>
         </nav>
       </aside>
       <div className="min-w-0">{children}</div>
