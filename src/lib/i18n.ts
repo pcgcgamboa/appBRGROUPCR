@@ -70,6 +70,12 @@ const mensajes = {
     hidePassword: 'Ocultar contraseña',
     protectedAccess: 'Su acceso está protegido y asociado a los permisos de su rol.',
     checkingSession: 'Comprobando sesión…',
+    collapseMenu: 'Colapsar menú',
+    expandMenu: 'Expandir menú',
+    viewProfile: 'Ver perfil',
+    profile: 'Perfil',
+    assignedRoles: 'Roles asignados',
+    close: 'Cerrar',
   },
   en: {
     appName: 'Service requests',
@@ -138,6 +144,12 @@ const mensajes = {
     hidePassword: 'Hide password',
     protectedAccess: 'Your access is protected and tied to your role permissions.',
     checkingSession: 'Checking session…',
+    collapseMenu: 'Collapse menu',
+    expandMenu: 'Expand menu',
+    viewProfile: 'View profile',
+    profile: 'Profile',
+    assignedRoles: 'Assigned roles',
+    close: 'Close',
   },
 } as const
 
