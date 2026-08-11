@@ -10,8 +10,8 @@ export function AppShell({ children }: PropsWithChildren) {
       <header className="sticky top-0 z-40 border-b bg-white/90 backdrop-blur-xl">
         <div className="container flex h-16 items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3 font-bold tracking-tight">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-sm text-primary-foreground shadow-sm">
-              CS
+            <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border bg-white p-1 shadow-sm">
+              <img src="/br-icon.png" alt="" className="size-full object-contain" />
             </span>
             <span className="truncate">{t('appName')}</span>
           </div>
