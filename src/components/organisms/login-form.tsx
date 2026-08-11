@@ -5,8 +5,10 @@ import { Button } from '@/components/atoms/button'
 import { FormField } from '@/components/molecules/form-field'
 import { loginSchema, type LoginFormData } from '@/features/auth/schemas/login.schema'
 import { supabase } from '@/lib/supabase'
+import { useI18n } from '@/lib/i18n'
 
 export function LoginForm() {
+  const { t } = useI18n()
   const [errorServidor, setErrorServidor] = useState<string | null>(null)
   const {
     register,
@@ -20,7 +22,7 @@ export function LoginForm() {
     if (!supabase) return
     setErrorServidor(null)
     const { error } = await supabase.auth.signInWithPassword(values)
-    if (error) setErrorServidor('No fue posible iniciar sesión. Verifique sus credenciales.')
+    if (error) setErrorServidor(t('invalidCredentials'))
   }
 
   return (
@@ -29,14 +31,12 @@ export function LoginForm() {
       className="grid gap-5 rounded-lg border bg-white p-6 shadow-sm"
     >
       <div>
-        <h2 className="text-xl font-semibold">Iniciar sesión</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Use su cuenta registrada en Supabase Auth.
-        </p>
+        <h2 className="text-xl font-semibold">{t('signIn')}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">{t('loginHelp')}</p>
       </div>
       <FormField
         id="email"
-        label="Correo electrónico"
+        label={t('email')}
         type="email"
         autoComplete="email"
         error={errors.email?.message}
@@ -44,7 +44,7 @@ export function LoginForm() {
       />
       <FormField
         id="password"
-        label="Contraseña"
+        label={t('password')}
         type="password"
         autoComplete="current-password"
         error={errors.password?.message}
@@ -56,7 +56,7 @@ export function LoginForm() {
         </p>
       )}
       <Button type="submit" disabled={isSubmitting}>
-        {isSubmitting ? 'Ingresando…' : 'Ingresar'}
+        {isSubmitting ? t('signingIn') : t('enter')}
       </Button>
     </form>
   )

@@ -9,6 +9,7 @@ import { useCatalogo } from '@/features/catalogos/hooks/use-catalogo'
 import type { Cliente, Rol } from '@/features/catalogos/types/catalogos.types'
 import { useUsuariosAdmin } from '@/features/usuarios/hooks/use-usuarios-admin'
 import type { DatosUsuarioAdmin, UsuarioAdmin } from '@/features/usuarios/types/usuarios.types'
+import { useI18n } from '@/lib/i18n'
 
 const initialValues: DatosUsuarioAdmin = {
   email: '',
@@ -21,6 +22,7 @@ const initialValues: DatosUsuarioAdmin = {
 }
 
 export function UsuariosPage() {
+  const { t } = useI18n()
   const { usuarios, guardar, eliminar } = useUsuariosAdmin()
   const { listado: roles } = useCatalogo<Rol>('roles')
   const { listado: clientes } = useCatalogo<Cliente>('clientes')
@@ -55,21 +57,17 @@ export function UsuariosPage() {
     setFormVisible(false)
   }
   async function confirmarEliminar(id: string) {
-    if (window.confirm('¿Eliminar definitivamente esta cuenta de autenticación?'))
-      await eliminar.mutateAsync(id)
+    if (window.confirm(t('deleteUserConfirm'))) await eliminar.mutateAsync(id)
   }
   const error = usuarios.error ?? guardar.error ?? eliminar.error
 
   return (
     <section className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <PageHeader
-          title="Usuarios"
-          description="Cuentas de acceso, relación con clientes y asignación multirrol."
-        />
+        <PageHeader title={t('users')} description={t('usersDescription')} />
         <Button onClick={nuevo}>
           <Plus className="mr-2 size-4" />
-          Nuevo usuario
+          {t('newUser')}
         </Button>
       </div>
       {formVisible && (
@@ -78,7 +76,7 @@ export function UsuariosPage() {
           className="grid gap-4 rounded-lg border bg-white p-5 shadow-sm sm:grid-cols-2"
         >
           <div className="flex items-center justify-between sm:col-span-2">
-            <h2 className="font-semibold">{values.id ? 'Editar usuario' : 'Nuevo usuario'}</h2>
+            <h2 className="font-semibold">{values.id ? t('editUser') : t('newUser')}</h2>
             <Button
               type="button"
               variant="outline"
@@ -89,7 +87,7 @@ export function UsuariosPage() {
             </Button>
           </div>
           <label className="grid gap-2 text-sm font-medium">
-            Nombre completo
+            {t('fullName')}
             <Input
               required
               value={values.nombre_completo}
@@ -97,7 +95,7 @@ export function UsuariosPage() {
             />
           </label>
           <label className="grid gap-2 text-sm font-medium">
-            Correo
+            {t('email')}
             <Input
               type="email"
               required
@@ -107,7 +105,7 @@ export function UsuariosPage() {
           </label>
           {!values.id && (
             <label className="grid gap-2 text-sm font-medium">
-              Contraseña inicial
+              {t('initialPassword')}
               <Input
                 type="password"
                 minLength={8}
@@ -118,19 +116,19 @@ export function UsuariosPage() {
             </label>
           )}
           <label className="grid gap-2 text-sm font-medium">
-            Teléfono
+            {t('phone')}
             <Input
               value={values.telefono ?? ''}
               onChange={(event) => setValues({ ...values, telefono: event.target.value || null })}
             />
           </label>
           <label className="grid gap-2 text-sm font-medium">
-            Cliente relacionado
+            {t('relatedClient')}
             <Select
               value={values.cliente_id ?? ''}
               onChange={(event) => setValues({ ...values, cliente_id: event.target.value || null })}
             >
-              <option value="">Sin cliente</option>
+              <option value="">{t('noClient')}</option>
               {clientes.data?.map((cliente) => (
                 <option key={cliente.id} value={cliente.id}>
                   {cliente.nombre}
@@ -145,7 +143,7 @@ export function UsuariosPage() {
               checked={values.activo}
               onChange={(event) => setValues({ ...values, activo: event.target.checked })}
             />
-            Usuario activo
+            {t('activeUser')}
           </label>
           <fieldset className="grid gap-3 sm:col-span-2">
             <legend className="mb-2 text-sm font-semibold">Roles</legend>
@@ -165,10 +163,10 @@ export function UsuariosPage() {
           </fieldset>
           <div className="flex gap-3 sm:col-span-2">
             <Button type="submit" disabled={guardar.isPending}>
-              {guardar.isPending ? 'Guardando…' : 'Guardar'}
+              {guardar.isPending ? t('saving') : t('save')}
             </Button>
             <Button type="button" variant="outline" onClick={() => setFormVisible(false)}>
-              Cancelar
+              {t('cancel')}
             </Button>
           </div>
         </form>
@@ -182,18 +180,18 @@ export function UsuariosPage() {
         <table className="w-full min-w-[760px] text-left text-sm">
           <thead className="bg-muted">
             <tr>
-              <th className="px-4 py-3">Nombre</th>
-              <th className="px-4 py-3">Correo</th>
-              <th className="px-4 py-3">Roles</th>
-              <th className="px-4 py-3">Activo</th>
-              <th className="px-4 py-3 text-right">Acciones</th>
+              <th className="px-4 py-3">{t('name')}</th>
+              <th className="px-4 py-3">{t('email')}</th>
+              <th className="px-4 py-3">{t('roles')}</th>
+              <th className="px-4 py-3">{t('active')}</th>
+              <th className="px-4 py-3 text-right">{t('actions')}</th>
             </tr>
           </thead>
           <tbody>
             {usuarios.isLoading ? (
               <tr>
                 <td colSpan={5} className="px-4 py-8 text-center">
-                  Cargando…
+                  {t('loading')}
                 </td>
               </tr>
             ) : (
@@ -210,7 +208,7 @@ export function UsuariosPage() {
                       ))}
                     </div>
                   </td>
-                  <td className="px-4 py-3">{usuario.activo ? 'Sí' : 'No'}</td>
+                  <td className="px-4 py-3">{usuario.activo ? t('yes') : t('no')}</td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2">
                       <Button

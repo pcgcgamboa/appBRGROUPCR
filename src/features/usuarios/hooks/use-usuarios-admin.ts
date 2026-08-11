@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import type { DatosUsuarioAdmin, UsuarioAdmin } from '@/features/usuarios/types/usuarios.types'
+import { traducirError } from '@/lib/i18n'
 
 async function invocar(accion: string, usuario?: Partial<DatosUsuarioAdmin>) {
   if (!supabase) throw new Error('Supabase no está configurado.')
@@ -14,11 +15,11 @@ async function invocar(accion: string, usuario?: Partial<DatosUsuarioAdmin>) {
         .clone()
         .json()
         .catch(() => null)) as { error?: string } | null
-      if (detalle?.error) throw new Error(detalle.error)
+      if (detalle?.error) throw new Error(traducirError(detalle.error))
     }
     throw error
   }
-  if (data?.error) throw new Error(data.error as string)
+  if (data?.error) throw new Error(traducirError(data.error as string))
   return data as { usuarios?: UsuarioAdmin[] }
 }
 

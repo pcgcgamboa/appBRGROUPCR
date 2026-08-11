@@ -14,6 +14,7 @@ import {
 import type { ReactNode } from 'react'
 import { Button } from '@/components/atoms/button'
 import { LogoutButton } from '@/components/molecules/logout-button'
+import { useI18n, type ClaveTraduccion } from '@/lib/i18n'
 
 export type AdminSection =
   | 'solicitudes'
@@ -28,18 +29,18 @@ export type AdminSection =
   | 'usuarios'
   | 'roles'
 
-const navigation: { id: AdminSection; label: string; icon: typeof Boxes }[] = [
-  { id: 'solicitudes', label: 'Solicitudes', icon: ClipboardList },
-  { id: 'rutas', label: 'Control de ruta', icon: MapPin },
-  { id: 'notificaciones', label: 'Notificaciones', icon: Bell },
-  { id: 'reportes', label: 'Reportes', icon: ChartPie },
-  { id: 'clientes', label: 'Clientes', icon: Building2 },
-  { id: 'ubicaciones', label: 'Ubicaciones', icon: MapPin },
-  { id: 'tipos', label: 'Tipos', icon: Tags },
-  { id: 'materiales', label: 'Materiales', icon: Package },
-  { id: 'vehiculos', label: 'Vehículos', icon: Car },
-  { id: 'usuarios', label: 'Usuarios', icon: Users },
-  { id: 'roles', label: 'Roles', icon: Shield },
+const navigation: { id: AdminSection; label: ClaveTraduccion; icon: typeof Boxes }[] = [
+  { id: 'solicitudes', label: 'requests', icon: ClipboardList },
+  { id: 'rutas', label: 'routeControl', icon: MapPin },
+  { id: 'notificaciones', label: 'notifications', icon: Bell },
+  { id: 'reportes', label: 'reports', icon: ChartPie },
+  { id: 'clientes', label: 'clients', icon: Building2 },
+  { id: 'ubicaciones', label: 'locations', icon: MapPin },
+  { id: 'tipos', label: 'types', icon: Tags },
+  { id: 'materiales', label: 'materials', icon: Package },
+  { id: 'vehiculos', label: 'vehicles', icon: Car },
+  { id: 'usuarios', label: 'users', icon: Users },
+  { id: 'roles', label: 'roles', icon: Shield },
 ]
 
 export function AdminShell({
@@ -51,14 +52,15 @@ export function AdminShell({
   onSectionChange: (section: AdminSection) => void
   children: ReactNode
 }) {
+  const { t } = useI18n()
   return (
     <div className="grid gap-8 lg:grid-cols-[220px_1fr]">
       <aside>
         <div className="mb-3 flex items-center gap-2 font-semibold">
           <Boxes className="size-5 text-primary" />
-          Administración
+          {t('administration')}
         </div>
-        <nav className="flex gap-2 overflow-x-auto pb-2 lg:grid" aria-label="Administración">
+        <nav className="flex gap-2 overflow-x-auto pb-2 lg:grid" aria-label={t('administration')}>
           {navigation.map(({ id, label, icon: Icon }) => (
             <Button
               key={id}
@@ -67,7 +69,7 @@ export function AdminShell({
               onClick={() => onSectionChange(id)}
             >
               <Icon className="mr-2 size-4" />
-              {label}
+              {t(label)}
             </Button>
           ))}
         </nav>
