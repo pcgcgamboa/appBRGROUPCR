@@ -17,8 +17,12 @@ export function LoginPage() {
         <div className="absolute -bottom-32 -left-20 size-80 rounded-full bg-blue-400/20 blur-3xl" />
         <div className="relative flex h-full flex-col justify-between">
           <div>
-            <div className="mb-16 flex size-14 items-center justify-center rounded-2xl border border-white/20 bg-white/10 backdrop-blur">
-              <ClipboardCheck className="size-7" />
+            <div className="mb-12 max-w-md rounded-2xl bg-white p-4 shadow-xl shadow-slate-950/20">
+              <img
+                src="/br-mantenimiento-logo.png"
+                alt="BR Mantenimiento General"
+                className="h-auto w-full object-contain"
+              />
             </div>
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-200">
               {t('loginEyebrow')}
@@ -44,6 +48,13 @@ export function LoginPage() {
         </div>
       </div>
       <div className="mx-auto w-full max-w-md rounded-3xl border bg-white p-6 shadow-xl shadow-slate-900/5 sm:p-9">
+        <div className="mb-7 rounded-2xl border bg-white p-3 shadow-sm lg:hidden">
+          <img
+            src="/br-mantenimiento-logo.png"
+            alt="BR Mantenimiento General"
+            className="mx-auto h-auto max-h-28 w-full object-contain"
+          />
+        </div>
         <LoginForm />
       </div>
     </section>
