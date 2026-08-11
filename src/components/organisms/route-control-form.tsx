@@ -261,11 +261,28 @@ export function RouteControlForm({
           />
         </label>
       </div>
-      <LocationMap
-        latitude={latitude}
-        longitude={longitude}
-        label={`Solicitud #${solicitud.numero}`}
-      />
+      <div className="space-y-3">
+        <div>
+          <h3 className="text-sm font-semibold">Ubicación de la ruta en el mapa</h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Confirme el punto registrado o haga clic en otra posición del mapa de Costa Rica para
+            actualizarlo.
+          </p>
+        </div>
+        <LocationMap
+          latitude={latitude}
+          longitude={longitude}
+          label={`Solicitud #${solicitud.numero}`}
+          selectable
+          onLocationChange={(latitud, longitud) =>
+            setValues((current) => ({
+              ...current,
+              latitud: String(latitud),
+              longitud: String(longitud),
+            }))
+          }
+        />
+      </div>
       {guardar.error && (
         <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-800">
           {guardar.error.message}
