@@ -41,6 +41,7 @@ export function BandejaEncargadoPage() {
   const [operadorId, setOperadorId] = useState('')
   const [estado, setEstado] = useState<EstadoSolicitud>('asignada')
   const [motivo, setMotivo] = useState('')
+  const [comentarioPeticion, setComentarioPeticion] = useState('')
   const [creando, setCreando] = useState(false)
   const [vista, setVista] = useState<'lista' | 'mapa'>('lista')
 
@@ -50,6 +51,7 @@ export function BandejaEncargadoPage() {
     setOperadorId(item.operador_id ?? '')
     setEstado(transicionesDisponibles(item)[0] ?? item.estado)
     setMotivo('')
+    setComentarioPeticion('')
   }
 
   async function ejecutar(input: Parameters<typeof gestionar.mutateAsync>[0]) {
@@ -61,6 +63,12 @@ export function BandejaEncargadoPage() {
   const ordenadas = [...(solicitudes.data ?? [])].sort(
     (a, b) => (a.prioridad ? rango[a.prioridad] : -1) - (b.prioridad ? rango[b.prioridad] : -1),
   )
+  const peticionPendiente = seleccionada?.peticiones.find(
+    (peticion) => peticion.estado === 'pendiente',
+  )
+  const admiteReasignacion =
+    seleccionada &&
+    ['en_atencion', 'en_espera_materiales', 'atendida'].includes(seleccionada.estado)
 
   return (
     <section className="space-y-6">
@@ -146,7 +154,14 @@ export function BandejaEncargadoPage() {
                     <td className="px-4 py-3">
                       <Badge>{item.prioridad ?? 'Por definir'}</Badge>
                     </td>
-                    <td className="px-4 py-3">{item.estado.replace(/_/g, ' ')}</td>
+                    <td className="px-4 py-3">
+                      <div>{item.estado.replace(/_/g, ' ')}</div>
+                      {item.peticiones.some((peticion) => peticion.estado === 'pendiente') && (
+                        <span className="mt-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900">
+                          Petición pendiente
+                        </span>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       <SlaBadge
                         venceEn={item.sla_vence_en}
@@ -178,6 +193,89 @@ export function BandejaEncargadoPage() {
           <h2 className="font-semibold">
             Gestionar #{seleccionada.numero}: {seleccionada.nombre}
           </h2>
+          {peticionPendiente && (
+            <div className="mt-4 space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+              <div>
+                <p className="font-semibold text-amber-950">
+                  Solicitud de {peticionPendiente.tipo === 'cierre' ? 'cierre' : 'cancelación'} del
+                  Operador
+                </p>
+                <p className="mt-1 text-sm text-amber-900">{peticionPendiente.motivo}</p>
+              </div>
+              <Textarea
+                value={comentarioPeticion}
+                placeholder="Comentario de la decisión (obligatorio al rechazar)"
+                onChange={(event) => setComentarioPeticion(event.target.value)}
+              />
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  disabled={gestionar.isPending}
+                  onClick={() =>
+                    void ejecutar({
+                      accion: 'resolver_peticion',
+                      solicitud_id: seleccionada.id,
+                      peticion_id: peticionPendiente.id,
+                      aprobar: true,
+                      motivo: comentarioPeticion,
+                    })
+                  }
+                >
+                  Aprobar petición
+                </Button>
+                <Button
+                  variant="outline"
+                  className="text-red-700"
+                  disabled={gestionar.isPending || comentarioPeticion.trim().length < 5}
+                  onClick={() =>
+                    void ejecutar({
+                      accion: 'resolver_peticion',
+                      solicitud_id: seleccionada.id,
+                      peticion_id: peticionPendiente.id,
+                      aprobar: false,
+                      motivo: comentarioPeticion,
+                    })
+                  }
+                >
+                  Rechazar petición
+                </Button>
+              </div>
+              {peticionPendiente.tipo === 'cierre' && !seleccionada.validacion && (
+                <p className="text-xs text-amber-800">
+                  El cierre solo podrá aprobarse después de la validación del Cliente.
+                </p>
+              )}
+            </div>
+          )}
+          {admiteReasignacion && (
+            <div className="mt-4 grid gap-3 rounded-xl border bg-muted/40 p-4 sm:grid-cols-[1fr_auto] sm:items-end">
+              <label className="grid gap-2 text-sm font-medium">
+                Reasignar a otro operador
+                <Select value={operadorId} onChange={(event) => setOperadorId(event.target.value)}>
+                  <option value="">Seleccione…</option>
+                  {operadores.data?.map((operador) => (
+                    <option key={operador.id} value={operador.id}>
+                      {operador.nombre_completo}
+                    </option>
+                  ))}
+                </Select>
+              </label>
+              <Button
+                disabled={
+                  !operadorId || operadorId === seleccionada.operador_id || gestionar.isPending
+                }
+                onClick={() =>
+                  void ejecutar({
+                    accion: 'asignar',
+                    solicitud_id: seleccionada.id,
+                    prioridad: seleccionada.prioridad ?? prioridad,
+                    operador_id: operadorId,
+                  })
+                }
+              >
+                Reasignar solicitud
+              </Button>
+            </div>
+          )}
           {seleccionada.estado === 'creada' || seleccionada.estado === 'asignada' ? (
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <label className="grid gap-2 text-sm font-medium">

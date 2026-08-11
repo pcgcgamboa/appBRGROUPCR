@@ -33,6 +33,14 @@ export interface SolicitudAdmin {
   ruta: { latitud: number | null; longitud: number | null } | null
   operador: { nombre_completo: string } | null
   validacion: { satisfecho: boolean; comentario: string | null; validado_en: string } | null
+  peticiones: {
+    id: string
+    tipo: 'cierre' | 'cancelacion'
+    motivo: string
+    estado: 'pendiente' | 'aprobada' | 'rechazada'
+    creado_en: string
+    comentario_resolucion: string | null
+  }[]
 }
 
 export interface OperadorResumen {

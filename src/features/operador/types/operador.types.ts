@@ -9,6 +9,7 @@ export interface SolicitudOperador {
   prioridad: string | null
   cliente: { nombre: string } | null
   tipo: { nombre: string } | null
+  peticiones: PeticionResolucion[]
   ruta: {
     vehiculo_id: string | null
     vehiculo: { placa: string; tipo: string } | null
@@ -17,6 +18,15 @@ export interface SolicitudOperador {
     distrito: string
     otras_senas: string | null
   } | null
+}
+
+export interface PeticionResolucion {
+  id: string
+  tipo: 'cierre' | 'cancelacion'
+  motivo: string
+  estado: 'pendiente' | 'aprobada' | 'rechazada'
+  creado_en: string
+  comentario_resolucion: string | null
 }
 
 export interface MaterialAvanceInput {

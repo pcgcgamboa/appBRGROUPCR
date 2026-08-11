@@ -1,9 +1,10 @@
-import { ClipboardCheck, MapPin } from 'lucide-react'
+import { ClipboardCheck, MapPin, Send } from 'lucide-react'
 import { useState } from 'react'
 import { Badge } from '@/components/atoms/badge'
 import { Button } from '@/components/atoms/button'
 import { PageHeader } from '@/components/molecules/page-header'
 import { OperatorProgressForm } from '@/components/organisms/operator-progress-form'
+import { OperatorResolutionRequest } from '@/components/organisms/operator-resolution-request'
 import { ProgressHistory } from '@/components/organisms/progress-history'
 import { useSolicitudesOperador } from '@/features/operador/hooks/use-operador'
 import type { SolicitudOperador } from '@/features/operador/types/operador.types'
@@ -11,6 +12,7 @@ import type { SolicitudOperador } from '@/features/operador/types/operador.types
 export function OperadorPage({ usuarioId }: { usuarioId: string }) {
   const solicitudes = useSolicitudesOperador(usuarioId)
   const [seleccionada, setSeleccionada] = useState<SolicitudOperador | null>(null)
+  const [peticionSeleccionada, setPeticionSeleccionada] = useState<SolicitudOperador | null>(null)
   return (
     <section className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -55,10 +57,25 @@ export function OperadorPage({ usuarioId }: { usuarioId: string }) {
                 <span className="text-amber-800">Control de ruta pendiente</span>
               )}
             </div>
-            <Button className="mt-4 w-full sm:w-auto" onClick={() => setSeleccionada(solicitud)}>
-              <ClipboardCheck className="mr-2 size-4" />
-              Atender solicitud
-            </Button>
+            {solicitud.peticiones.some((peticion) => peticion.estado === 'pendiente') ? (
+              <p className="mt-4 rounded-lg bg-amber-50 p-3 text-sm font-medium text-amber-900">
+                Petición de {solicitud.peticiones.find((item) => item.estado === 'pendiente')?.tipo}{' '}
+                pendiente de aprobación.
+              </p>
+            ) : (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {solicitud.estado !== 'atendida' && (
+                  <Button onClick={() => setSeleccionada(solicitud)}>
+                    <ClipboardCheck className="mr-2 size-4" /> Atender solicitud
+                  </Button>
+                )}
+                <Button variant="outline" onClick={() => setPeticionSeleccionada(solicitud)}>
+                  <Send className="mr-2 size-4" />
+                  Solicitar{' '}
+                  {solicitud.estado === 'atendida' ? 'cierre o cancelación' : 'cancelación'}
+                </Button>
+              </div>
+            )}
           </article>
         ))}
       </div>
@@ -66,6 +83,12 @@ export function OperadorPage({ usuarioId }: { usuarioId: string }) {
         <p className="rounded-lg border bg-white p-6 text-center text-sm text-muted-foreground">
           No tiene solicitudes pendientes de atención.
         </p>
+      )}
+      {peticionSeleccionada && (
+        <OperatorResolutionRequest
+          solicitud={peticionSeleccionada}
+          onClose={() => setPeticionSeleccionada(null)}
+        />
       )}
       {seleccionada && (
         <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">

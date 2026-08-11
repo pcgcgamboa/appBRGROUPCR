@@ -18,14 +18,39 @@ export function useSolicitudesOperador(usuarioId?: string) {
       const { data, error } = await supabase
         .from('solicitudes')
         .select(
-          'id, numero, nombre, detalle, estado, prioridad, cliente:clientes(nombre), tipo:tipos_solicitud(nombre), ruta:rutas(vehiculo_id, vehiculo:vehiculos(placa, tipo), provincia, canton, distrito, otras_senas)',
+          'id, numero, nombre, detalle, estado, prioridad, cliente:clientes(nombre), tipo:tipos_solicitud(nombre), ruta:rutas(vehiculo_id, vehiculo:vehiculos(placa, tipo), provincia, canton, distrito, otras_senas), peticiones:solicitud_peticiones_resolucion(id, tipo, motivo, estado, creado_en, comentario_resolucion)',
         )
         .eq('operador_id', usuarioId)
-        .in('estado', ['asignada', 'en_atencion', 'en_espera_materiales'])
+        .in('estado', ['asignada', 'en_atencion', 'en_espera_materiales', 'atendida'])
         .order('creado_en', { ascending: false })
       if (error) throw error
       return data as unknown as SolicitudOperador[]
     },
+  })
+}
+
+export function useSolicitarResolucion() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      solicitud_id,
+      tipo,
+      motivo,
+    }: {
+      solicitud_id: string
+      tipo: 'cierre' | 'cancelacion'
+      motivo: string
+    }) => {
+      if (!supabase) throw new Error('Supabase no está configurado.')
+      const { data, error } = await supabase.rpc('solicitar_resolucion_solicitud', {
+        p_solicitud_id: solicitud_id,
+        p_tipo: tipo,
+        p_motivo: motivo,
+      })
+      if (error) throw error
+      return data as string
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['solicitudes-operador'] }),
   })
 }
 

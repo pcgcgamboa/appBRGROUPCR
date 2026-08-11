@@ -55,11 +55,12 @@ Deno.serve(async (request) => {
     if (payload.accion === 'asignar') {
       if (!payload.prioridad || !payload.operador_id)
         return respuesta({ error: 'Prioridad y operador son obligatorios.' }, 400)
-      if (solicitud.estado !== 'creada' && solicitud.estado !== 'asignada')
-        return respuesta(
-          { error: 'Solo se puede asignar o reasignar una solicitud creada o asignada.' },
-          409,
+      if (
+        !['creada', 'asignada', 'en_atencion', 'en_espera_materiales', 'atendida'].includes(
+          solicitud.estado,
         )
+      )
+        return respuesta({ error: 'La solicitud no admite reasignación en su estado actual.' }, 409)
       const { data: operadorValido } = await caller
         .from('usuario_roles')
         .select(
@@ -89,11 +90,29 @@ Deno.serve(async (request) => {
           prioridad: payload.prioridad,
           sla_horas: horas,
           sla_vence_en: vence,
-          estado: 'asignada',
+          estado: solicitud.estado === 'creada' ? 'asignada' : solicitud.estado,
           motivo_rechazo_cancelacion: null,
         })
         .eq('id', payload.solicitud_id)
       if (error) throw error
+      if (solicitud.operador_id && solicitud.operador_id !== payload.operador_id) {
+        await caller
+          .from('ruta_operarios')
+          .delete()
+          .eq('solicitud_id', payload.solicitud_id)
+          .eq('operario_id', solicitud.operador_id)
+        const { data: ruta } = await caller
+          .from('rutas')
+          .select('solicitud_id')
+          .eq('solicitud_id', payload.solicitud_id)
+          .maybeSingle()
+        if (ruta)
+          await caller.from('ruta_operarios').upsert({
+            solicitud_id: payload.solicitud_id,
+            operario_id: payload.operador_id,
+            estado: 'disponible',
+          })
+      }
       if (solicitud.estado !== 'asignada')
         await notificarEstado(payload.solicitud_id, 'asignada').catch(console.error)
       return respuesta({
