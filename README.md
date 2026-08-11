@@ -30,3 +30,4 @@ La especificación funcional se encuentra en `docs/requerimientos-sistema-solici
 - `supabase/migrations`: esquema, datos iniciales, RLS y reglas de integridad.
 - `docs/modelo-datos-fase-1.md`: decisiones y diagrama de relaciones.
 - `docs/configuracion-supabase.md`: preparación del proyecto remoto y primer administrador.
+- `docs/fase-3-solicitudes-sla.md`: creación, asignación, estados y cálculo de SLA.

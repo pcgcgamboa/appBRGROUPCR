@@ -1,7 +1,11 @@
+import { useState } from 'react'
+import { RoleSwitcher } from '@/components/molecules/role-switcher'
 import { LoginForm } from '@/components/organisms/login-form'
 import { SessionPanel } from '@/components/organisms/session-panel'
 import { SetupOverview } from '@/components/organisms/setup-overview'
 import { AdminDashboardPage } from '@/components/pages/admin/admin-dashboard-page'
+import { BandejaEncargadoPage } from '@/components/pages/encargado/bandeja-encargado-page'
+import { SolicitantePage } from '@/components/pages/solicitante/solicitante-page'
 import { AppShell } from '@/components/templates/app-shell'
 import { usePerfilActual } from '@/features/auth/hooks/use-perfil-actual'
 import { useSession } from '@/features/auth/hooks/use-session'
@@ -10,11 +14,39 @@ import { supabaseConfigurado } from '@/lib/supabase'
 export function HomePage() {
   const { session, cargando } = useSession()
   const perfil = usePerfilActual(session?.user.id)
+  const [rolSeleccionado, setRolSeleccionado] = useState<string | null>(null)
+  const rolesDisponibles =
+    perfil.data?.roles.filter((rol) =>
+      ['administrador', 'encargado', 'solicitante'].includes(rol),
+    ) ?? []
+  const rolActivo =
+    rolSeleccionado && rolesDisponibles.includes(rolSeleccionado)
+      ? rolSeleccionado
+      : rolesDisponibles[0]
 
-  if (session && perfil.data?.roles.includes('administrador')) {
+  if (session && rolActivo === 'administrador') {
     return (
       <AppShell>
+        <RoleSwitcher roles={rolesDisponibles} active={rolActivo} onChange={setRolSeleccionado} />
         <AdminDashboardPage />
+      </AppShell>
+    )
+  }
+
+  if (session && rolActivo === 'encargado') {
+    return (
+      <AppShell>
+        <RoleSwitcher roles={rolesDisponibles} active={rolActivo} onChange={setRolSeleccionado} />
+        <BandejaEncargadoPage />
+      </AppShell>
+    )
+  }
+
+  if (session && rolActivo === 'solicitante') {
+    return (
+      <AppShell>
+        <RoleSwitcher roles={rolesDisponibles} active={rolActivo} onChange={setRolSeleccionado} />
+        <SolicitantePage usuarioId={session.user.id} clienteId={perfil.data?.cliente_id ?? null} />
       </AppShell>
     )
   }
