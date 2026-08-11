@@ -12,6 +12,8 @@ export function SessionToolbar({
   onChange: (role: string) => void
   showLogout?: boolean
 }) {
+  if (roles.length < 2 && !showLogout) return null
+
   return (
     <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-white p-3 shadow-sm">
       <RoleSwitcher roles={roles} active={active} onChange={onChange} />

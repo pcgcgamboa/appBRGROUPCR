@@ -17,7 +17,7 @@ export function AppShell({ children }: PropsWithChildren) {
           <LanguageSwitcher />
         </div>
       </header>
-      <main className="container py-6 sm:py-10">{children}</main>
+      <main className="container py-3 sm:py-5">{children}</main>
     </div>
   )
 }

@@ -23,10 +23,11 @@ export function useCatalogo<T extends EntidadBase>(tabla: string) {
     mutationFn: async ({ id, values }: { id?: string | number; values: DatosFormulario }) => {
       if (!supabase) throw new Error('Supabase no está configurado.')
       const consulta = id
-        ? supabase.from(tabla).update(values).eq('id', id)
-        : supabase.from(tabla).insert(values)
-      const { error } = await consulta
+        ? supabase.from(tabla).update(values).eq('id', id).select('id').single()
+        : supabase.from(tabla).insert(values).select('id').single()
+      const { data, error } = await consulta
       if (error) throw error
+      return data.id as string | number
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey }),
   })

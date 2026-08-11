@@ -1,5 +1,5 @@
 import { Pencil, Plus, Trash2, X } from 'lucide-react'
-import { type FormEvent, useMemo, useState } from 'react'
+import { type FormEvent, type ReactNode, useMemo, useState } from 'react'
 import { Button } from '@/components/atoms/button'
 import { Input } from '@/components/atoms/input'
 import { Select } from '@/components/atoms/select'
@@ -12,13 +12,17 @@ import type {
   EntidadBase,
 } from '@/features/catalogos/types/catalogos.types'
 
-interface CatalogManagerProps {
+interface CatalogManagerProps<T> {
   tabla: string
   title: string
   description: string
   fields: CampoCatalogo[]
   columns: string[]
   columnLabels: Record<string, string>
+  extraFormContent?: ReactNode
+  onOpenNew?: () => void
+  onOpenEdit?: (item: T) => void
+  onSaved?: (id: string | number) => Promise<void>
 }
 
 function valoresIniciales(fields: CampoCatalogo[]) {
@@ -34,22 +38,30 @@ export function CatalogManager<T extends EntidadBase>({
   fields,
   columns,
   columnLabels,
-}: CatalogManagerProps) {
+  extraFormContent,
+  onOpenNew,
+  onOpenEdit,
+  onSaved,
+}: CatalogManagerProps<T>) {
   const { listado, guardar, eliminar } = useCatalogo<T>(tabla)
   const initialValues = useMemo(() => valoresIniciales(fields), [fields])
   const [formVisible, setFormVisible] = useState(false)
   const [editingId, setEditingId] = useState<string | number | undefined>()
   const [values, setValues] = useState<DatosFormulario>(initialValues)
+  const [extraError, setExtraError] = useState<Error | null>(null)
 
   function abrirNuevo() {
     setEditingId(undefined)
+    setExtraError(null)
     setValues(initialValues)
     setFormVisible(true)
+    onOpenNew?.()
   }
 
   function abrirEdicion(item: T) {
     const record = item as unknown as Record<string, unknown>
     setEditingId(item.id)
+    setExtraError(null)
     setValues(
       Object.fromEntries(
         fields.map((field) => [
@@ -59,6 +71,7 @@ export function CatalogManager<T extends EntidadBase>({
       ),
     )
     setFormVisible(true)
+    onOpenEdit?.(item)
   }
 
   async function enviar(event: FormEvent) {
@@ -71,7 +84,15 @@ export function CatalogManager<T extends EntidadBase>({
         return [field.name, value]
       }),
     ) as DatosFormulario
-    await guardar.mutateAsync({ id: editingId, values: payload })
+    const idGuardado = await guardar.mutateAsync({ id: editingId, values: payload })
+    try {
+      await onSaved?.(idGuardado)
+    } catch (error) {
+      setExtraError(
+        error instanceof Error ? error : new Error('No fue posible completar la operación.'),
+      )
+      return
+    }
     setFormVisible(false)
   }
 
@@ -85,7 +106,7 @@ export function CatalogManager<T extends EntidadBase>({
     }
   }
 
-  const error = listado.error ?? guardar.error ?? eliminar.error
+  const error = listado.error ?? guardar.error ?? eliminar.error ?? extraError
 
   return (
     <section className="space-y-6">
@@ -169,6 +190,7 @@ export function CatalogManager<T extends EntidadBase>({
               )}
             </label>
           ))}
+          {extraFormContent}
           <div className="flex gap-3 sm:col-span-2">
             <Button type="submit" disabled={guardar.isPending}>
               {guardar.isPending ? 'Guardando…' : 'Guardar'}
