@@ -32,6 +32,7 @@ interface CatalogManagerProps<T> {
   onOpenNew?: () => void
   onOpenEdit?: (item: T) => void
   onSaved?: (id: string | number) => Promise<void>
+  extraActions?: (item: T) => ReactNode
 }
 
 function valoresIniciales(fields: CampoCatalogo[]) {
@@ -51,6 +52,7 @@ export function CatalogManager<T extends EntidadBase>({
   onOpenNew,
   onOpenEdit,
   onSaved,
+  extraActions,
 }: CatalogManagerProps<T>) {
   const { listado, guardar, eliminar } = useCatalogo<T>(tabla)
   const initialValues = useMemo(() => valoresIniciales(fields), [fields])
@@ -257,6 +259,7 @@ export function CatalogManager<T extends EntidadBase>({
                     ))}
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-2">
+                        {extraActions?.(item)}
                         <Button
                           variant="outline"
                           className="h-9 px-3"

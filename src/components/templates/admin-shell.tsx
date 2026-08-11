@@ -26,7 +26,6 @@ export type AdminSection =
   | 'notificaciones'
   | 'reportes'
   | 'clientes'
-  | 'ubicaciones'
   | 'tipos'
   | 'materiales'
   | 'vehiculos'
@@ -40,7 +39,6 @@ const navigation: { id: AdminSection; label: ClaveTraduccion; icon: typeof Boxes
   { id: 'notificaciones', label: 'notifications', icon: Bell },
   { id: 'reportes', label: 'reports', icon: ChartPie },
   { id: 'clientes', label: 'clients', icon: Building2 },
-  { id: 'ubicaciones', label: 'locations', icon: MapPin },
   { id: 'tipos', label: 'types', icon: Tags },
   { id: 'materiales', label: 'materials', icon: Package },
   { id: 'vehiculos', label: 'vehicles', icon: Car },

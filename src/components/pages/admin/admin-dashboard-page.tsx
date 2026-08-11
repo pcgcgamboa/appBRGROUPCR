@@ -8,7 +8,6 @@ import { ControlRutasPage } from '@/components/pages/encargado/control-rutas-pag
 import { NotificacionesPage } from '@/components/pages/encargado/notificaciones-page'
 import { ReportesPage } from '@/components/pages/reportes/reportes-page'
 import { TiposPage } from '@/components/pages/admin/tipos-page'
-import { UbicacionesPage } from '@/components/pages/admin/ubicaciones-page'
 import { UsuariosPage } from '@/components/pages/admin/usuarios-page'
 import { VehiculosPage } from '@/components/pages/admin/vehiculos-page'
 import { MarcaPage } from '@/components/pages/admin/marca-page'
@@ -19,7 +18,6 @@ const pages: Record<AdminSection, () => React.JSX.Element> = {
   notificaciones: NotificacionesPage,
   reportes: () => <ReportesPage />,
   clientes: ClientesPage,
-  ubicaciones: UbicacionesPage,
   tipos: TiposPage,
   materiales: MaterialesPage,
   vehiculos: VehiculosPage,
