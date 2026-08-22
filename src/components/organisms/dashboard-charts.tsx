@@ -38,7 +38,7 @@ function ChartCard({
 }) {
   return (
     <section
-      className="group min-w-0 cursor-pointer rounded-lg border bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 sm:p-5"
+      className="group min-w-0 cursor-pointer rounded-lg border bg-card p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:p-5"
       role="link"
       tabIndex={0}
       aria-label={`${title}. Ver solicitudes`}

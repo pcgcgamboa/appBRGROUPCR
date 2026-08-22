@@ -49,7 +49,7 @@ export function MarcaPage() {
       />
       <form
         onSubmit={guardar}
-        className="space-y-6 rounded-2xl border bg-white p-5 shadow-sm sm:p-7"
+        className="space-y-6 rounded-2xl border bg-card p-5 shadow-sm sm:p-7"
       >
         <div className="grid gap-6 md:grid-cols-2">
           <SelectorImagen
@@ -70,12 +70,12 @@ export function MarcaPage() {
           />
         </div>
         {actualizar.error && (
-          <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">
+          <p role="alert" className="rounded-lg bg-destructive-soft p-3 text-sm text-destructive-soft-foreground">
             {actualizar.error.message}
           </p>
         )}
         {actualizar.isSuccess && !logo && !icono && (
-          <p role="status" className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">
+          <p role="status" className="rounded-lg bg-success-soft p-3 text-sm text-success-soft-foreground">
             La identidad visual se actualizó correctamente.
           </p>
         )}
@@ -104,12 +104,12 @@ function SelectorImagen({
   onChange: (event: ChangeEvent<HTMLInputElement>) => void
 }) {
   return (
-    <div className="space-y-3 rounded-xl border bg-slate-50 p-4">
+    <div className="space-y-3 rounded-xl border bg-muted/40 p-4">
       <div>
         <h2 className="font-semibold">{title}</h2>
         <p className="mt-1 text-xs leading-5 text-muted-foreground">{help}</p>
       </div>
-      <div className="flex h-44 items-center justify-center overflow-hidden rounded-xl border bg-white p-4">
+      <div className="flex h-44 items-center justify-center overflow-hidden rounded-xl border bg-card p-4">
         {src ? (
           <img src={src} alt={`Vista previa: ${title}`} className={`${className} object-contain`} />
         ) : (

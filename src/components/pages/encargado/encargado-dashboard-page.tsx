@@ -1,61 +1,70 @@
 import { Bell, ChartPie, ClipboardList, MapPinned } from 'lucide-react'
 import { useState } from 'react'
-import { Button } from '@/components/atoms/button'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/atoms/tabs'
 import { BandejaEncargadoPage } from '@/components/pages/encargado/bandeja-encargado-page'
 import { ControlRutasPage } from '@/components/pages/encargado/control-rutas-page'
 import { NotificacionesPage } from '@/components/pages/encargado/notificaciones-page'
 import { ReportesPage } from '@/components/pages/reportes/reportes-page'
+import { OperationsHomePage } from '@/components/pages/operations-home-page'
+import { useCantidadNotificacionesPendientes } from '@/features/notificaciones/hooks/use-notificaciones-internas'
+
+type Seccion = 'home' | 'solicitudes' | 'rutas' | 'notificaciones' | 'reportes'
 
 export function EncargadoDashboardPage() {
-  const [section, setSection] = useState<'solicitudes' | 'rutas' | 'notificaciones' | 'reportes'>(
-    'solicitudes',
-  )
+  const [section, setSection] = useState<Seccion>('home')
+  const notificacionesPendientes = useCantidadNotificacionesPendientes().cantidad
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <nav
-          className="flex flex-wrap gap-2 rounded-lg border bg-white p-3"
-          aria-label="Gestión del proceso"
-        >
-          <Button
-            variant={section === 'solicitudes' ? 'default' : 'outline'}
-            onClick={() => setSection('solicitudes')}
-          >
-            <ClipboardList className="mr-2 size-4" />
-            Solicitudes
-          </Button>
-          <Button
-            variant={section === 'rutas' ? 'default' : 'outline'}
-            onClick={() => setSection('rutas')}
-          >
-            <MapPinned className="mr-2 size-4" />
-            Control de ruta
-          </Button>
-          <Button
-            variant={section === 'notificaciones' ? 'default' : 'outline'}
-            onClick={() => setSection('notificaciones')}
-          >
-            <Bell className="mr-2 size-4" />
-            Notificaciones
-          </Button>
-          <Button
-            variant={section === 'reportes' ? 'default' : 'outline'}
-            onClick={() => setSection('reportes')}
-          >
-            <ChartPie className="mr-2 size-4" />
-            Reportes
-          </Button>
-        </nav>
-      </div>
-      {section === 'solicitudes' ? (
+    <Tabs
+      value={section}
+      onValueChange={(value) => setSection(value as Seccion)}
+      className="space-y-6"
+    >
+      <button
+        type="button"
+        className="rounded-md text-sm font-bold uppercase tracking-wider text-muted-foreground transition hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        onClick={() => setSection('home')}
+        aria-current={section === 'home' ? 'page' : undefined}
+      >
+        Gestión del proceso
+      </button>
+      <TabsList aria-label="Gestión del proceso">
+        <TabsTrigger value="solicitudes">
+          <ClipboardList className="mr-2 size-4" />
+          Solicitudes
+        </TabsTrigger>
+        <TabsTrigger value="rutas">
+          <MapPinned className="mr-2 size-4" />
+          Control de ruta
+        </TabsTrigger>
+        <TabsTrigger value="notificaciones">
+          <Bell className="mr-2 size-4" />
+          Notificaciones
+          {notificacionesPendientes > 0 && (
+            <span className="ml-2 rounded-full bg-destructive px-2 py-0.5 text-xs text-destructive-foreground">
+              {notificacionesPendientes > 99 ? '99+' : notificacionesPendientes}
+            </span>
+          )}
+        </TabsTrigger>
+        <TabsTrigger value="reportes">
+          <ChartPie className="mr-2 size-4" />
+          Reportes
+        </TabsTrigger>
+      </TabsList>
+      <TabsContent value="home">
+        <OperationsHomePage onOpenSolicitudes={() => setSection('solicitudes')} />
+      </TabsContent>
+      <TabsContent value="solicitudes">
         <BandejaEncargadoPage />
-      ) : section === 'rutas' ? (
+      </TabsContent>
+      <TabsContent value="rutas">
         <ControlRutasPage />
-      ) : section === 'notificaciones' ? (
+      </TabsContent>
+      <TabsContent value="notificaciones">
         <NotificacionesPage />
-      ) : (
-        <ReportesPage onOpenSolicitudes={() => setSection('solicitudes')} />
-      )}
-    </div>
+      </TabsContent>
+      <TabsContent value="reportes">
+        <ReportesPage />
+      </TabsContent>
+    </Tabs>
   )
 }

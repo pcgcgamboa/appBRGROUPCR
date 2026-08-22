@@ -6,6 +6,7 @@ import { Button } from '@/components/atoms/button'
 import { Input } from '@/components/atoms/input'
 import { Select } from '@/components/atoms/select'
 import { Textarea } from '@/components/atoms/textarea'
+import { FormErrorSummary } from '@/components/molecules/form-error-summary'
 import { useCatalogo } from '@/features/catalogos/hooks/use-catalogo'
 import type { Cliente, TipoSolicitud, Ubicacion } from '@/features/catalogos/types/catalogos.types'
 import { useCrearSolicitud } from '@/features/solicitudes/hooks/use-crear-solicitud'
@@ -45,6 +46,13 @@ export function SolicitudForm({
     setValue,
     formState: { errors },
   } = useForm<SolicitudFormData>({ resolver: zodResolver(solicitudSchema) })
+  const resumenErroresRef = useRef<HTMLDivElement>(null)
+  const erroresResumen = [
+    errors.nombre && { id: 'nombre', label: 'Título de la solicitud' },
+    errors.tipo_solicitud_id && { id: 'tipo_solicitud_id', label: 'Tipo de servicio' },
+    errors.ubicacion_id && { id: 'ubicacion_id', label: 'Ubicación' },
+    errors.detalle && { id: 'detalle', label: 'Detalle de la necesidad' },
+  ].filter((campo): campo is { id: string; label: string } => Boolean(campo))
 
   async function enviar(values: SolicitudFormData) {
     if (!clienteSeleccionado) return
@@ -67,8 +75,8 @@ export function SolicitudForm({
 
   return (
     <form
-      onSubmit={handleSubmit(enviar)}
-      className="mx-auto grid w-full max-w-5xl gap-5 rounded-2xl border bg-white p-5 shadow-sm sm:grid-cols-2 sm:p-7"
+      onSubmit={handleSubmit(enviar, () => resumenErroresRef.current?.focus())}
+      className="mx-auto grid w-full max-w-5xl gap-5 rounded-2xl border bg-card p-5 shadow-sm sm:grid-cols-2 sm:p-7"
     >
       <div className="border-b pb-5 sm:col-span-2">
         <div className="flex items-center gap-3">
@@ -83,6 +91,7 @@ export function SolicitudForm({
           </div>
         </div>
       </div>
+      <FormErrorSummary ref={resumenErroresRef} errors={erroresResumen} />
       {comoGestor && (
         <label className="grid gap-2 text-sm font-medium sm:col-span-2">
           Cliente
@@ -111,15 +120,20 @@ export function SolicitudForm({
       <label className="grid gap-2 text-sm font-medium">
         Título de la solicitud
         <Input
+          id="nombre"
           placeholder="Ej. Reparación de aire acondicionado"
           {...register('nombre')}
           aria-invalid={Boolean(errors.nombre)}
         />
-        {errors.nombre && <span className="text-red-700">{errors.nombre.message}</span>}
+        {errors.nombre && <span className="text-destructive">{errors.nombre.message}</span>}
       </label>
       <label className="grid gap-2 text-sm font-medium">
         Tipo de servicio
-        <Select {...register('tipo_solicitud_id')} aria-invalid={Boolean(errors.tipo_solicitud_id)}>
+        <Select
+          id="tipo_solicitud_id"
+          {...register('tipo_solicitud_id')}
+          aria-invalid={Boolean(errors.tipo_solicitud_id)}
+        >
           <option value="">Seleccione…</option>
           {tipos.data
             ?.filter((tipo) => tipo.activo)
@@ -130,12 +144,13 @@ export function SolicitudForm({
             ))}
         </Select>
         {errors.tipo_solicitud_id && (
-          <span className="text-red-700">{errors.tipo_solicitud_id.message}</span>
+          <span className="text-destructive">{errors.tipo_solicitud_id.message}</span>
         )}
       </label>
       <label className="grid gap-2 text-sm font-medium sm:col-span-2">
         Ubicación
         <Select
+          id="ubicacion_id"
           disabled={!disponibles.length}
           {...register('ubicacion_id')}
           aria-invalid={Boolean(errors.ubicacion_id)}
@@ -148,21 +163,22 @@ export function SolicitudForm({
           ))}
         </Select>
         {!ubicaciones.isLoading && !disponibles.length && (
-          <span className="text-xs font-normal text-amber-700">
+          <span className="text-xs font-normal text-warning">
             No hay ubicaciones activas. Solicite al administrador registrar una ubicación.
           </span>
         )}
-        {errors.ubicacion_id && <span className="text-red-700">{errors.ubicacion_id.message}</span>}
+        {errors.ubicacion_id && <span className="text-destructive">{errors.ubicacion_id.message}</span>}
       </label>
       <label className="grid gap-2 text-sm font-medium sm:col-span-2">
         Detalle de la necesidad
         <Textarea
+          id="detalle"
           className="min-h-32"
           placeholder="Explique qué sucede, desde cuándo y cualquier información que ayude a atender el caso."
           {...register('detalle')}
           aria-invalid={Boolean(errors.detalle)}
         />
-        {errors.detalle && <span className="text-red-700">{errors.detalle.message}</span>}
+        {errors.detalle && <span className="text-destructive">{errors.detalle.message}</span>}
       </label>
       <fieldset className="grid gap-3 sm:col-span-2">
         <legend className="mb-2 flex items-center gap-2 text-sm font-semibold">
@@ -189,13 +205,13 @@ export function SolicitudForm({
             {archivos.map((archivo, indice) => (
               <li
                 key={`${archivo.name}-${archivo.lastModified}`}
-                className="flex min-w-0 items-center gap-3 rounded-lg border bg-white p-3"
+                className="flex min-w-0 items-center gap-3 rounded-lg border bg-card p-3"
               >
                 <FileText className="size-4 shrink-0 text-primary" />
                 <span className="min-w-0 flex-1 truncate text-sm">{archivo.name}</span>
                 <button
                   type="button"
-                  className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition hover:bg-red-50 hover:text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition hover:bg-destructive-soft hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   aria-label={`Quitar ${archivo.name}`}
                   onClick={() => quitarArchivo(indice)}
                 >
@@ -207,12 +223,12 @@ export function SolicitudForm({
         )}
       </fieldset>
       {crear.error && (
-        <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-800 sm:col-span-2">
+        <p role="alert" className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground sm:col-span-2">
           {crear.error.message}
         </p>
       )}
       {crear.isSuccess && (
-        <p className="rounded-md bg-green-50 p-3 text-sm text-green-800 sm:col-span-2">
+        <p role="status" className="rounded-md bg-success-soft p-3 text-sm text-success-soft-foreground sm:col-span-2">
           Solicitud creada correctamente.
         </p>
       )}

@@ -66,13 +66,13 @@ export function SolicitudesMap({
           {puntos.length === 1 ? 'solicitud activa ubicada' : 'solicitudes activas ubicadas'}
         </p>
         {sinCoordenadas > 0 && (
-          <p className="text-amber-700">
+          <p className="text-warning">
             {sinCoordenadas} {sinCoordenadas === 1 ? 'solicitud no tiene' : 'solicitudes no tienen'}{' '}
             coordenadas.
           </p>
         )}
       </div>
-      <div className="h-[min(68vh,620px)] min-h-96 overflow-hidden rounded-xl border bg-white shadow-sm">
+      <div className="h-[min(68vh,620px)] min-h-96 overflow-hidden rounded-xl border bg-card shadow-sm">
         <MapContainer center={centroCostaRica} zoom={8} className="h-full w-full" scrollWheelZoom>
           <AjustarVista puntos={puntos} />
           <TileLayer

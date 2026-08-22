@@ -55,7 +55,18 @@ export interface RegistrarAvanceInput {
   narrativa: string
   estado_nuevo: EstadoSolicitud
   materiales: Omit<MaterialAvanceInput, 'key'>[]
-  archivos: File[]
+  adjuntos: AdjuntoAvanceInput[]
+}
+
+export type EstadoSubidaAdjunto = 'pendiente' | 'subiendo' | 'listo' | 'error'
+
+export interface AttachmentUploadItem {
+  localId: string
+  file?: File
+  previewUrl?: string
+  estado: EstadoSubidaAdjunto
+  error?: string
+  adjunto?: AdjuntoAvanceInput
 }
 
 export interface AvanceResumen {

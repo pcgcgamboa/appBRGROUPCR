@@ -13,12 +13,14 @@ import { usePerfilActual } from '@/features/auth/hooks/use-perfil-actual'
 import { useSession } from '@/features/auth/hooks/use-session'
 import { supabaseConfigurado } from '@/lib/supabase'
 import { useI18n } from '@/lib/i18n'
+import { BolsaEmpleoPage } from '@/components/pages/bolsa-empleo-page'
 
 export function HomePage() {
   const { t } = useI18n()
   const { session, cargando } = useSession()
   const perfil = usePerfilActual(session?.user.id)
   const [rolSeleccionado, setRolSeleccionado] = useState<string | null>(null)
+  const bolsaEmpleo = window.location.pathname.replace(/\/$/, '') === '/bolsa-empleo'
   const rolesDisponibles =
     perfil.data?.roles.filter((rol) =>
       ['administrador', 'encargado', 'solicitante', 'operador', 'cliente'].includes(rol),
@@ -28,6 +30,12 @@ export function HomePage() {
       ? rolSeleccionado
       : rolesDisponibles[0]
 
+  if (bolsaEmpleo)
+    return (
+      <AppShell>
+        <BolsaEmpleoPage />
+      </AppShell>
+    )
   if (cargando) {
     return (
       <AppShell>
@@ -45,7 +53,7 @@ export function HomePage() {
         {supabaseConfigurado ? (
           <LoginPage />
         ) : (
-          <div className="mx-auto max-w-xl rounded-2xl border border-amber-300 bg-amber-50 p-6 text-sm text-amber-950 shadow-sm">
+          <div className="mx-auto max-w-xl rounded-2xl border border-warning/30 bg-warning-soft p-6 text-sm text-warning-soft-foreground shadow-sm">
             Copie <code>.env.example</code> como <code>.env.local</code> y configure las
             credenciales de Supabase para habilitar la autenticación.
           </div>
@@ -106,11 +114,11 @@ export function HomePage() {
         {perfil.isLoading ? (
           <p className="text-sm text-muted-foreground">Cargando permisos…</p>
         ) : perfil.error ? (
-          <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-800">
+          <p role="alert" className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground">
             No fue posible consultar el perfil: {perfil.error.message}
           </p>
         ) : (
-          <p className="rounded-md bg-blue-50 p-3 text-sm text-blue-900">
+          <p className="rounded-md bg-primary-soft p-3 text-sm text-primary-soft-foreground">
             La sesión no tiene un módulo asignado. Solicite a un administrador que revise sus roles.
           </p>
         )}

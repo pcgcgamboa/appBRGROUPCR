@@ -25,7 +25,7 @@ export const FormField = forwardRef<HTMLInputElement, FormFieldProps>(
         )}
       </span>
       {error && (
-        <span id={`${id}-error`} className="text-sm text-red-700">
+        <span id={`${id}-error`} className="text-sm text-destructive">
           {error}
         </span>
       )}

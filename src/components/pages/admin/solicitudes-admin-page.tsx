@@ -1,10 +1,13 @@
-import { Wrench } from 'lucide-react'
+import { ListChecks, Wrench } from 'lucide-react'
 import { useState } from 'react'
 import { Badge } from '@/components/atoms/badge'
 import { Button } from '@/components/atoms/button'
+import { Input } from '@/components/atoms/input'
 import { Select } from '@/components/atoms/select'
 import { Textarea } from '@/components/atoms/textarea'
+import { Skeleton } from '@/components/atoms/skeleton'
 import { PageHeader } from '@/components/molecules/page-header'
+import { WorkspacePanel } from '@/components/molecules/workspace-panel'
 import { useCatalogo } from '@/features/catalogos/hooks/use-catalogo'
 import type { Rol } from '@/features/catalogos/types/catalogos.types'
 import { useSolicitudesAdmin } from '@/features/solicitudes/hooks/use-solicitudes-admin'
@@ -13,6 +16,13 @@ import type {
   SolicitudAdmin,
 } from '@/features/solicitudes/types/solicitudes.types'
 import { useUsuariosAdmin } from '@/features/usuarios/hooks/use-usuarios-admin'
+
+function normalizarBusqueda(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('es')
+}
 
 const transiciones: Record<EstadoSolicitud, EstadoSolicitud[]> = {
   creada: ['creada', 'rechazada', 'cancelada'],
@@ -33,12 +43,27 @@ export function SolicitudesAdminPage() {
   const [estado, setEstado] = useState<EstadoSolicitud>('creada')
   const [operadorId, setOperadorId] = useState<string>('')
   const [motivo, setMotivo] = useState('')
+  const [search, setSearch] = useState('')
   const operadorRolId = roles.data?.find((rol) => rol.codigo === 'operador')?.id
   const operadores =
     usuarios.data?.filter(
       (usuario) =>
         usuario.activo && usuario.usuario_roles.some((rol) => rol.rol_id === operadorRolId),
     ) ?? []
+  const term = normalizarBusqueda(search)
+  const solicitudesFiltradas = (solicitudes.data ?? []).filter((solicitud) =>
+    normalizarBusqueda(
+      [
+        solicitud.numero,
+        solicitud.nombre,
+        solicitud.cliente?.nombre,
+        solicitud.operador?.nombre_completo,
+        solicitud.solicitante?.nombre_completo,
+      ]
+        .filter(Boolean)
+        .join(' '),
+    ).includes(term),
+  )
   const requiereOperador = [
     'asignada',
     'en_atencion',
@@ -72,64 +97,96 @@ export function SolicitudesAdminPage() {
         description="Intervención administrativa para reasignar, cerrar o cancelar servicios."
       />
       {(solicitudes.error ?? intervenir.error) && (
-        <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-800">
+        <p
+          role="alert"
+          className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground"
+        >
           {(solicitudes.error ?? intervenir.error)?.message}
         </p>
       )}
-      <div className="overflow-x-auto rounded-lg border bg-white shadow-sm">
-        <table className="w-full min-w-[760px] text-left text-sm">
-          <thead className="bg-muted">
-            <tr>
-              <th className="px-4 py-3">Número</th>
-              <th className="px-4 py-3">Solicitud</th>
-              <th className="px-4 py-3">Cliente</th>
-              <th className="px-4 py-3">Estado</th>
-              <th className="px-4 py-3">Operador</th>
-              <th className="px-4 py-3"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {solicitudes.isLoading ? (
+      <WorkspacePanel
+        variant="list"
+        icon={ListChecks}
+        title="Listado de solicitudes"
+        description="Busque y seleccione una solicitud para realizar una intervención administrativa."
+      >
+        <div className="rounded-lg border bg-card p-4">
+          <label className="grid gap-2 text-sm font-medium">
+            Buscar por usuario o solicitud
+            <Input
+              type="search"
+              placeholder="Digite el nombre o una parte del nombre del solicitante u operador…"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
+          </label>
+        </div>
+        <div className="overflow-x-auto rounded-lg border bg-card shadow-sm">
+          <table className="w-full min-w-[760px] text-left text-sm">
+            <thead className="bg-muted text-muted-foreground">
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center">
-                  Cargando…
-                </td>
+                <th className="px-4 py-3">Número</th>
+                <th className="px-4 py-3">Solicitud</th>
+                <th className="px-4 py-3">Cliente</th>
+                <th className="px-4 py-3">Estado</th>
+                <th className="px-4 py-3">Solicitante</th>
+                <th className="px-4 py-3">Operador</th>
+                <th className="px-4 py-3"></th>
               </tr>
-            ) : solicitudes.data?.length ? (
-              solicitudes.data.map((solicitud) => (
-                <tr key={solicitud.id} className="border-t">
-                  <td className="px-4 py-3">#{solicitud.numero}</td>
-                  <td className="px-4 py-3 font-medium">{solicitud.nombre}</td>
-                  <td className="px-4 py-3">{solicitud.cliente?.nombre}</td>
-                  <td className="px-4 py-3">
-                    <Badge>{solicitud.estado.replace(/_/g, ' ')}</Badge>
-                  </td>
-                  <td className="px-4 py-3">
-                    {solicitud.operador?.nombre_completo ?? 'Sin asignar'}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Button variant="outline" onClick={() => abrir(solicitud)}>
-                      <Wrench className="mr-2 size-4" />
-                      Intervenir
-                    </Button>
+            </thead>
+            <tbody>
+              {solicitudes.isLoading ? (
+                Array.from({ length: 5 }).map((_, index) => (
+                  <tr key={index} className="border-t">
+                    {Array.from({ length: 6 }).map((__, cell) => (
+                      <td key={cell} className="px-4 py-3">
+                        <Skeleton className="h-4 w-full max-w-24" />
+                      </td>
+                    ))}
+                    <td className="px-4 py-3" />
+                  </tr>
+                ))
+              ) : solicitudesFiltradas.length ? (
+                solicitudesFiltradas.map((solicitud) => (
+                  <tr key={solicitud.id} className="border-t transition-colors hover:bg-accent/50">
+                    <td className="px-4 py-3">#{solicitud.numero}</td>
+                    <td className="px-4 py-3 font-medium">{solicitud.nombre}</td>
+                    <td className="px-4 py-3">{solicitud.cliente?.nombre}</td>
+                    <td className="px-4 py-3">
+                      <Badge>{solicitud.estado.replace(/_/g, ' ')}</Badge>
+                    </td>
+                    <td className="px-4 py-3">
+                      {solicitud.solicitante?.nombre_completo ?? 'Sin identificar'}
+                    </td>
+                    <td className="px-4 py-3">
+                      {solicitud.operador?.nombre_completo ?? 'Sin asignar'}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <Button variant="outline" onClick={() => abrir(solicitud)}>
+                        <Wrench className="mr-2 size-4" />
+                        Intervenir
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
+                    No hay solicitudes que coincidan con la búsqueda.
                   </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
-                  No hay solicitudes activas.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </WorkspacePanel>
       {seleccionada && (
-        <div className="rounded-lg border bg-white p-5 shadow-sm">
-          <h2 className="font-semibold">
-            Intervenir #{seleccionada.numero}: {seleccionada.nombre}
-          </h2>
+        <WorkspacePanel
+          variant="management"
+          icon={Wrench}
+          title={`Intervenir #${seleccionada.numero}: ${seleccionada.nombre}`}
+          description="Actualice la asignación o el estado de esta solicitud."
+        >
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <label className="grid gap-2 text-sm font-medium">
               Operador
@@ -178,7 +235,7 @@ export function SolicitudesAdminPage() {
               Cancelar
             </Button>
           </div>
-        </div>
+        </WorkspacePanel>
       )}
     </section>
   )

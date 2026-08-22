@@ -1,6 +1,8 @@
 import { LoginForm } from '@/components/organisms/login-form'
 import { useMarca } from '@/features/configuracion/hooks/use-marca'
 import { useI18n } from '@/lib/i18n'
+import { BriefcaseBusiness } from 'lucide-react'
+import { Button } from '@/components/atoms/button'
 
 export function LoginPage() {
   const { t } = useI18n()
@@ -13,11 +15,13 @@ export function LoginPage() {
         <div className="absolute -bottom-32 -left-20 size-80 rounded-full bg-blue-400/20 blur-3xl" />
         <div className="relative flex h-full flex-col justify-center">
           <div>
-            <div className="mb-9 max-w-md rounded-2xl bg-white p-4 shadow-xl shadow-slate-950/20">
+            <div className="mb-9 max-w-md rounded-2xl bg-card p-4 shadow-xl shadow-slate-950/20">
               <img
                 src={marca.data?.logo_url}
                 alt="BR Mantenimiento General"
-                className="h-auto w-full object-contain"
+                width={400}
+                height={160}
+                className="aspect-[5/2] w-full object-contain"
               />
             </div>
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-200">
@@ -32,15 +36,23 @@ export function LoginPage() {
           </div>
         </div>
       </div>
-      <div className="mx-auto w-full max-w-md rounded-3xl border bg-white p-6 shadow-xl shadow-slate-900/5 sm:p-9">
-        <div className="mb-7 rounded-2xl border bg-white p-3 shadow-sm lg:hidden">
+      <div className="mx-auto w-full max-w-md rounded-3xl border bg-card p-6 shadow-xl shadow-slate-900/5 sm:p-9">
+        <div className="mb-7 rounded-2xl border bg-card p-3 shadow-sm lg:hidden">
           <img
             src={marca.data?.logo_url}
             alt="BR Mantenimiento General"
-            className="mx-auto h-auto max-h-28 w-full object-contain"
+            width={400}
+            height={112}
+            className="mx-auto aspect-[25/7] max-h-28 w-full object-contain"
           />
         </div>
         <LoginForm />
+        <a href="/bolsa-empleo" className="mt-5 block">
+          <Button variant="outline" className="w-full">
+            <BriefcaseBusiness className="mr-2 size-4" />
+            Bolsa de empleo para técnicos
+          </Button>
+        </a>
       </div>
     </section>
   )

@@ -1,17 +1,27 @@
-import { Camera, PackagePlus, Trash2 } from 'lucide-react'
-import { type FormEvent, useEffect, useState } from 'react'
+import { PackagePlus, Trash2 } from 'lucide-react'
+import { type FormEvent, useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/atoms/button'
 import { Input } from '@/components/atoms/input'
 import { Select } from '@/components/atoms/select'
 import { Textarea } from '@/components/atoms/textarea'
+import { PhotoAttachmentPicker } from '@/components/molecules/photo-attachment-picker'
 import { useCatalogo } from '@/features/catalogos/hooks/use-catalogo'
 import type { Material } from '@/features/catalogos/types/catalogos.types'
+import { useAttachmentUploads } from '@/features/operador/hooks/use-attachment-uploads'
+import {
+  descartarAvanceDraft,
+  leerAvanceDraft,
+  useGuardarAvanceDraft,
+} from '@/features/operador/hooks/use-avance-draft'
 import { useAvancesSolicitud, useRegistrarAvance } from '@/features/operador/hooks/use-operador'
 import type {
   MaterialAvanceInput,
   SolicitudOperador,
 } from '@/features/operador/types/operador.types'
 import type { EstadoSolicitud } from '@/features/solicitudes/types/solicitudes.types'
+import { useNetworkStatus } from '@/hooks/use-network-status'
+import { useI18n } from '@/lib/i18n'
 
 function materialVacio(): MaterialAvanceInput {
   return {
@@ -34,13 +44,19 @@ const estadosPorActual: Partial<Record<EstadoSolicitud, EstadoSolicitud[]>> = {
 export function OperatorProgressForm({
   solicitud,
   onSaved,
+  onCancel,
 }: {
   solicitud: SolicitudOperador
   onSaved: () => void
+  onCancel: () => void
 }) {
   const { listado: catalogo } = useCatalogo<Material>('materiales')
   const registrar = useRegistrarAvance()
   const avances = useAvancesSolicitud(solicitud.id)
+  const attachmentUploads = useAttachmentUploads()
+  const { isOnline } = useNetworkStatus()
+  const { t } = useI18n()
+
   const [horas, setHoras] = useState('1')
   const [porcentaje, setPorcentaje] = useState('0')
   const [narrativa, setNarrativa] = useState('')
@@ -48,18 +64,69 @@ export function OperatorProgressForm({
     estadosPorActual[solicitud.estado]?.[0] ?? 'en_atencion',
   )
   const [materiales, setMateriales] = useState<MaterialAvanceInput[]>([])
-  const [archivos, setArchivos] = useState<File[]>([])
+  const [borradorRestaurado, setBorradorRestaurado] = useState(false)
+  const [fotosPendientesDelBorrador, setFotosPendientesDelBorrador] = useState(0)
 
+  // Hidrata desde el borrador local al abrir una solicitud; si no hay borrador, vuelve a
+  // los valores por defecto en vez de arrastrar los de la solicitud vista anteriormente.
   useEffect(() => {
-    setEstado(estadosPorActual[solicitud.estado]?.[0] ?? 'en_atencion')
+    const draft = leerAvanceDraft(solicitud.id)
+    if (draft) {
+      setHoras(draft.horas)
+      setPorcentaje(draft.porcentaje)
+      setEstado(draft.estado)
+      setNarrativa(draft.narrativa)
+      setMateriales(draft.materiales.map((item) => ({ ...item, key: crypto.randomUUID() })))
+      setBorradorRestaurado(true)
+      setFotosPendientesDelBorrador(draft.archivosSeleccionadosCount)
+    } else {
+      setHoras('1')
+      setPorcentaje('0')
+      setEstado(estadosPorActual[solicitud.estado]?.[0] ?? 'en_atencion')
+      setNarrativa('')
+      setMateriales([])
+      setBorradorRestaurado(false)
+      setFotosPendientesDelBorrador(0)
+    }
   }, [solicitud])
+
+  // El porcentaje nunca puede quedar por debajo del máximo ya confirmado en el historial,
+  // incluso si el borrador restaurado o el valor previo eran menores.
   useEffect(() => {
     const maximo = Math.max(0, ...(avances.data?.map((avance) => avance.porcentaje) ?? []))
-    setPorcentaje(String(maximo))
+    setPorcentaje((actual) => String(Math.max(Number(actual) || 0, maximo)))
   }, [avances.data, solicitud.id])
+
   useEffect(() => {
     if (estado === 'atendida') setPorcentaje('100')
   }, [estado])
+
+  // Sube automáticamente cualquier adjunto pendiente o reintentado, sin bloquear al usuario
+  // en el resto del formulario mientras la subida ocurre en segundo plano.
+  useEffect(() => {
+    const hayPendientes = attachmentUploads.items.some((item) => item.estado === 'pendiente')
+    if (hayPendientes && !attachmentUploads.isUploading) void attachmentUploads.uploadAll(solicitud.id)
+  }, [attachmentUploads, solicitud.id])
+
+  // Limpieza best-effort: si se cambia de solicitud (o se desmonta) con fotos ya subidas
+  // pero sin guardar el avance, se intentan retirar del bucket para reducir huérfanos.
+  const cancelarUploadsRef = useRef(attachmentUploads.cancelar)
+  cancelarUploadsRef.current = attachmentUploads.cancelar
+  useEffect(() => {
+    return () => {
+      void cancelarUploadsRef.current()
+    }
+  }, [solicitud.id])
+
+  useGuardarAvanceDraft(solicitud.id, {
+    horas,
+    porcentaje,
+    estado,
+    narrativa,
+    materiales,
+    archivosSeleccionadosCount: attachmentUploads.items.filter((item) => item.estado !== 'listo')
+      .length,
+  })
 
   function actualizarMaterial(key: string, changes: Partial<MaterialAvanceInput>) {
     setMateriales((current) =>
@@ -89,25 +156,60 @@ export function OperatorProgressForm({
     }
   }
 
-  async function enviar(event: FormEvent) {
-    event.preventDefault()
-    await registrar.mutateAsync({
-      solicitud_id: solicitud.id,
-      horas_trabajadas: Number(horas),
-      porcentaje: Number(porcentaje),
-      narrativa,
-      estado_nuevo: estado,
-      materiales,
-      archivos,
-    })
+  function descartarBorrador() {
+    descartarAvanceDraft(solicitud.id)
+    setHoras('1')
+    setPorcentaje('0')
+    setEstado(estadosPorActual[solicitud.estado]?.[0] ?? 'en_atencion')
     setNarrativa('')
     setMateriales([])
-    setArchivos([])
-    onSaved()
+    setBorradorRestaurado(false)
+    setFotosPendientesDelBorrador(0)
   }
 
+  function cancelar() {
+    void attachmentUploads.cancelar()
+    onCancel()
+  }
+
+  async function enviar(event: FormEvent) {
+    event.preventDefault()
+    if (!isOnline || !attachmentUploads.allReady) return
+    try {
+      await registrar.mutateAsync({
+        solicitud_id: solicitud.id,
+        horas_trabajadas: Number(horas),
+        porcentaje: Number(porcentaje),
+        narrativa,
+        estado_nuevo: estado,
+        materiales,
+        adjuntos: attachmentUploads.adjuntosParaEnviar(),
+      })
+      descartarAvanceDraft(solicitud.id)
+      attachmentUploads.reset()
+      setNarrativa('')
+      setMateriales([])
+      setBorradorRestaurado(false)
+      toast.success(t('avanceSaved'))
+      onSaved()
+    } catch {
+      // El error ya queda expuesto abajo vía registrar.error.
+    }
+  }
+
+  const bloqueadoPorVehiculo = !solicitud.ruta?.vehiculo_id
+  const bloqueadoPorAdjuntos = !attachmentUploads.allReady
+  const deshabilitado =
+    registrar.isPending || !isOnline || bloqueadoPorVehiculo || bloqueadoPorAdjuntos
+
+  let mensajeFooter: string | null = null
+  if (!isOnline) mensajeFooter = t('offlineSubmitBlocked')
+  else if (attachmentUploads.isUploading) mensajeFooter = t('uploadingPhotosStatus')
+  else if (bloqueadoPorAdjuntos) mensajeFooter = t('photosPendingBlocked')
+  else if (bloqueadoPorVehiculo) mensajeFooter = t('vehicleMissingBlocked')
+
   return (
-    <form onSubmit={enviar} className="space-y-6 rounded-lg border bg-white p-4 shadow-sm sm:p-6">
+    <form onSubmit={enviar} className="space-y-6 rounded-lg border bg-card p-4 shadow-sm sm:p-6">
       <div>
         <h2 className="text-lg font-semibold">Registrar avance</h2>
         <p className="text-sm text-muted-foreground">
@@ -117,6 +219,23 @@ export function OperatorProgressForm({
             : 'Ruta sin vehículo'}
         </p>
       </div>
+
+      {borradorRestaurado && (
+        <div
+          role="status"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-primary-soft p-3 text-sm text-primary-soft-foreground"
+        >
+          <p>
+            {t('draftRestored')}
+            {fotosPendientesDelBorrador > 0 &&
+              ` ${t('draftPendingPhotosPrefix')} ${fotosPendientesDelBorrador} ${t('draftPendingPhotosSuffix')}`}
+          </p>
+          <Button type="button" variant="outline" size="sm" onClick={descartarBorrador}>
+            {t('discardDraft')}
+          </Button>
+        </div>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-3">
         <label className="grid gap-2 text-sm font-medium">
           Horas trabajadas
@@ -256,7 +375,7 @@ export function OperatorProgressForm({
             <Button
               type="button"
               variant="outline"
-              className="w-fit text-red-700 sm:col-span-2"
+              className="w-fit text-destructive hover:bg-destructive-soft sm:col-span-2"
               onClick={() =>
                 setMateriales((current) => current.filter((material) => material.key !== item.key))
               }
@@ -268,30 +387,41 @@ export function OperatorProgressForm({
         ))}
       </section>
 
-      <label className="grid gap-2 text-sm font-medium">
-        <span className="flex items-center gap-2">
-          <Camera className="size-4" />
-          Fotos o documentos
-        </span>
-        <Input
-          type="file"
-          multiple
-          accept="image/jpeg,image/png,image/webp,application/pdf"
-          capture="environment"
-          onChange={(event) => setArchivos(Array.from(event.target.files ?? []))}
-        />
-        <span className="text-xs font-normal text-muted-foreground">
-          Puede tomar fotografías directamente desde el teléfono. Máximo 10 MB por archivo.
-        </span>
-      </label>
+      <PhotoAttachmentPicker
+        items={attachmentUploads.items}
+        onAddFiles={attachmentUploads.addFiles}
+        onRemove={attachmentUploads.removeFile}
+        onRetry={attachmentUploads.retryFile}
+        listosCount={attachmentUploads.listosCount}
+        totalCount={attachmentUploads.totalCount}
+        disabled={registrar.isPending}
+      />
+
       {registrar.error && (
-        <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-800">
+        <p role="alert" className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground">
           {registrar.error.message}
         </p>
       )}
-      <Button type="submit" disabled={registrar.isPending || !solicitud.ruta?.vehiculo_id}>
-        {registrar.isPending ? 'Registrando…' : 'Guardar avance'}
-      </Button>
+
+      <div className="sticky bottom-0 -mx-4 -mb-4 mt-2 rounded-b-lg border-t bg-card/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:-mb-6 sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {mensajeFooter ? (
+            <p role={!isOnline || bloqueadoPorAdjuntos ? 'alert' : 'status'} className="text-sm text-muted-foreground">
+              {mensajeFooter}
+            </p>
+          ) : (
+            <span />
+          )}
+          <div className="ml-auto flex gap-2">
+            <Button type="button" variant="outline" onClick={cancelar}>
+              {t('cancel')}
+            </Button>
+            <Button type="submit" disabled={deshabilitado}>
+              {registrar.isPending ? t('savingProgress') : t('saveProgress')}
+            </Button>
+          </div>
+        </div>
+      </div>
     </form>
   )
 }

@@ -22,7 +22,7 @@ Aplicación web responsive para gestionar solicitudes, asignaciones, rutas, avan
 - `src/stores`: estado global de interfaz con Zustand.
 - `supabase`: migraciones y Edge Functions, a partir de la Fase 1.
 
-La especificación funcional se encuentra en `docs/requerimientos-sistema-solicitudes-servicio.md`.
+La especificación funcional se encuentra en `docs/requerimientos-sistema-solicitudes-servicio.md`. Las mejoras de mobile-first y operación degradada del registro de avance del operador se documentan en `docs/mejoras-mobile-first-operacion-degradada.md`.
 
 ## Supabase
 

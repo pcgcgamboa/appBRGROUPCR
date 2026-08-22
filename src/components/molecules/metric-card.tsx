@@ -16,16 +16,16 @@ export function MetricCard({
 }) {
   const className = cn(
     'w-full rounded-lg border p-5 text-left shadow-sm',
-    alert && value > 0 ? 'border-red-200 bg-red-50' : 'bg-white',
+    alert && value > 0 ? 'border-destructive/30 bg-destructive-soft' : 'bg-card',
     onClick &&
-      'group cursor-pointer transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
+      'group cursor-pointer transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
   )
   const content = (
     <>
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm font-medium text-muted-foreground">{label}</p>
         <div className="flex items-center gap-2">
-          <Icon className={alert && value > 0 ? 'size-5 text-red-700' : 'size-5 text-primary'} />
+          <Icon className={alert && value > 0 ? 'size-5 text-destructive' : 'size-5 text-primary'} />
           {onClick && (
             <ArrowUpRight className="size-4 text-muted-foreground transition group-hover:text-primary" />
           )}

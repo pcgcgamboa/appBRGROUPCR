@@ -3,6 +3,7 @@ import { Button } from '@/components/atoms/button'
 import { Input } from '@/components/atoms/input'
 import { Select } from '@/components/atoms/select'
 import { Textarea } from '@/components/atoms/textarea'
+import { Checkbox } from '@/components/atoms/checkbox'
 import { LocationMap } from '@/components/organisms/location-map'
 import { useCatalogo } from '@/features/catalogos/hooks/use-catalogo'
 import type { Vehiculo } from '@/features/catalogos/types/catalogos.types'
@@ -110,7 +111,7 @@ export function RouteControlForm({
     values.longitud === '' || Number.isNaN(Number(values.longitud)) ? null : Number(values.longitud)
 
   return (
-    <form onSubmit={enviar} className="space-y-6 rounded-lg border bg-white p-5 shadow-sm">
+    <form onSubmit={enviar} className="space-y-6 rounded-lg border bg-card p-5 shadow-sm">
       <div>
         <h2 className="text-lg font-semibold">
           Ruta de #{solicitud.numero}: {solicitud.nombre}
@@ -173,12 +174,10 @@ export function RouteControlForm({
               className="grid items-center gap-3 rounded-md border p-3 sm:grid-cols-[1fr_180px]"
             >
               <label className="flex items-center gap-3 text-sm font-medium">
-                <input
-                  type="checkbox"
-                  className="size-5"
+                <Checkbox
                   checked={Boolean(seleccionado)}
                   disabled={operador.id === solicitud.operador_id}
-                  onChange={(event) => toggleOperario(operador.id, event.target.checked)}
+                  onCheckedChange={(checked) => toggleOperario(operador.id, checked === true)}
                 />
                 {operador.nombre_completo}
                 {operador.id === solicitud.operador_id ? ' (principal)' : ''}
@@ -284,12 +283,12 @@ export function RouteControlForm({
         />
       </div>
       {guardar.error && (
-        <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-800">
+        <p role="alert" className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground">
           {guardar.error.message}
         </p>
       )}
       {validationError && (
-        <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-800">
+        <p role="alert" className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground">
           {validationError}
         </p>
       )}

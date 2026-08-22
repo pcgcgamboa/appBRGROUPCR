@@ -1,0 +1,56 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project
+
+Sistema de Solicitudes de Servicio: a responsive web app for managing field service requests (mantenimiento, soporte, reparación, instalación) through their full lifecycle — creation, assignment, route/fleet dispatch, on-site progress with materials and attachments, and client-validated closure. Roles: `administrador`, `encargado`, `operador`, `cliente`, `solicitante`; a user can hold multiple roles and switch the active one at runtime (`SessionToolbar`).
+
+The functional spec lives in `docs/requerimientos-sistema-solicitudes-servicio.md` — read it before making product/behavior decisions. `docs/fase-2-*.md` … `docs/fase-7-*.md` are historical per-phase notes and are **not all current**: in particular `docs/fase-4-control-ruta.md` describes the original one-route-per-request model, which was superseded by the grouped "rutas de proceso" model (see Domain notes below) — its UI (`route-control-form.tsx`) is dead code, not referenced by any page. `docs/propuesta-mejoras-srm-ticketing-crm-tms.md` is a forward-looking roadmap proposal, not implemented state.
+
+## Commands
+
+```
+npm run dev            # Vite dev server
+npm run build           # tsc -b && vite build (type-checks, then bundles)
+npm run lint             # eslint .
+npm run format           # prettier --write .
+npm run format:check     # prettier --check .
+npm run preview          # serve the production build locally
+```
+
+CI (`.github/workflows/ci.yml`) runs `npm run lint`, `npm run format:check`, and `npm run build` on push/PR to `main`. There is no test suite in this repo (Playwright is a devDependency but has no config or spec files yet) — verify changes via `npm run build` (which type-checks with `tsc -b`) plus manual/dev-server testing.
+
+Supabase-side changes require a linked project and the Supabase CLI:
+```
+supabase db push                              # apply pending migrations
+supabase functions deploy <name>              # deploy an Edge Function
+supabase secrets set --env-file supabase/.env.local   # SMTP secrets, etc.
+```
+`docs/configuracion-supabase.md` covers linking a remote project and bootstrapping the first `administrador` (must be done via direct SQL against `usuario_roles` — no user can self-assign a role, and there's no in-app path for the very first admin).
+
+## Architecture
+
+**Stack**: React 18 + TypeScript + Vite, Tailwind CSS with local shadcn/ui-style primitives (not an external component package — extend `src/components/atoms` directly), TanStack Query for server state, Zustand for UI state, React Hook Form + Zod (used in some feature forms, not all — several organisms still validate with plain `useState` + native HTML attributes), Leaflet/React Leaflet for maps, Recharts for charts. Backend is Supabase end-to-end: Postgres + Auth + Storage + Edge Functions, authorization via RLS. There is **no client-side router** — `HomePage` picks the experience by session/active role from local state; the only URL-based exception is the public `/bolsa-empleo` route, detected directly from `window.location.pathname`. Nothing is deep-linkable.
+
+**Directory layout** (feature-first + Atomic Design, aliased as `@/*` → `src/*`):
+- `src/app` — root component and providers (`AppProviders` wires `QueryClient` with `staleTime: 30_000, retry: 1` for queries only — mutations have no automatic retry).
+- `src/components/{atoms,molecules,organisms,templates,pages}` — atoms are the local primitive library (button, input, dialog, sheet, etc.); templates are shells (`AppShell`, `AdminShell`); pages compose a role/area's screen.
+- `src/features/<domain>/{hooks,types,schemas,lib}` — data fetching/mutation and domain types per feature area (e.g. `operador`, `solicitudes`, `flota`, `catalogos`). Data access stays out of components where practical.
+- `src/hooks` — cross-cutting hooks not tied to one feature (e.g. `use-network-status.ts`); this is also the shadcn alias target (`components.json` → `"hooks": "@/hooks"`).
+- `src/lib` — `supabase.ts` (client), `i18n.ts` (custom i18n, no external library), `utils.ts` (`cn()`).
+- `src/stores/ui.store.ts` — Zustand store persisted to `localStorage` under key `control-solicitudes-ui` (only `idioma` and `menuColapsado` are persisted).
+- `supabase/migrations` — sequential, timestamp-named SQL files; the schema/RLS/business-rule source of truth. Seed/demo inserts use fixed UUIDs with `on conflict do nothing` so migrations stay idempotent on re-run.
+- `supabase/functions` — Edge Functions: `admin-users` (the only one using the `service_role` key, for user management), `gestionar-solicitud` (state transitions/SLA), `registrar-avance` (operator progress, transactional), plus `_shared/` (CORS, email helpers). Functions mostly validate the caller's role then execute with the caller's own JWT so RLS and audit columns (`cambiado_por`, etc.) reflect the real user; heavy transactional logic itself typically lives in Postgres functions (`security definer`, `set search_path = ''`) invoked via `supabase.rpc(...)`, not in application code.
+
+**i18n**: `src/lib/i18n.ts` defines a single `mensajes` object with `es`/`en` blocks; `ClaveTraduccion` is derived as `keyof typeof mensajes['es']`, so TypeScript forces every key to exist in both languages. Use `useI18n()` → `t(clave)`. Adoption is incremental — several existing organisms (e.g. field-entry forms) still hardcode Spanish strings; new user-facing text should go through this system.
+
+**Domain model note**: route/dispatch planning moved from a 1:1 "ruta per solicitud" model to grouped **rutas de proceso** (`rutas_proceso`, `ruta_solicitudes`, `ruta_vehiculos`, `ruta_movimientos_vehiculo`) that bundle multiple requests, vehicles, a responsible operator/encargado, and fleet cost tracking (fuel, mileage, expenses, depreciation) into one dispatch unit. This was an additive migration (`20260813100000_gestion_flota_rutas.sql`); the older `rutas` table and its UI still exist in the schema/codebase but are no longer wired into any screen.
+
+**Design system**: `DESIGN.md` is the authoritative reference for color tokens, typography scale, breakpoints, motion, and component rules — but code is the source of truth on any discrepancy (`src/styles/globals.css` for CSS variables, `tailwind.config.ts` for their Tailwind exposure, `src/components/atoms` for primitive APIs). Known rules worth internalizing before writing UI: mobile-first (base = 1 column, `sm` 2 columns, `md` content grids, `lg` navigation/panels), ≥44px touch targets (`min-h-11`/`size-11`) on primary/icon buttons, always provide loading (`Skeleton`)/empty/error (`role="alert"`)/success (Sonner toast) states, use `Dialog`/`AlertDialog`/`Sheet` rather than hand-rolled overlays, and prefer semantic tokens (`bg-card`, `text-muted-foreground`, `border-input`) over literal Tailwind colors.
+
+**TypeScript strictness**: `noUnusedLocals` and `noUnusedParameters` are enabled (`tsconfig.app.json`), so unused destructured bindings fail the build, not just lint. When you need to pass a value that structurally has extra properties (e.g. an object with a `key` used only for React's list rendering), it's fine to pass the variable as-is rather than destructuring it away — TypeScript's excess-property check only applies to object literals, not variables, so extra fields pass through harmlessly at the type level.
+
+**Lint discipline**: there are no `eslint-disable` comments anywhere in this codebase — that convention is intentional, not accidental. If `react-hooks/exhaustive-deps` complains about depending on individual properties of an object returned fresh from a hook each render, depend on the whole object (or capture the value in a `ref` if you need it read-only inside a cleanup/guard without retriggering the effect) instead of suppressing the warning.
+
+**Formatting**: Prettier config is no semicolons, single quotes, trailing commas everywhere, 100-char print width (`.prettierrc.json`). Run `npm run format` rather than hand-formatting.

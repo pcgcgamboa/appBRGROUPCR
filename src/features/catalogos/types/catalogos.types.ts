@@ -47,6 +47,11 @@ export interface Vehiculo extends EntidadBase {
   tipo: string
   estado: 'disponible' | 'en_uso' | 'mantenimiento'
   activo: boolean
+  costo_inicial: number | null
+  fecha_adquisicion: string | null
+  vida_util_meses: number | null
+  valor_residual: number
+  kilometraje_actual: number
 }
 
 export interface Rol extends EntidadBase {
@@ -54,6 +59,34 @@ export interface Rol extends EntidadBase {
   codigo: string
   nombre: string
   descripcion: string | null
+}
+
+export interface Tecnico extends EntidadBase {
+  id: string
+  nombre_completo: string
+  identificacion: string | null
+  especialidad: 'albanil' | 'soldador' | 'chofer'
+  celular: string
+  correo: string | null
+  direccion: string | null
+  contacto_emergencia: string | null
+  observaciones: string | null
+  activo: boolean
+}
+export interface Proveedor extends EntidadBase {
+  id: string
+  nombre: string
+  identificacion: string | null
+  persona_contacto: string
+  telefono: string
+  celular: string | null
+  correo: string | null
+  articulos_provee: string
+  provincia: string
+  canton: string
+  distrito: string
+  direccion: string | null
+  activo: boolean
 }
 
 export type ValorFormulario = string | number | boolean | null
@@ -67,7 +100,7 @@ export interface OpcionCampo {
 export interface CampoCatalogo {
   name: string
   label: string
-  type?: 'text' | 'email' | 'number' | 'textarea' | 'select' | 'checkbox'
+  type?: 'text' | 'email' | 'number' | 'date' | 'textarea' | 'select' | 'checkbox'
   required?: boolean
   options?: OpcionCampo[]
   step?: string

@@ -1,8 +1,29 @@
 import { MapPin, Pencil, Plus, Trash2, X } from 'lucide-react'
-import { type FormEvent, useState } from 'react'
+import { type FormEvent, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/atoms/button'
 import { Input } from '@/components/atoms/input'
 import { Textarea } from '@/components/atoms/textarea'
+import { Checkbox } from '@/components/atoms/checkbox'
+import { Skeleton } from '@/components/atoms/skeleton'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/atoms/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/atoms/alert-dialog'
 import { LocationMap } from '@/components/organisms/location-map'
 import { useCatalogo } from '@/features/catalogos/hooks/use-catalogo'
 import type {
@@ -44,17 +65,21 @@ export function ClientLocationsManager({
   const [formVisible, setFormVisible] = useState(false)
   const [editingId, setEditingId] = useState<string>()
   const [values, setValues] = useState<FormularioUbicacion>(inicial)
+  const [ubicacionAEliminar, setUbicacionAEliminar] = useState<Ubicacion | null>(null)
+  const ultimoDisparadorRef = useRef<HTMLElement | null>(null)
   const ubicaciones = listado.data?.filter((item) => item.cliente_id === cliente.id) ?? []
   const latitud = values.latitud === '' ? null : Number(values.latitud)
   const longitud = values.longitud === '' ? null : Number(values.longitud)
 
   function nueva() {
+    ultimoDisparadorRef.current = document.activeElement as HTMLElement
     setEditingId(undefined)
     setValues(inicial)
     setFormVisible(true)
   }
 
   function editar(ubicacion: Ubicacion) {
+    ultimoDisparadorRef.current = document.activeElement as HTMLElement
     setEditingId(ubicacion.id)
     setValues({
       nombre: ubicacion.nombre,
@@ -84,19 +109,23 @@ export function ClientLocationsManager({
       activa: values.activa,
     }
     await guardar.mutateAsync({ id: editingId, values: payload })
+    toast.success(editingId ? 'Ubicación actualizada correctamente.' : 'Ubicación creada correctamente.')
     setFormVisible(false)
   }
 
-  async function confirmarEliminar(ubicacion: Ubicacion) {
-    if (window.confirm(`¿Eliminar la ubicación “${ubicacion.nombre}”?`)) {
-      await eliminar.mutateAsync(ubicacion.id)
-    }
+  async function confirmarEliminar() {
+    if (!ubicacionAEliminar) return
+    await eliminar.mutateAsync(ubicacionAEliminar.id)
+    toast.success('Ubicación eliminada correctamente.')
+    setUbicacionAEliminar(null)
   }
 
-  const error = listado.error ?? guardar.error ?? eliminar.error
+  const pageError = listado.error
+  const formError = guardar.error
+  const deleteError = eliminar.error
 
   return (
-    <section className="scroll-mt-24 space-y-5 rounded-2xl border border-primary/20 bg-white p-5 shadow-md sm:p-6">
+    <section className="scroll-mt-24 space-y-5 rounded-2xl border border-primary/20 bg-card p-5 shadow-md sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 text-primary">
@@ -114,7 +143,7 @@ export function ClientLocationsManager({
           </Button>
           <Button
             variant="outline"
-            className="px-3"
+            size="icon"
             onClick={onClose}
             aria-label="Cerrar ubicaciones"
           >
@@ -123,119 +152,157 @@ export function ClientLocationsManager({
         </div>
       </div>
 
-      {formVisible && (
-        <form
-          onSubmit={enviar}
-          className="grid gap-4 rounded-xl border bg-slate-50 p-4 sm:grid-cols-2"
+      <Dialog open={formVisible} onOpenChange={setFormVisible}>
+        <DialogContent
+          onCloseAutoFocus={(event) => {
+            event.preventDefault()
+            ultimoDisparadorRef.current?.focus()
+          }}
         >
-          <div className="flex items-center justify-between sm:col-span-2">
-            <h3 className="font-semibold">{editingId ? 'Editar ubicación' : 'Nueva ubicación'}</h3>
-            <Button
-              type="button"
-              variant="outline"
-              className="h-9 px-3"
-              onClick={() => setFormVisible(false)}
-            >
-              <X className="size-4" />
-            </Button>
-          </div>
-          <Campo
-            label="Nombre de ubicación"
-            required
-            value={values.nombre}
-            onChange={(nombre) => setValues({ ...values, nombre })}
-          />
-          <Campo
-            label="Provincia"
-            required
-            value={values.provincia}
-            onChange={(provincia) => setValues({ ...values, provincia })}
-          />
-          <Campo
-            label="Cantón"
-            required
-            value={values.canton}
-            onChange={(canton) => setValues({ ...values, canton })}
-          />
-          <Campo
-            label="Distrito"
-            required
-            value={values.distrito}
-            onChange={(distrito) => setValues({ ...values, distrito })}
-          />
-          <label className="grid gap-2 text-sm font-medium sm:col-span-2">
-            Otras señas
-            <Textarea
-              value={values.otras_senas}
-              onChange={(event) => setValues({ ...values, otras_senas: event.target.value })}
+          <DialogHeader>
+            <DialogTitle>{editingId ? 'Editar ubicación' : 'Nueva ubicación'}</DialogTitle>
+            <DialogDescription>
+              {editingId
+                ? 'Actualice los datos de la ubicación y guarde los cambios.'
+                : 'Complete los datos de la nueva sede de este cliente.'}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={enviar} className="grid gap-4 sm:grid-cols-2">
+            <Campo
+              label="Nombre de ubicación"
+              required
+              value={values.nombre}
+              onChange={(nombre) => setValues({ ...values, nombre })}
             />
-          </label>
-          <Campo
-            label="Latitud"
-            type="number"
-            step="0.000001"
-            value={values.latitud}
-            onChange={(latitud) => setValues({ ...values, latitud })}
-          />
-          <Campo
-            label="Longitud"
-            type="number"
-            step="0.000001"
-            value={values.longitud}
-            onChange={(longitud) => setValues({ ...values, longitud })}
-          />
-          <label className="flex items-center gap-3 text-sm font-medium sm:col-span-2">
-            <input
-              type="checkbox"
-              className="size-5"
-              checked={values.activa}
-              onChange={(event) => setValues({ ...values, activa: event.target.checked })}
+            <Campo
+              label="Provincia"
+              required
+              value={values.provincia}
+              onChange={(provincia) => setValues({ ...values, provincia })}
             />
-            Ubicación activa
-          </label>
-          <div className="space-y-2 sm:col-span-2">
-            <h4 className="text-sm font-semibold">Seleccione el punto en el mapa</h4>
-            <LocationMap
-              latitude={Number.isFinite(latitud) ? latitud : null}
-              longitude={Number.isFinite(longitud) ? longitud : null}
-              label={values.nombre || 'Ubicación seleccionada'}
-              selectable
-              onLocationChange={(latitude, longitude) =>
-                setValues((current) => ({
-                  ...current,
-                  latitud: String(latitude),
-                  longitud: String(longitude),
-                }))
-              }
+            <Campo
+              label="Cantón"
+              required
+              value={values.canton}
+              onChange={(canton) => setValues({ ...values, canton })}
             />
-          </div>
-          {(latitud === null) !== (longitud === null) && (
-            <p role="alert" className="text-sm text-red-700 sm:col-span-2">
-              Latitud y longitud deben completarse juntas.
+            <Campo
+              label="Distrito"
+              required
+              value={values.distrito}
+              onChange={(distrito) => setValues({ ...values, distrito })}
+            />
+            <label className="grid gap-2 text-sm font-medium sm:col-span-2">
+              Otras señas
+              <Textarea
+                value={values.otras_senas}
+                onChange={(event) => setValues({ ...values, otras_senas: event.target.value })}
+              />
+            </label>
+            <Campo
+              label="Latitud"
+              type="number"
+              step="0.000001"
+              value={values.latitud}
+              onChange={(latitud) => setValues({ ...values, latitud })}
+            />
+            <Campo
+              label="Longitud"
+              type="number"
+              step="0.000001"
+              value={values.longitud}
+              onChange={(longitud) => setValues({ ...values, longitud })}
+            />
+            <label className="flex items-center gap-3 text-sm font-medium sm:col-span-2">
+              <Checkbox
+                checked={values.activa}
+                onCheckedChange={(checked) => setValues({ ...values, activa: checked === true })}
+              />
+              Ubicación activa
+            </label>
+            <div className="space-y-2 sm:col-span-2">
+              <h4 className="text-sm font-semibold">Seleccione el punto en el mapa</h4>
+              <LocationMap
+                latitude={Number.isFinite(latitud) ? latitud : null}
+                longitude={Number.isFinite(longitud) ? longitud : null}
+                label={values.nombre || 'Ubicación seleccionada'}
+                selectable
+                onLocationChange={(latitude, longitude) =>
+                  setValues((current) => ({
+                    ...current,
+                    latitud: String(latitude),
+                    longitud: String(longitude),
+                  }))
+                }
+              />
+            </div>
+            {(latitud === null) !== (longitud === null) && (
+              <p role="alert" className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground sm:col-span-2">
+                Latitud y longitud deben completarse juntas.
+              </p>
+            )}
+            {formError && (
+              <p role="alert" className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground sm:col-span-2">
+                {formError.message}
+              </p>
+            )}
+            <DialogFooter className="sm:col-span-2">
+              <Button type="button" variant="outline" onClick={() => setFormVisible(false)}>
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                disabled={guardar.isPending || (latitud === null) !== (longitud === null)}
+              >
+                {guardar.isPending ? 'Guardando…' : 'Guardar ubicación'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        open={Boolean(ubicacionAEliminar)}
+        onOpenChange={(open) => !open && setUbicacionAEliminar(null)}
+      >
+        <AlertDialogContent
+          onCloseAutoFocus={(event) => {
+            event.preventDefault()
+            ultimoDisparadorRef.current?.focus()
+          }}
+        >
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar “{ubicacionAEliminar?.nombre}”?</AlertDialogTitle>
+            <AlertDialogDescription>Esta acción no se puede deshacer.</AlertDialogDescription>
+          </AlertDialogHeader>
+          {deleteError && (
+            <p role="alert" className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground">
+              {deleteError.message}
             </p>
           )}
-          <div className="flex gap-3 sm:col-span-2">
-            <Button
-              type="submit"
-              disabled={guardar.isPending || (latitud === null) !== (longitud === null)}
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={eliminar.isPending}
+              onClick={(event) => {
+                event.preventDefault()
+                void confirmarEliminar()
+              }}
             >
-              {guardar.isPending ? 'Guardando…' : 'Guardar ubicación'}
-            </Button>
-            <Button type="button" variant="outline" onClick={() => setFormVisible(false)}>
-              Cancelar
-            </Button>
-          </div>
-        </form>
-      )}
+              {eliminar.isPending ? 'Eliminando…' : 'Eliminar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-      {error && (
-        <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">
-          {error.message}
+      {pageError && (
+        <p role="alert" className="rounded-lg bg-destructive-soft p-3 text-sm text-destructive-soft-foreground">
+          {pageError.message}
         </p>
       )}
       <div className="overflow-x-auto rounded-xl border">
         <table className="w-full min-w-[680px] text-left text-sm">
-          <thead className="bg-muted">
+          <thead className="bg-muted text-muted-foreground">
             <tr>
               <th className="px-4 py-3">Nombre</th>
               <th className="px-4 py-3">Dirección</th>
@@ -246,14 +313,24 @@ export function ClientLocationsManager({
           </thead>
           <tbody>
             {listado.isLoading ? (
-              <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
-                  Cargando ubicaciones…
-                </td>
-              </tr>
+              Array.from({ length: 3 }).map((_, index) => (
+                <tr key={index} className="border-t">
+                  {Array.from({ length: 4 }).map((__, cell) => (
+                    <td key={cell} className="px-4 py-3">
+                      <Skeleton className="h-4 w-full max-w-32" />
+                    </td>
+                  ))}
+                  <td className="px-4 py-3">
+                    <div className="flex justify-end gap-2">
+                      <Skeleton className="size-9 rounded-lg" />
+                      <Skeleton className="size-9 rounded-lg" />
+                    </div>
+                  </td>
+                </tr>
+              ))
             ) : ubicaciones.length ? (
               ubicaciones.map((ubicacion) => (
-                <tr key={ubicacion.id} className="border-t">
+                <tr key={ubicacion.id} className="border-t transition-colors hover:bg-accent/50">
                   <td className="px-4 py-3 font-medium">{ubicacion.nombre}</td>
                   <td className="px-4 py-3">
                     {ubicacion.distrito}, {ubicacion.canton}, {ubicacion.provincia}
@@ -268,7 +345,7 @@ export function ClientLocationsManager({
                     <div className="flex justify-end gap-2">
                       <Button
                         variant="outline"
-                        className="h-9 px-3"
+                        size="icon"
                         onClick={() => editar(ubicacion)}
                         aria-label={`Editar ${ubicacion.nombre}`}
                       >
@@ -276,8 +353,12 @@ export function ClientLocationsManager({
                       </Button>
                       <Button
                         variant="outline"
-                        className="h-9 px-3 text-red-700"
-                        onClick={() => void confirmarEliminar(ubicacion)}
+                        size="icon"
+                        className="text-destructive hover:bg-destructive-soft"
+                        onClick={(event) => {
+                          ultimoDisparadorRef.current = event.currentTarget
+                          setUbicacionAEliminar(ubicacion)
+                        }}
                         aria-label={`Eliminar ${ubicacion.nombre}`}
                       >
                         <Trash2 className="size-4" />

@@ -28,19 +28,19 @@ export function OperatorResolutionRequest({
   return (
     <form
       onSubmit={enviar}
-      className="space-y-4 rounded-xl border border-amber-200 bg-amber-50 p-5"
+      className="space-y-4 rounded-xl border border-warning/30 bg-warning-soft p-5"
     >
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="font-semibold">Solicitar decisión del Encargado</h2>
-          <p className="mt-1 text-sm text-amber-900">
+          <p className="mt-1 text-sm text-warning-soft-foreground">
             Solicitud #{solicitud.numero}: {solicitud.nombre}
           </p>
         </div>
         <Button
           type="button"
           variant="outline"
-          className="h-9 px-3"
+          size="icon"
           onClick={onClose}
           aria-label="Cerrar"
         >
@@ -65,7 +65,7 @@ export function OperatorResolutionRequest({
         />
       </label>
       {solicitar.error && (
-        <p role="alert" className="text-sm text-red-800">
+        <p role="alert" className="text-sm text-destructive">
           {solicitar.error.message}
         </p>
       )}

@@ -12,6 +12,9 @@ export interface SolicitudAdmin {
   id: string
   numero: number
   nombre: string
+  detalle: string
+  cliente_id: string
+  ubicacion_id: string
   prioridad: 'baja' | 'media' | 'alta' | 'urgente' | null
   estado: EstadoSolicitud
   operador_id: string | null
@@ -32,6 +35,7 @@ export interface SolicitudAdmin {
   } | null
   ruta: { latitud: number | null; longitud: number | null } | null
   operador: { nombre_completo: string } | null
+  solicitante: { nombre_completo: string } | null
   validacion: { satisfecho: boolean; comentario: string | null; validado_en: string } | null
   peticiones: {
     id: string

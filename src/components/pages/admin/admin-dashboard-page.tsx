@@ -11,8 +11,11 @@ import { TiposPage } from '@/components/pages/admin/tipos-page'
 import { UsuariosPage } from '@/components/pages/admin/usuarios-page'
 import { VehiculosPage } from '@/components/pages/admin/vehiculos-page'
 import { MarcaPage } from '@/components/pages/admin/marca-page'
+import { ProveedoresPage } from '@/components/pages/admin/proveedores-page'
+import { OperationsHomePage } from '@/components/pages/operations-home-page'
 
 const pages: Record<AdminSection, () => React.JSX.Element> = {
+  home: () => <></>,
   solicitudes: BandejaEncargadoPage,
   rutas: ControlRutasPage,
   notificaciones: NotificacionesPage,
@@ -22,17 +25,18 @@ const pages: Record<AdminSection, () => React.JSX.Element> = {
   materiales: MaterialesPage,
   vehiculos: VehiculosPage,
   usuarios: UsuariosPage,
+  proveedores: ProveedoresPage,
   roles: RolesPage,
   marca: MarcaPage,
 }
 
 export function AdminDashboardPage() {
-  const [section, setSection] = useState<AdminSection>('solicitudes')
+  const [section, setSection] = useState<AdminSection>('home')
   const Page = pages[section]
   return (
     <AdminShell section={section} onSectionChange={setSection}>
-      {section === 'reportes' ? (
-        <ReportesPage onOpenSolicitudes={() => setSection('solicitudes')} />
+      {section === 'home' ? (
+        <OperationsHomePage onOpenSolicitudes={() => setSection('solicitudes')} />
       ) : (
         <Page />
       )}

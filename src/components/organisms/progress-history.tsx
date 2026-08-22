@@ -8,7 +8,7 @@ export function ProgressHistory({ solicitudId }: { solicitudId: string }) {
       <h2 className="text-lg font-semibold">Bitácora registrada</h2>
       {avances.data?.length ? (
         avances.data.map((avance) => (
-          <article key={avance.id} className="rounded-lg border bg-white p-4 shadow-sm">
+          <article key={avance.id} className="rounded-lg border bg-card p-4 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex gap-2">
                 <Badge>{avance.porcentaje}%</Badge>
@@ -37,7 +37,7 @@ export function ProgressHistory({ solicitudId }: { solicitudId: string }) {
           </article>
         ))
       ) : (
-        <p className="rounded-lg border bg-white p-4 text-sm text-muted-foreground">
+        <p className="rounded-lg border bg-card p-4 text-sm text-muted-foreground">
           Todavía no hay avances registrados.
         </p>
       )}

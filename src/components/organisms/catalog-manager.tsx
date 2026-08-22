@@ -1,17 +1,43 @@
-import { Pencil, Plus, Trash2, X } from 'lucide-react'
+import { ListChecks, Pencil, Plus, Trash2 } from 'lucide-react'
 import {
   type Dispatch,
   type FormEvent,
   type ReactNode,
   type SetStateAction,
   useMemo,
+  useEffect,
+  useRef,
   useState,
 } from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/atoms/button'
 import { Input } from '@/components/atoms/input'
 import { Select } from '@/components/atoms/select'
 import { Textarea } from '@/components/atoms/textarea'
+import { Checkbox } from '@/components/atoms/checkbox'
+import { Skeleton } from '@/components/atoms/skeleton'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/atoms/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/atoms/alert-dialog'
+import { FormField } from '@/components/molecules/form-field'
 import { PageHeader } from '@/components/molecules/page-header'
+import { GridPagination } from '@/components/molecules/grid-pagination'
+import { WorkspacePanel } from '@/components/molecules/workspace-panel'
 import { useCatalogo } from '@/features/catalogos/hooks/use-catalogo'
 import type {
   CampoCatalogo,
@@ -33,6 +59,7 @@ interface CatalogManagerProps<T> {
   onOpenEdit?: (item: T) => void
   onSaved?: (id: string | number) => Promise<void>
   extraActions?: (item: T) => ReactNode
+  headerActions?: ReactNode
 }
 
 function valoresIniciales(fields: CampoCatalogo[]) {
@@ -53,6 +80,7 @@ export function CatalogManager<T extends EntidadBase>({
   onOpenEdit,
   onSaved,
   extraActions,
+  headerActions,
 }: CatalogManagerProps<T>) {
   const { listado, guardar, eliminar } = useCatalogo<T>(tabla)
   const initialValues = useMemo(() => valoresIniciales(fields), [fields])
@@ -60,8 +88,56 @@ export function CatalogManager<T extends EntidadBase>({
   const [editingId, setEditingId] = useState<string | number | undefined>()
   const [values, setValues] = useState<DatosFormulario>(initialValues)
   const [extraError, setExtraError] = useState<Error | null>(null)
+  const [itemAEliminar, setItemAEliminar] = useState<T | null>(null)
+  const ultimoDisparadorRef = useRef<HTMLElement | null>(null)
+  const [search, setSearch] = useState('')
+  const [status, setStatus] = useState('todos')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+
+  const processed = useMemo(() => {
+    const term = search.trim().toLocaleLowerCase('es')
+    return [...(listado.data ?? [])]
+      .filter((item) => {
+        const record = item as unknown as Record<string, unknown>
+        const matchesSearch =
+          !term ||
+          columns.some((column) =>
+            String(record[column] ?? '')
+              .toLocaleLowerCase('es')
+              .includes(term),
+          )
+        const matchesStatus =
+          status === 'todos' ||
+          (status === 'activos'
+            ? record.activo !== false && record.estado !== 'mantenimiento'
+            : record.activo === false || record.estado === 'mantenimiento')
+        return matchesSearch && matchesStatus
+      })
+      .sort((a, b) => {
+        const left = a as unknown as Record<string, unknown>
+        const right = b as unknown as Record<string, unknown>
+        if (tabla === 'vehiculos') {
+          const score = (r: Record<string, unknown>) =>
+            r.activo === false ? 2 : r.estado === 'mantenimiento' ? 1 : 0
+          const difference = score(left) - score(right)
+          if (difference) return difference
+        }
+        if (left.creado_en && right.creado_en)
+          return String(right.creado_en).localeCompare(String(left.creado_en))
+        return String(left[columns[0]] ?? '').localeCompare(String(right[columns[0]] ?? ''), 'es')
+      })
+  }, [columns, listado.data, search, status, tabla])
+  const currentPage = Math.min(page, Math.max(1, Math.ceil(processed.length / pageSize)))
+  const paginated = processed.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  const supportsStatus = (listado.data ?? []).some((item) => {
+    const record = item as unknown as Record<string, unknown>
+    return 'activo' in record || 'estado' in record
+  })
+  useEffect(() => setPage(1), [search, status, pageSize])
 
   function abrirNuevo() {
+    ultimoDisparadorRef.current = document.activeElement as HTMLElement
     setEditingId(undefined)
     setExtraError(null)
     setValues(initialValues)
@@ -70,6 +146,7 @@ export function CatalogManager<T extends EntidadBase>({
   }
 
   function abrirEdicion(item: T) {
+    ultimoDisparadorRef.current = document.activeElement as HTMLElement
     const record = item as unknown as Record<string, unknown>
     setEditingId(item.id)
     setExtraError(null)
@@ -104,196 +181,307 @@ export function CatalogManager<T extends EntidadBase>({
       )
       return
     }
+    toast.success(
+      editingId ? 'Registro actualizado correctamente.' : 'Registro creado correctamente.',
+    )
     setFormVisible(false)
   }
 
-  async function confirmarEliminar(item: T) {
-    if (
-      window.confirm(
-        '¿Desea eliminar este registro? Esta acción puede estar restringida si tiene información asociada.',
-      )
-    ) {
-      await eliminar.mutateAsync(item.id)
-    }
+  async function confirmarEliminar() {
+    if (!itemAEliminar) return
+    await eliminar.mutateAsync(itemAEliminar.id)
+    toast.success('Registro eliminado correctamente.')
+    setItemAEliminar(null)
   }
 
-  const error = listado.error ?? guardar.error ?? eliminar.error ?? extraError
+  const formError = guardar.error ?? extraError
+  const deleteError = eliminar.error
+  const pageError = listado.error
 
   return (
     <section className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <PageHeader title={title} description={description} />
-        <Button onClick={abrirNuevo}>
-          <Plus className="mr-2 size-4" />
-          Nuevo registro
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {headerActions}
+          <Button onClick={abrirNuevo}>
+            <Plus className="mr-2 size-4" />
+            Nuevo registro
+          </Button>
+        </div>
       </div>
 
-      {formVisible && (
-        <form
-          onSubmit={enviar}
-          className="grid gap-4 rounded-lg border bg-white p-5 shadow-sm sm:grid-cols-2"
+      <Dialog open={formVisible} onOpenChange={setFormVisible}>
+        <DialogContent
+          onCloseAutoFocus={(event) => {
+            event.preventDefault()
+            ultimoDisparadorRef.current?.focus()
+          }}
         >
-          <div className="flex items-center justify-between sm:col-span-2">
-            <h2 className="font-semibold">{editingId ? 'Editar registro' : 'Nuevo registro'}</h2>
-            <Button
-              type="button"
-              variant="outline"
-              className="h-9 px-3"
-              onClick={() => setFormVisible(false)}
-              aria-label="Cerrar formulario"
-            >
-              <X className="size-4" />
-            </Button>
-          </div>
-          {fields.map((field) => (
-            <label
-              key={field.name}
-              className={
-                field.type === 'textarea'
-                  ? 'grid gap-2 text-sm font-medium sm:col-span-2'
-                  : 'grid gap-2 text-sm font-medium'
-              }
-            >
-              {field.label}
-              {field.type === 'textarea' ? (
-                <Textarea
-                  required={field.required}
-                  value={String(values[field.name] ?? '')}
-                  onChange={(event) =>
-                    setValues((current) => ({ ...current, [field.name]: event.target.value }))
-                  }
-                />
-              ) : field.type === 'select' ? (
-                <Select
-                  required={field.required}
-                  value={String(values[field.name] ?? '')}
-                  onChange={(event) =>
-                    setValues((current) => ({ ...current, [field.name]: event.target.value }))
-                  }
-                >
-                  <option value="">Seleccione…</option>
-                  {field.options?.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </Select>
-              ) : field.type === 'checkbox' ? (
-                <input
-                  className="size-5"
-                  type="checkbox"
-                  checked={Boolean(values[field.name])}
-                  onChange={(event) =>
-                    setValues((current) => ({ ...current, [field.name]: event.target.checked }))
-                  }
-                />
-              ) : (
-                <Input
-                  type={field.type ?? 'text'}
-                  step={field.step}
-                  required={field.required}
-                  value={String(values[field.name] ?? '')}
-                  onChange={(event) =>
-                    setValues((current) => ({ ...current, [field.name]: event.target.value }))
-                  }
-                />
-              )}
-            </label>
-          ))}
-          {typeof extraFormContent === 'function'
-            ? extraFormContent(values, setValues)
-            : extraFormContent}
-          <div className="flex gap-3 sm:col-span-2">
-            <Button type="submit" disabled={guardar.isPending}>
-              {guardar.isPending ? 'Guardando…' : 'Guardar'}
-            </Button>
-            <Button type="button" variant="outline" onClick={() => setFormVisible(false)}>
-              Cancelar
-            </Button>
-          </div>
-        </form>
-      )}
+          <DialogHeader>
+            <DialogTitle>{editingId ? 'Editar registro' : 'Nuevo registro'}</DialogTitle>
+            <DialogDescription>
+              {editingId
+                ? 'Actualice los datos del registro y guarde los cambios.'
+                : 'Complete los datos para crear un nuevo registro.'}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={enviar} className="grid gap-4 sm:grid-cols-2">
+            {fields.map((field) => (
+              <div
+                key={field.name}
+                className={
+                  field.type === 'textarea' || field.type === 'checkbox'
+                    ? 'sm:col-span-2'
+                    : undefined
+                }
+              >
+                {field.type === 'textarea' ? (
+                  <label htmlFor={`campo-${field.name}`} className="grid gap-2 text-sm font-medium">
+                    {field.label}
+                    <Textarea
+                      id={`campo-${field.name}`}
+                      required={field.required}
+                      value={String(values[field.name] ?? '')}
+                      onChange={(event) =>
+                        setValues((current) => ({ ...current, [field.name]: event.target.value }))
+                      }
+                    />
+                  </label>
+                ) : field.type === 'select' ? (
+                  <label htmlFor={`campo-${field.name}`} className="grid gap-2 text-sm font-medium">
+                    {field.label}
+                    <Select
+                      id={`campo-${field.name}`}
+                      required={field.required}
+                      value={String(values[field.name] ?? '')}
+                      onChange={(event) =>
+                        setValues((current) => ({ ...current, [field.name]: event.target.value }))
+                      }
+                    >
+                      <option value="">Seleccione…</option>
+                      {field.options?.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </Select>
+                  </label>
+                ) : field.type === 'checkbox' ? (
+                  <label
+                    htmlFor={`campo-${field.name}`}
+                    className="flex items-center gap-2 text-sm font-medium"
+                  >
+                    <Checkbox
+                      id={`campo-${field.name}`}
+                      checked={Boolean(values[field.name])}
+                      onCheckedChange={(checked) =>
+                        setValues((current) => ({ ...current, [field.name]: checked === true }))
+                      }
+                    />
+                    {field.label}
+                  </label>
+                ) : (
+                  <FormField
+                    id={`campo-${field.name}`}
+                    label={field.label}
+                    type={field.type ?? 'text'}
+                    step={field.step}
+                    required={field.required}
+                    value={String(values[field.name] ?? '')}
+                    onChange={(event) =>
+                      setValues((current) => ({ ...current, [field.name]: event.target.value }))
+                    }
+                  />
+                )}
+              </div>
+            ))}
+            {typeof extraFormContent === 'function'
+              ? extraFormContent(values, setValues)
+              : extraFormContent}
+            {formError && (
+              <p
+                role="alert"
+                className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground sm:col-span-2"
+              >
+                {formError.message}
+              </p>
+            )}
+            <DialogFooter className="sm:col-span-2">
+              <Button type="button" variant="outline" onClick={() => setFormVisible(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={guardar.isPending}>
+                {guardar.isPending ? 'Guardando…' : 'Guardar'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
-      {error && (
-        <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-800">
-          {error.message}
+      <AlertDialog
+        open={Boolean(itemAEliminar)}
+        onOpenChange={(open) => !open && setItemAEliminar(null)}
+      >
+        <AlertDialogContent
+          onCloseAutoFocus={(event) => {
+            event.preventDefault()
+            ultimoDisparadorRef.current?.focus()
+          }}
+        >
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar este registro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción puede estar restringida si el registro tiene información asociada. No se
+              puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {deleteError && (
+            <p
+              role="alert"
+              className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground"
+            >
+              {deleteError.message}
+            </p>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={eliminar.isPending}
+              onClick={(event) => {
+                event.preventDefault()
+                void confirmarEliminar()
+              }}
+            >
+              {eliminar.isPending ? 'Eliminando…' : 'Eliminar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {pageError && (
+        <p
+          role="alert"
+          className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground"
+        >
+          {pageError.message}
         </p>
       )}
 
-      <div className="overflow-x-auto rounded-lg border bg-white shadow-sm">
-        <table className="w-full min-w-[640px] text-left text-sm">
-          <thead className="bg-muted">
-            <tr>
-              {columns.map((column) => (
-                <th key={column} className="px-4 py-3 font-semibold">
-                  {columnLabels[column]}
-                </th>
-              ))}
-              <th className="px-4 py-3 text-right">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {listado.isLoading ? (
+      <WorkspacePanel
+        variant="list"
+        icon={ListChecks}
+        title="Listado de registros"
+        description="Consulte, filtre y seleccione los registros que desea administrar."
+      >
+        <div className="grid gap-3 sm:grid-cols-[minmax(220px,1fr)_220px]">
+          <Input
+            type="search"
+            placeholder="Buscar en el listado…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          {supportsStatus && (
+            <Select value={status} onChange={(e) => setStatus(e.target.value)}>
+              <option value="todos">Todos los registros</option>
+              <option value="activos">Activos / funcionales</option>
+              <option value="inactivos">Inactivos / no disponibles</option>
+            </Select>
+          )}
+        </div>
+
+        <div className="overflow-x-auto rounded-lg border bg-card shadow-sm">
+          <table className="w-full min-w-[640px] text-left text-sm">
+            <thead className="bg-muted text-muted-foreground">
               <tr>
-                <td
-                  colSpan={columns.length + 1}
-                  className="px-4 py-8 text-center text-muted-foreground"
-                >
-                  Cargando…
-                </td>
+                {columns.map((column) => (
+                  <th key={column} className="px-4 py-3 font-semibold">
+                    {columnLabels[column]}
+                  </th>
+                ))}
+                <th className="px-4 py-3 text-right">Acciones</th>
               </tr>
-            ) : listado.data?.length ? (
-              listado.data.map((item) => {
-                const record = item as unknown as Record<string, unknown>
-                return (
-                  <tr key={item.id} className="border-t">
+            </thead>
+            <tbody>
+              {listado.isLoading ? (
+                Array.from({ length: 5 }).map((_, index) => (
+                  <tr key={index} className="border-t">
                     {columns.map((column) => (
                       <td key={column} className="px-4 py-3">
-                        {typeof record[column] === 'boolean'
-                          ? record[column]
-                            ? 'Sí'
-                            : 'No'
-                          : String(record[column] ?? '—')}
+                        <Skeleton className="h-4 w-full max-w-32" />
                       </td>
                     ))}
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-2">
-                        {extraActions?.(item)}
-                        <Button
-                          variant="outline"
-                          className="h-9 px-3"
-                          onClick={() => abrirEdicion(item)}
-                          aria-label="Editar"
-                        >
-                          <Pencil className="size-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          className="h-9 px-3 text-red-700"
-                          onClick={() => void confirmarEliminar(item)}
-                          aria-label="Eliminar"
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
+                        <Skeleton className="size-9 rounded-lg" />
+                        <Skeleton className="size-9 rounded-lg" />
                       </div>
                     </td>
                   </tr>
-                )
-              })
-            ) : (
-              <tr>
-                <td
-                  colSpan={columns.length + 1}
-                  className="px-4 py-8 text-center text-muted-foreground"
-                >
-                  No hay registros.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+                ))
+              ) : paginated.length ? (
+                paginated.map((item) => {
+                  const record = item as unknown as Record<string, unknown>
+                  return (
+                    <tr key={item.id} className="border-t transition-colors hover:bg-accent/50">
+                      {columns.map((column) => (
+                        <td key={column} className="px-4 py-3">
+                          {typeof record[column] === 'boolean'
+                            ? record[column]
+                              ? 'Sí'
+                              : 'No'
+                            : String(record[column] ?? '—')}
+                        </td>
+                      ))}
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end gap-2">
+                          {extraActions?.(item)}
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => abrirEdicion(item)}
+                            aria-label="Editar"
+                          >
+                            <Pencil className="size-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="text-destructive hover:bg-destructive-soft"
+                            onClick={(event) => {
+                              ultimoDisparadorRef.current = event.currentTarget
+                              setItemAEliminar(item)
+                            }}
+                            aria-label="Eliminar"
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })
+              ) : (
+                <tr>
+                  <td
+                    colSpan={columns.length + 1}
+                    className="px-4 py-8 text-center text-muted-foreground"
+                  >
+                    No hay registros.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+          <GridPagination
+            page={currentPage}
+            total={processed.length}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
+        </div>
+      </WorkspacePanel>
     </section>
   )
 }

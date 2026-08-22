@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4'
 import { corsHeaders } from '../_shared/cors.ts'
 
 interface SolicitudAdmin {
-  accion: 'listar' | 'crear' | 'actualizar' | 'eliminar'
+  accion: 'listar' | 'crear' | 'actualizar' | 'cambiar_clave' | 'eliminar'
   usuario?: {
     id?: string
     email?: string
@@ -135,6 +135,16 @@ Deno.serve(async (request) => {
           .insert(usuario.roles.map((rol_id) => ({ usuario_id: usuario.id!, rol_id })))
         if (rolesError) throw rolesError
       }
+      return respuesta({ id: usuario.id })
+    }
+
+    if (payload.accion === 'cambiar_clave') {
+      if (!usuario.password || usuario.password.length < 8)
+        return respuesta({ error: 'La contraseña debe tener al menos 8 caracteres.' }, 400)
+      const { error } = await admin.auth.admin.updateUserById(usuario.id, {
+        password: usuario.password,
+      })
+      if (error) throw error
       return respuesta({ id: usuario.id })
     }
 

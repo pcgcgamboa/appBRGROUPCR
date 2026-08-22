@@ -38,5 +38,9 @@ export function useUsuariosAdmin() {
     mutationFn: (id: string) => invocar('eliminar', { id }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-users'] }),
   })
-  return { usuarios, guardar, eliminar }
+  const cambiarClave = useMutation({
+    mutationFn: ({ id, password }: { id: string; password: string }) =>
+      invocar('cambiar_clave', { id, password }),
+  })
+  return { usuarios, guardar, eliminar, cambiarClave }
 }

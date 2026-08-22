@@ -143,17 +143,17 @@ export function LocationMap({
             </Button>
           </div>
           {errorBusqueda && (
-            <p role="status" className="text-sm text-amber-700">
+            <p role="status" className="text-sm text-warning">
               {errorBusqueda}
             </p>
           )}
           {resultados.length > 0 && (
-            <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+            <div className="overflow-hidden rounded-lg border bg-card shadow-sm">
               {resultados.map((resultado) => (
                 <button
                   key={resultado.place_id}
                   type="button"
-                  className="flex w-full items-start gap-2 border-b px-3 py-2 text-left text-sm transition last:border-b-0 hover:bg-blue-50 focus-visible:bg-blue-50 focus-visible:outline-none"
+                  className="flex w-full items-start gap-2 border-b px-3 py-2 text-left text-sm transition last:border-b-0 hover:bg-accent focus-visible:bg-accent focus-visible:outline-none"
                   onClick={() => {
                     onLocationChange(Number(resultado.lat), Number(resultado.lon))
                     setConsulta(resultado.display_name)

@@ -9,7 +9,7 @@ export function LogoutButton({ compact = false }: { compact?: boolean }) {
   return (
     <Button
       variant="outline"
-      className={cn('justify-start text-red-700', compact && 'px-0')}
+      className={cn('justify-start text-destructive hover:bg-destructive-soft', compact && 'px-0')}
       title={compact ? t('signOut') : undefined}
       onClick={() => void supabase?.auth.signOut()}
     >

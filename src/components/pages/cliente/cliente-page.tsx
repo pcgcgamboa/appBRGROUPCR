@@ -1,9 +1,12 @@
-import { ClipboardCheck, FilePlus2, MessageSquare } from 'lucide-react'
+import { ClipboardCheck, FilePlus2, FolderOpen, MessageSquare } from 'lucide-react'
 import { useState } from 'react'
 import { Badge } from '@/components/atoms/badge'
 import { Button } from '@/components/atoms/button'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/atoms/tabs'
 import { PageHeader } from '@/components/molecules/page-header'
 import { ClientValidationForm } from '@/components/organisms/client-validation-form'
+import { ClientTracking } from '@/components/organisms/client-tracking'
+import { ClientDocumentsManager } from '@/components/organisms/client-documents-manager'
 import { SolicitantePage } from '@/components/pages/solicitante/solicitante-page'
 import { useSolicitudesCliente } from '@/features/cliente/hooks/use-cliente'
 import type { SolicitudCliente } from '@/features/cliente/types/cliente.types'
@@ -19,44 +22,59 @@ export function ClientePage({
   const { t } = useI18n()
   const solicitudes = useSolicitudesCliente(clienteId)
   const [seleccionada, setSeleccionada] = useState<SolicitudCliente | null>(null)
-  const [seccion, setSeccion] = useState<'solicitudes' | 'validaciones'>('solicitudes')
+  const [seccion, setSeccion] = useState<
+    'solicitudes' | 'validaciones' | 'tracking' | 'documentos'
+  >('solicitudes')
   if (!clienteId)
     return (
-      <p className="rounded-md bg-amber-50 p-4 text-sm text-amber-900">
+      <p
+        role="alert"
+        className="rounded-md bg-warning-soft p-4 text-sm text-warning-soft-foreground"
+      >
         Su usuario necesita estar asociado a un cliente.
       </p>
     )
   return (
-    <section className="space-y-6">
-      <nav
-        className="flex w-fit flex-wrap gap-2 rounded-xl border bg-white p-2 shadow-sm"
-        aria-label={t('serviceValidation')}
-      >
-        <Button
-          variant={seccion === 'solicitudes' ? 'default' : 'outline'}
-          onClick={() => setSeccion('solicitudes')}
-        >
+    <Tabs
+      value={seccion}
+      onValueChange={(value) => setSeccion(value as typeof seccion)}
+      className="space-y-6"
+    >
+      <TabsList className="w-fit" aria-label={t('serviceValidation')}>
+        <TabsTrigger value="solicitudes">
           <FilePlus2 className="mr-2 size-4" />
           {t('myRequests')}
-        </Button>
-        <Button
-          variant={seccion === 'validaciones' ? 'default' : 'outline'}
-          onClick={() => setSeccion('validaciones')}
-        >
+        </TabsTrigger>
+        <TabsTrigger value="documentos">
+          <FolderOpen className="mr-2 size-4" />
+          Documentos
+        </TabsTrigger>
+        <TabsTrigger value="tracking">
+          <MessageSquare className="mr-2 size-4" />
+          Tracking
+        </TabsTrigger>
+        <TabsTrigger value="validaciones">
           <ClipboardCheck className="mr-2 size-4" />
           {t('serviceValidation')}
-        </Button>
-      </nav>
-      {seccion === 'solicitudes' ? (
+        </TabsTrigger>
+      </TabsList>
+      <TabsContent value="solicitudes">
         <SolicitantePage usuarioId={usuarioId} clienteId={clienteId} />
-      ) : (
+      </TabsContent>
+      <TabsContent value="documentos">
+        <ClientDocumentsManager clienteId={clienteId} clienteNombre="Mi organización" canUpload />
+      </TabsContent>
+      <TabsContent value="tracking">
+        <ClientTracking clienteId={clienteId} />
+      </TabsContent>
+      <TabsContent value="validaciones">
         <ValidacionesCliente
           solicitudes={solicitudes}
           seleccionada={seleccionada}
           setSeleccionada={setSeleccionada}
         />
-      )}
-    </section>
+      </TabsContent>
+    </Tabs>
   )
 }
 
@@ -78,7 +96,10 @@ function ValidacionesCliente({
         />
       </div>
       {solicitudes.error && (
-        <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-800">
+        <p
+          role="alert"
+          className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground"
+        >
           {solicitudes.error.message}
         </p>
       )}
@@ -87,7 +108,7 @@ function ValidacionesCliente({
       )}
       <div className="grid gap-4 md:grid-cols-2">
         {solicitudes.data?.map((solicitud) => (
-          <article key={solicitud.id} className="rounded-lg border bg-white p-5 shadow-sm">
+          <article key={solicitud.id} className="rounded-lg border bg-card p-5 shadow-sm">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs text-muted-foreground">Solicitud #{solicitud.numero}</p>
@@ -100,7 +121,7 @@ function ValidacionesCliente({
               Operador: {solicitud.operador?.nombre_completo ?? '—'}
             </p>
             {solicitud.validacion ? (
-              <div className="mt-4 rounded-md bg-green-50 p-3 text-sm text-green-900">
+              <div className="mt-4 rounded-md bg-success-soft p-3 text-sm text-success-soft-foreground">
                 <p className="font-medium">
                   Validación enviada:{' '}
                   {solicitud.validacion.satisfecho ? 'Satisfecho' : 'No satisfecho'}
@@ -121,7 +142,7 @@ function ValidacionesCliente({
         ))}
       </div>
       {!solicitudes.isLoading && !solicitudes.data?.length && (
-        <p className="rounded-lg border bg-white p-6 text-center text-sm text-muted-foreground">
+        <p className="rounded-lg border bg-card p-6 text-center text-sm text-muted-foreground">
           No hay servicios pendientes de validación.
         </p>
       )}

@@ -1,6 +1,7 @@
 import { type FormEvent, useState } from 'react'
 import { Button } from '@/components/atoms/button'
 import { Textarea } from '@/components/atoms/textarea'
+import { RadioGroup, RadioGroupItem } from '@/components/atoms/radio-group'
 import { useValidarAtencion } from '@/features/cliente/hooks/use-cliente'
 import type { SolicitudCliente } from '@/features/cliente/types/cliente.types'
 
@@ -20,33 +21,27 @@ export function ClientValidationForm({
     onSaved()
   }
   return (
-    <form onSubmit={enviar} className="space-y-5 rounded-lg border bg-white p-5 shadow-sm">
+    <form onSubmit={enviar} className="space-y-5 rounded-lg border bg-card p-5 shadow-sm">
       <div>
         <h2 className="font-semibold">Validar solicitud #{solicitud.numero}</h2>
         <p className="text-sm text-muted-foreground">{solicitud.nombre}</p>
       </div>
       <fieldset>
         <legend className="mb-3 text-sm font-semibold">¿Está satisfecho con la atención?</legend>
-        <div className="flex gap-6">
+        <RadioGroup
+          className="flex gap-6"
+          value={satisfecho ? 'si' : 'no'}
+          onValueChange={(value) => setSatisfecho(value === 'si')}
+        >
           <label className="flex items-center gap-2 text-sm">
-            <input
-              type="radio"
-              name="satisfaccion"
-              checked={satisfecho}
-              onChange={() => setSatisfecho(true)}
-            />
+            <RadioGroupItem value="si" />
             Sí
           </label>
           <label className="flex items-center gap-2 text-sm">
-            <input
-              type="radio"
-              name="satisfaccion"
-              checked={!satisfecho}
-              onChange={() => setSatisfecho(false)}
-            />
+            <RadioGroupItem value="no" />
             No
           </label>
-        </div>
+        </RadioGroup>
       </fieldset>
       <label className="grid gap-2 text-sm font-medium">
         Comentarios{!satisfecho && ' (obligatorios)'}
@@ -58,7 +53,7 @@ export function ClientValidationForm({
         />
       </label>
       {validar.error && (
-        <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-800">
+        <p role="alert" className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground">
           {validar.error.message}
         </p>
       )}

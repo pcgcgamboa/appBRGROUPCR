@@ -1,8 +1,10 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { MapPinned, UsersRound } from 'lucide-react'
+import { FileText, MapPinned, UsersRound } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/atoms/button'
+import { Checkbox } from '@/components/atoms/checkbox'
 import { ClientLocationsManager } from '@/components/organisms/client-locations-manager'
+import { ClientDocumentsManager } from '@/components/organisms/client-documents-manager'
 import { CatalogManager } from '@/components/organisms/catalog-manager'
 import type { CampoCatalogo, Cliente } from '@/features/catalogos/types/catalogos.types'
 import { supabase } from '@/lib/supabase'
@@ -26,6 +28,7 @@ export function ClientesPage() {
   const queryClient = useQueryClient()
   const [usuariosSeleccionados, setUsuariosSeleccionados] = useState<string[]>([])
   const [clienteUbicaciones, setClienteUbicaciones] = useState<Cliente | null>(null)
+  const [clienteDocumentos, setClienteDocumentos] = useState<Cliente | null>(null)
   const ubicacionesRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -91,15 +94,26 @@ export function ClientesPage() {
         }
         onSaved={guardarUsuarios}
         extraActions={(cliente) => (
-          <Button
-            variant="outline"
-            className="h-9 px-3"
-            onClick={() => setClienteUbicaciones(cliente)}
-            aria-label={`Administrar ubicaciones de ${cliente.nombre}`}
-            title="Administrar ubicaciones"
-          >
-            <MapPinned className="size-4" />
-          </Button>
+          <>
+            <Button
+              variant="outline"
+              className="h-9 px-3"
+              onClick={() => setClienteUbicaciones(cliente)}
+              aria-label={`Administrar ubicaciones de ${cliente.nombre}`}
+              title="Administrar ubicaciones"
+            >
+              <MapPinned className="size-4" />
+            </Button>
+            <Button
+              variant="outline"
+              className="h-9 px-3"
+              onClick={() => setClienteDocumentos(cliente)}
+              aria-label={`Administrar documentos de ${cliente.nombre}`}
+              title="Administrar documentos"
+            >
+              <FileText className="size-4" />
+            </Button>
+          </>
         )}
         extraFormContent={
           <fieldset className="rounded-xl border bg-muted/40 p-4 sm:col-span-2">
@@ -117,13 +131,13 @@ export function ClientesPage() {
                 {usuarios.data.map((usuario) => (
                   <label
                     key={usuario.id}
-                    className="flex cursor-pointer items-center gap-3 rounded-lg border bg-white p-3 text-sm transition hover:border-primary/30"
+                    className="flex cursor-pointer items-center gap-3 rounded-lg border bg-card p-3 text-sm transition hover:border-primary/30"
                   >
-                    <input
-                      type="checkbox"
-                      className="size-4"
+                    <Checkbox
                       checked={usuariosSeleccionados.includes(usuario.id)}
-                      onChange={(event) => seleccionarUsuario(usuario.id, event.target.checked)}
+                      onCheckedChange={(checked) =>
+                        seleccionarUsuario(usuario.id, checked === true)
+                      }
                     />
                     <span className="min-w-0">
                       <span className="block truncate font-medium">
@@ -142,6 +156,14 @@ export function ClientesPage() {
           </fieldset>
         }
       />
+      {clienteDocumentos && (
+        <ClientDocumentsManager
+          clienteId={String(clienteDocumentos.id)}
+          clienteNombre={clienteDocumentos.nombre}
+          canManage
+          onClose={() => setClienteDocumentos(null)}
+        />
+      )}{' '}
       {clienteUbicaciones && (
         <div ref={ubicacionesRef}>
           <ClientLocationsManager

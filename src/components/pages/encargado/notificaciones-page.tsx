@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { Badge } from '@/components/atoms/badge'
+import { Checkbox } from '@/components/atoms/checkbox'
+import { Skeleton } from '@/components/atoms/skeleton'
 import { PageHeader } from '@/components/molecules/page-header'
+import { InternalNotifications } from '@/components/organisms/internal-notifications'
 import {
   useConfiguracionNotificaciones,
   useEnviosNotificaciones,
@@ -41,16 +44,28 @@ export function NotificacionesPage() {
   }
   return (
     <section className="space-y-6">
+      <InternalNotifications />
       <PageHeader
         title="Notificaciones al cliente"
         description="Active el correo individualmente para cada cambio de estado."
       />
       {(configuracion.error ?? guardar.error) && (
-        <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-800">
+        <p
+          role="alert"
+          className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground"
+        >
           {(configuracion.error ?? guardar.error)?.message}
         </p>
       )}
       <div className="grid gap-4 md:grid-cols-2">
+        {configuracion.isLoading &&
+          Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="space-y-2 rounded-lg border bg-card p-4 shadow-sm">
+              <Skeleton className="h-3 w-1/3" />
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-3 w-1/2" />
+            </div>
+          ))}
         {configuracion.data?.map((solicitud) => (
           <button
             type="button"
@@ -58,8 +73,8 @@ export function NotificacionesPage() {
             onClick={() => setSeleccionada(solicitud)}
             className={
               seleccionada?.id === solicitud.id
-                ? 'rounded-lg border-2 border-primary bg-white p-4 text-left shadow-sm'
-                : 'rounded-lg border bg-white p-4 text-left shadow-sm'
+                ? 'rounded-lg border-2 border-primary bg-card p-4 text-left shadow-sm'
+                : 'rounded-lg border bg-card p-4 text-left shadow-sm'
             }
           >
             <p className="text-xs text-muted-foreground">Solicitud #{solicitud.numero}</p>
@@ -73,7 +88,7 @@ export function NotificacionesPage() {
       </div>
       {seleccionada && (
         <div className="grid gap-6 lg:grid-cols-2">
-          <section className="rounded-lg border bg-white p-5 shadow-sm">
+          <section className="rounded-lg border bg-card p-5 shadow-sm">
             <h2 className="font-semibold">Estados notificados para #{seleccionada.numero}</h2>
             <div className="mt-4 grid gap-3">
               {estados.map((estado) => {
@@ -86,33 +101,38 @@ export function NotificacionesPage() {
                     className="flex items-center justify-between gap-4 rounded-md border p-3 text-sm"
                   >
                     <span className="capitalize">{estado.replace(/_/g, ' ')}</span>
-                    <input
-                      type="checkbox"
-                      className="size-5"
+                    <Checkbox
                       checked={activa}
                       disabled={guardar.isPending}
-                      onChange={(event) => void cambiar(estado, event.target.checked)}
+                      onCheckedChange={(checked) => void cambiar(estado, checked === true)}
                     />
                   </label>
                 )
               })}
             </div>
           </section>
-          <section className="rounded-lg border bg-white p-5 shadow-sm">
+          <section className="rounded-lg border bg-card p-5 shadow-sm">
             <h2 className="font-semibold">Últimos envíos</h2>
             <div className="mt-4 space-y-3">
-              {envios.data?.length ? (
+              {envios.isLoading ? (
+                Array.from({ length: 3 }).map((_, index) => (
+                  <div key={index} className="space-y-2 rounded-md border p-3">
+                    <Skeleton className="h-3 w-1/3" />
+                    <Skeleton className="h-3 w-1/2" />
+                  </div>
+                ))
+              ) : envios.data?.length ? (
                 envios.data.map((envio) => (
                   <article key={envio.id} className="rounded-md border p-3 text-sm">
                     <div className="flex items-center justify-between gap-2">
                       <span className="capitalize">{envio.estado.replace(/_/g, ' ')}</span>
                       <Badge
-                        className={
+                        variant={
                           envio.resultado === 'error'
-                            ? 'bg-red-100 text-red-800'
+                            ? 'destructive'
                             : envio.resultado === 'enviado'
-                              ? 'bg-green-100 text-green-800'
-                              : ''
+                              ? 'success'
+                              : 'default'
                         }
                       >
                         {envio.resultado}
@@ -122,7 +142,7 @@ export function NotificacionesPage() {
                       {envio.destinatario ?? 'Sin destinatario'}
                     </p>
                     {envio.detalle_error && (
-                      <p className="mt-2 text-xs text-red-700">{envio.detalle_error}</p>
+                      <p className="mt-2 text-xs text-destructive">{envio.detalle_error}</p>
                     )}
                   </article>
                 ))
