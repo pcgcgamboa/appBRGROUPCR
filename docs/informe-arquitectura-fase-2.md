@@ -14,6 +14,9 @@ segura"): normalización de errores y desacople del envío de notificaciones del
 | Puertos/adaptadores en los 10 dominios restantes (`flota`, `cliente`, `catalogos`, `tecnicos`, `usuarios`, `configuracion`, `notificaciones`, `reportes`, `operador`, `rutas`) | ✅ Hecho — los 12 dominios de `src/features/**` quedan con el mismo patrón |
 | Fase 2: utilidad de normalización de errores (`src/lib/errores.ts`) | ✅ Hecho, aplicada en 3 componentes representativos (1 por tipo de fuente de error); el resto queda documentado como trabajo futuro |
 | Fase 2: desacoplar el envío de notificaciones del camino crítico | ✅ Hecho — corregido además un problema de diseño detectado en verificación (ver sección 4) |
+| Fase 2: `correlacion_id` en respuestas de Edge Functions | ✅ Hecho (alcance acotado, ver sección 6) |
+| Fase 2: matriz de decisión (consulta directa / RPC / Edge Function) | ✅ Documentada en `CLAUDE.md` |
+| Fase 2: outbox con reintentos (`pg_cron`), idempotencia de mutaciones | 📋 Pendiente — requiere decisiones operativas (política de reintento, habilitar extensión de Postgres) |
 
 Ejecutado con 7 agentes en paralelo (4 para los dominios restantes, agrupados por tamaño; 2 para
 los ítems de Fase 2; 1 adicional para dos dominios que faltaron en el primer lote), cero
@@ -135,7 +138,41 @@ reintento, una decisión operativa fuera del alcance de este cambio.
 
 ---
 
-## 5. Archivos nuevos/modificados (resumen)
+## 5. Fase 2 — correlación y matriz de decisión
+
+Ejecutado directamente (sin delegar a un agente), dado que requería precisión sobre las
+limitaciones reales de Postgres en un entorno con connection pooling.
+
+### `correlacion_id` en respuestas de Edge Functions
+
+Las tres funciones (`gestionar-solicitud`, `registrar-avance`, `admin-users`) ahora generan
+`crypto.randomUUID()` al inicio de cada invocación y lo incluyen como `correlacion_id` en **toda**
+respuesta (éxito o error), vía una función `respuesta()` redefinida como closure dentro del
+handler (en vez de a nivel de módulo), para que cada request tenga su propio identificador sin
+tocar ninguno de los ~30 sitios donde ya se llamaba `respuesta(...)`.
+
+**Alcance deliberadamente acotado**: se evaluó threading el `correlacion_id` hacia
+`automatizacion_ejecuciones.correlacion_id` (que ya existe en el esquema desde
+`20260821160000_trazabilidad_automatizaciones.sql`) usando `set_config('app.correlacion_id', ...)`
+a nivel de sesión de Postgres — pero Supabase usa pooling de conexiones en modo transacción
+(PgBouncer), donde **no hay garantía de continuidad de sesión entre dos llamadas `.rpc()`
+separadas** desde `supabase-js`; un `set_config(..., is_local=true)` hecho en una llamada no
+necesariamente sobrevive hasta la siguiente. Hacerlo bien requeriría convertir las actualizaciones
+directas de `gestionar-solicitud` (`.from('solicitudes').update(...)`) en funciones RPC, para que
+el `set_config` y el `UPDATE` que dispara el trigger ocurran dentro de la misma función/transacción
+— un refactor más grande, no ejecutado ahora. El `correlacion_id` actual es solo para
+correlación cliente↔soporte vía la respuesta HTTP, no está enlazado (todavía) con la auditoría de
+automatizaciones.
+
+### Matriz de decisión
+
+Se documentó en `CLAUDE.md` (sección "Decision matrix") el criterio ya implícito en el código para
+elegir entre consulta directa, RPC y Edge Function, formalizando la recomendación de la propuesta
+original (sección 7.2) contra las convenciones reales de este proyecto.
+
+---
+
+## 6. Archivos nuevos/modificados (resumen)
 
 **12 dominios** (`ports/`, `adapters/`, `lib/repository.ts` nuevos por dominio; hooks existentes
 refactorizados internamente sin cambiar firmas): ver tabla de la sección 2 para el detalle por
@@ -145,8 +182,9 @@ dominio.
 `unexpectedError`; modificados `operator-progress-form.tsx`, `operator-resolution-request.tsx`,
 `request-timeline.tsx`.
 
-**Notificaciones**: modificados `supabase/functions/_shared/notificaciones.ts`,
-`supabase/functions/gestionar-solicitud/index.ts`, `supabase/functions/registrar-avance/index.ts`.
+**Notificaciones y correlación**: modificados `supabase/functions/_shared/notificaciones.ts`,
+`supabase/functions/gestionar-solicitud/index.ts`, `supabase/functions/registrar-avance/index.ts`,
+`supabase/functions/admin-users/index.ts`.
 
-**Documentación**: este informe; actualizado `CLAUDE.md` (la nota de "solo `solicitudes`/`auth`
-tienen puertos/adaptadores" ya no era cierta).
+**Documentación**: este informe; actualizado `CLAUDE.md` (nota de dominios sin puertos/adaptadores
+ya no era cierta; se agregó la matriz de decisión y la nota de correlación).

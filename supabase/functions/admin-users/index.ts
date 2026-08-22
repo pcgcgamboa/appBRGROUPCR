@@ -15,15 +15,19 @@ interface SolicitudAdmin {
   }
 }
 
-function respuesta(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  })
-}
-
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
+
+  // Identificador único por solicitud, incluido en toda respuesta (éxito o error) para poder
+  // correlacionar un reporte de usuario/soporte con esta invocación puntual de la función.
+  const correlacionId = crypto.randomUUID()
+  function respuesta(body: Record<string, unknown>, status = 200) {
+    return new Response(JSON.stringify({ ...body, correlacion_id: correlacionId }), {
+      status,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
   if (request.method !== 'POST') return respuesta({ error: 'Método no permitido.' }, 405)
 
   try {
