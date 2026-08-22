@@ -34,6 +34,26 @@ export function leerAvanceDraft(solicitudId: string): AvanceDraftCampos | null {
 
 export function descartarAvanceDraft(solicitudId: string) {
   borrarBorrador(claveBorrador(solicitudId))
+  borrarBorrador(claveIdempotencia(solicitudId))
+}
+
+function claveIdempotencia(solicitudId: string) {
+  return `srs:avance-draft:idempotencia:${solicitudId}`
+}
+
+/**
+ * Devuelve una clave estable para el envío del avance de esta solicitud: la misma clave en cada
+ * llamada mientras exista el borrador, para que un reintento tras perder la respuesta (señal
+ * débil, timeout) no duplique el avance en el servidor. Se genera una vez y se persiste junto al
+ * borrador; se descarta junto con él (ver `descartarAvanceDraft`) o al registrar el avance con
+ * éxito (el caller debe llamar `borrarBorrador` sobre esta misma clave, vía `descartarAvanceDraft`).
+ */
+export function obtenerClaveIdempotencia(solicitudId: string): string {
+  const existente = leerBorrador<string>(claveIdempotencia(solicitudId))
+  if (existente) return existente
+  const nueva = crypto.randomUUID()
+  escribirBorrador(claveIdempotencia(solicitudId), nueva)
+  return nueva
 }
 
 export function marcarSolicitudAbierta(solicitudId: string | null) {

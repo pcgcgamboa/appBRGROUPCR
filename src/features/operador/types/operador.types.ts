@@ -56,6 +56,9 @@ export interface RegistrarAvanceInput {
   estado_nuevo: EstadoSolicitud
   materiales: Omit<MaterialAvanceInput, 'key'>[]
   adjuntos: AdjuntoAvanceInput[]
+  /** Estable mientras exista el borrador de esta solicitud — ver `obtenerClaveIdempotencia`. Un
+   * reintento con la misma clave devuelve el avance ya registrado en vez de duplicarlo. */
+  idempotencia_clave: string
 }
 
 export type EstadoSubidaAdjunto = 'pendiente' | 'subiendo' | 'listo' | 'error'

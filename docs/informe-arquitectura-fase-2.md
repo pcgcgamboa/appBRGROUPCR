@@ -17,7 +17,7 @@ segura"): normalización de errores y desacople del envío de notificaciones del
 | Fase 2: `correlacion_id` en respuestas de Edge Functions | ✅ Hecho (alcance acotado, ver sección 6) |
 | Fase 2: matriz de decisión (consulta directa / RPC / Edge Function) | ✅ Documentada en `CLAUDE.md` |
 | Fase 2: outbox con reintentos (`pg_cron`) | ✅ Migración y Edge Function escritas con política por defecto (cada 5 min, 3 intentos, backoff simple) — **no desplegado**, requiere un paso manual de configuración (ver sección 7) |
-| Fase 2: idempotencia de mutaciones | 📋 Sigue pendiente — no se abordó en esta ronda |
+| Fase 2: idempotencia de mutaciones | ✅ Backend completo en 3 funciones críticas; frontend cableado solo en `registrar_avance_operador` (ver sección 8) |
 
 Ejecutado con 7 agentes en paralelo (4 para los dominios restantes, agrupados por tamaño; 2 para
 los ítems de Fase 2; 1 adicional para dos dominios que faltaron en el primer lote), cero
@@ -226,7 +226,68 @@ se recomienda verificar en un entorno de pruebas antes de aplicar en producción
 
 ---
 
-## 8. Archivos nuevos/modificados (resumen)
+## 8. Fase 2 — idempotencia de mutaciones críticas
+
+### Diseño
+
+`idempotencia_claves` (nueva tabla): `clave uuid primary key`, `usuario_id`, `operacion`,
+`resultado jsonb`, `creado_en`. Sin políticas de RLS para `authenticated` — solo la leen/escriben
+las propias funciones `security definer`. Un cliente que reintenta la misma llamada con la misma
+clave recibe el resultado ya guardado en vez de duplicar la fila creada la primera vez.
+
+**Se agregó a las 3 funciones que crean filas** (no a actualizaciones de estado, que ya son
+naturalmente idempotentes — marcar `estado='asignada'` dos veces no duplica nada):
+`crear_solicitud_portal`, `crear_solicitud_gestor`, `registrar_avance_operador`. En los tres casos
+el parámetro nuevo es `p_idempotencia_clave uuid default null`, **al final** de la lista y con
+default `null` — todo el código que no lo envía sigue funcionando exactamente igual que antes.
+
+**Decisión técnica importante**: no se usó `create or replace function` con la lista de parámetros
+modificada. En Postgres, la identidad de una función es su (nombre, tipos de parámetros) — agregar
+un parámetro nuevo, aunque tenga default, hace que `create or replace` cree una **sobrecarga
+nueva**, dejando la función vieja intacta y activa en paralelo. Con PostgREST resolviendo qué
+sobrecarga usar por los nombres de argumentos en el JSON del body, tener dos versiones del mismo
+nombre es un riesgo real de ambigüedad no verificable sin una base de datos real. Se usó en cambio
+`drop function if exists (firma vieja); create function (firma nueva)`, que dejar una única función
+sin ambigüedad — verificado contra semántica documentada de Postgres, no contra una base de datos
+real (misma limitación que el resto de este ítem).
+
+**Límite de concurrencia aceptado, no resuelto**: el patrón "verificar la clave, luego insertar" no
+es perfectamente atómico ante dos solicitudes *verdaderamente concurrentes* con la misma clave
+(ventana de milisegundos). Se acepta como límite conocido — documentado en el propio comentario de
+la migración — porque el caso real que esto protege es un reintento *secuencial* del mismo cliente
+tras un timeout o error de red (el escenario de campo con señal débil que motivó este ítem), no una
+carrera de solicitudes simultáneas.
+
+### Frontend: cableado completo solo para `registrar_avance_operador`
+
+Es el de mayor valor práctico: ya existe infraestructura de borrador local del formulario de avance
+(`src/features/operador/hooks/use-avance-draft.ts`, de una fase anterior de esta misma sesión) que
+sobrevive a pérdida de señal o cierre accidental de pestaña — el lugar natural para persistir
+también la clave de idempotencia. `obtenerClaveIdempotencia(solicitudId)` (nueva función en ese
+mismo archivo) genera una clave una sola vez y la reutiliza en cada llamada mientras exista el
+borrador; se descarta junto con él (éxito o "Descartar borrador" explícito). `RegistrarAvanceInput`
+gana el campo `idempotencia_clave: string`; `operator-progress-form.tsx` la obtiene al enviar; la
+Edge Function `registrar-avance` la reenvía como `p_idempotencia_clave`.
+
+**No cableado (backend listo, frontend pendiente)**: `crear_solicitud_portal`/`crear_solicitud_gestor`
+— `solicitud-form.tsx`/`use-crear-solicitud.ts` no tienen hoy una infraestructura de sesión estable
+equivalente al borrador del operador; generar y mantener una clave estable ahí (p. ej. vía
+`useRef`/`useState` en el componente, con el ciclo de vida correcto: misma clave en reintentos del
+mismo intento de envío, nueva clave si el usuario cierra y reabre el formulario) es un cambio de
+UI/estado que se dejó fuera de esta ronda para no improvisar un patrón nuevo bajo presión de tiempo.
+La capacidad del backend ya está lista para usarse en cuanto se decida hacerlo.
+
+### Verificación
+
+Se leyeron las 3 definiciones completas de las funciones originales antes de modificarlas (no se
+asumió ningún cuerpo). `tsc -b`, `npm run lint`, `npm run format:check`, `npm run build`,
+`npm run test` (14/14) y `npm run test:e2e` (2/2) limpios sobre el cambio de frontend. La migración
+SQL en sí **no se probó contra una base de datos real** (misma limitación que el resto de los
+cambios de esquema de esta sesión) — se recomienda aplicarla primero en un entorno de pruebas.
+
+---
+
+## 9. Archivos nuevos/modificados (resumen)
 
 **12 dominios** (`ports/`, `adapters/`, `lib/repository.ts` nuevos por dominio; hooks existentes
 refactorizados internamente sin cambiar firmas): ver tabla de la sección 2 para el detalle por
@@ -242,6 +303,12 @@ dominio.
 
 **Outbox**: nuevos `supabase/migrations/20260822120000_outbox_notificaciones.sql`,
 `supabase/functions/procesar-notificaciones-pendientes/index.ts`.
+
+**Idempotencia**: nuevo `supabase/migrations/20260822130000_idempotencia_mutaciones_criticas.sql`;
+modificados `src/features/operador/hooks/use-avance-draft.ts`,
+`src/features/operador/types/operador.types.ts`,
+`src/components/organisms/operator-progress-form.tsx`,
+`supabase/functions/registrar-avance/index.ts`.
 
 **Documentación**: este informe; actualizado `CLAUDE.md` (nota de dominios sin puertos/adaptadores
 ya no era cierta; se agregó la matriz de decisión y la nota de correlación).

@@ -12,6 +12,7 @@ import { useAttachmentUploads } from '@/features/operador/hooks/use-attachment-u
 import {
   descartarAvanceDraft,
   leerAvanceDraft,
+  obtenerClaveIdempotencia,
   useGuardarAvanceDraft,
 } from '@/features/operador/hooks/use-avance-draft'
 import { useAvancesSolicitud, useRegistrarAvance } from '@/features/operador/hooks/use-operador'
@@ -186,6 +187,7 @@ export function OperatorProgressForm({
         estado_nuevo: estado,
         materiales,
         adjuntos: attachmentUploads.adjuntosParaEnviar(),
+        idempotencia_clave: obtenerClaveIdempotencia(solicitud.id),
       })
       descartarAvanceDraft(solicitud.id)
       attachmentUploads.reset()

@@ -39,6 +39,9 @@ Deno.serve(async (request) => {
       p_estado_nuevo: payload.estado_nuevo,
       p_materiales: payload.materiales ?? [],
       p_adjuntos: payload.adjuntos ?? [],
+      // Un reintento del cliente con la misma clave (timeout, señal débil) devuelve el avance
+      // ya registrado en vez de duplicarlo — ver 20260822130000_idempotencia_mutaciones_criticas.sql.
+      p_idempotencia_clave: payload.idempotencia_clave ?? null,
     })
     if (error) throw error
     // El registro `pendiente` se inserta antes de responder; el envío SMTP es en segundo plano.
