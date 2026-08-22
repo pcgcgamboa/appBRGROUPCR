@@ -16,7 +16,8 @@ segura"): normalización de errores y desacople del envío de notificaciones del
 | Fase 2: desacoplar el envío de notificaciones del camino crítico | ✅ Hecho — corregido además un problema de diseño detectado en verificación (ver sección 4) |
 | Fase 2: `correlacion_id` en respuestas de Edge Functions | ✅ Hecho (alcance acotado, ver sección 6) |
 | Fase 2: matriz de decisión (consulta directa / RPC / Edge Function) | ✅ Documentada en `CLAUDE.md` |
-| Fase 2: outbox con reintentos (`pg_cron`), idempotencia de mutaciones | 📋 Pendiente — requiere decisiones operativas (política de reintento, habilitar extensión de Postgres) |
+| Fase 2: outbox con reintentos (`pg_cron`) | ✅ Migración y Edge Function escritas con política por defecto (cada 5 min, 3 intentos, backoff simple) — **no desplegado**, requiere un paso manual de configuración (ver sección 7) |
+| Fase 2: idempotencia de mutaciones | 📋 Sigue pendiente — no se abordó en esta ronda |
 
 Ejecutado con 7 agentes en paralelo (4 para los dominios restantes, agrupados por tamaño; 2 para
 los ítems de Fase 2; 1 adicional para dos dominios que faltaron en el primer lote), cero
@@ -172,7 +173,60 @@ original (sección 7.2) contra las convenciones reales de este proyecto.
 
 ---
 
-## 6. Archivos nuevos/modificados (resumen)
+## 7. Fase 2 — outbox con reintentos para notificaciones
+
+Política acordada con el usuario: pg_cron cada 5 minutos, 3 intentos con backoff simple (5/15/30
+minutos), sin habilitar un vendor externo. Verificada la sintaxis exacta contra la documentación
+oficial de Supabase (`supabase.com/docs/guides/functions/schedule-functions`) antes de escribir,
+dado que no hay forma de probar esto en el entorno de esta sesión.
+
+### Qué se escribió
+
+**`supabase/migrations/20260822120000_outbox_notificaciones.sql`** (nueva):
+- Habilita `pg_cron` y `pg_net`.
+- Agrega `intentos` (arranca en 1) y `siguiente_intento_en` a `notificaciones_envios`, más un
+  índice parcial sobre filas `pendiente`/`error`.
+- `reclamar_notificaciones_pendientes(p_limite)`: reclama hasta *p_limite* filas vencidas de
+  backoff con `for update skip locked` (dos ejecuciones de cron superpuestas nunca procesan la
+  misma fila dos veces), incrementa `intentos` y calcula el próximo backoff, y devuelve los datos
+  necesarios para reenviar — otorgada únicamente a `service_role`.
+- `cron.schedule('procesar-notificaciones-pendientes', '*/5 * * * *', ...)`: invoca la nueva Edge
+  Function vía `net.http_post`, leyendo URL y `apikey` desde `vault.decrypted_secrets` (nunca
+  hardcodeados en la migración — los valores dependen del entorno).
+
+**`supabase/functions/procesar-notificaciones-pendientes/index.ts`** (nueva): sin usuario detrás
+— corre con `service_role`, llama `reclamar_notificaciones_pendientes`, y por cada fila reclamada
+reutiliza `enviarNotificacionPendiente` (la misma función que ya usa el camino normal), sin
+duplicar la lógica de envío SMTP.
+
+### Paso manual pendiente, deliberadamente no incluido en la migración
+
+El job queda programado pero sin efecto (el `net.http_post` fallará silenciosamente al no
+encontrar los secretos) hasta ejecutar, **una sola vez, contra el proyecto real**:
+
+```sql
+select vault.create_secret('https://<project-ref>.supabase.co', 'notif_functions_base_url');
+select vault.create_secret('<anon/publishable key>', 'notif_publishable_key');
+```
+
+No se incluyó en la migración porque el valor depende del entorno (desarrollo/pruebas/producción
+tendrían URLs distintas) — una migración compartida no debe fijar un valor de un solo entorno.
+Después de aplicar la migración (`supabase db push`, no ejecutado en esta sesión) y desplegar la
+función (`supabase functions deploy procesar-notificaciones-pendientes`), correr esos dos
+`vault.create_secret` deja el outbox completamente operativo.
+
+### Verificación
+
+Sin acceso a un proyecto Supabase vinculado en este entorno para `db push`, la verificación fue:
+lectura cuidadosa del esquema real de `notificaciones_envios` (no se asumió ningún nombre/tipo de
+columna) antes de escribir la migración, `npx eslint`/`npx prettier` limpios sobre la nueva Edge
+Function, y contraste de la sintaxis de `cron.schedule`/`vault.decrypted_secrets`/`net.http_post`
+contra la documentación oficial vigente. **No probado end-to-end contra una base de datos real** —
+se recomienda verificar en un entorno de pruebas antes de aplicar en producción.
+
+---
+
+## 8. Archivos nuevos/modificados (resumen)
 
 **12 dominios** (`ports/`, `adapters/`, `lib/repository.ts` nuevos por dominio; hooks existentes
 refactorizados internamente sin cambiar firmas): ver tabla de la sección 2 para el detalle por
@@ -185,6 +239,9 @@ dominio.
 **Notificaciones y correlación**: modificados `supabase/functions/_shared/notificaciones.ts`,
 `supabase/functions/gestionar-solicitud/index.ts`, `supabase/functions/registrar-avance/index.ts`,
 `supabase/functions/admin-users/index.ts`.
+
+**Outbox**: nuevos `supabase/migrations/20260822120000_outbox_notificaciones.sql`,
+`supabase/functions/procesar-notificaciones-pendientes/index.ts`.
 
 **Documentación**: este informe; actualizado `CLAUDE.md` (nota de dominios sin puertos/adaptadores
 ya no era cierta; se agregó la matriz de decisión y la nota de correlación).
