@@ -105,7 +105,8 @@ export function OperatorProgressForm({
   // en el resto del formulario mientras la subida ocurre en segundo plano.
   useEffect(() => {
     const hayPendientes = attachmentUploads.items.some((item) => item.estado === 'pendiente')
-    if (hayPendientes && !attachmentUploads.isUploading) void attachmentUploads.uploadAll(solicitud.id)
+    if (hayPendientes && !attachmentUploads.isUploading)
+      void attachmentUploads.uploadAll(solicitud.id)
   }, [attachmentUploads, solicitud.id])
 
   // Limpieza best-effort: si se cambia de solicitud (o se desmonta) con fotos ya subidas
@@ -398,7 +399,10 @@ export function OperatorProgressForm({
       />
 
       {registrar.error && (
-        <p role="alert" className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground">
+        <p
+          role="alert"
+          className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground"
+        >
           {registrar.error.message}
         </p>
       )}
@@ -406,7 +410,10 @@ export function OperatorProgressForm({
       <div className="sticky bottom-0 -mx-4 -mb-4 mt-2 rounded-b-lg border-t bg-card/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:-mb-6 sm:px-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           {mensajeFooter ? (
-            <p role={!isOnline || bloqueadoPorAdjuntos ? 'alert' : 'status'} className="text-sm text-muted-foreground">
+            <p
+              role={!isOnline || bloqueadoPorAdjuntos ? 'alert' : 'status'}
+              className="text-sm text-muted-foreground"
+            >
               {mensajeFooter}
             </p>
           ) : (

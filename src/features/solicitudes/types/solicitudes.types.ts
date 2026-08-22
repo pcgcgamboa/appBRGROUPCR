@@ -51,3 +51,41 @@ export interface OperadorResumen {
   id: string
   nombre_completo: string
 }
+
+export interface MaterialSolicitud {
+  id: string
+  cantidad: number
+  costo_referencial_aplicado: number | null
+  creado_en: string
+  material: { nombre: string; unidad_medida: string } | null
+  registrado_por_usuario: { nombre_completo: string } | null
+}
+
+export interface MiSolicitud {
+  id: string
+  numero: number
+  nombre: string
+  estado: string
+  prioridad: string | null
+  creado_en: string
+  sla_vence_en: string | null
+  tipo: { nombre: string } | null
+}
+
+export type Comunicacion = {
+  id: string
+  solicitud_id: string
+  tipo: 'mensaje' | 'proforma'
+  asunto: string
+  mensaje: string
+  monto: number | null
+  creado_en: string
+  remitente: { nombre_completo: string } | null
+  adjuntos: {
+    id: string
+    nombre_archivo: string
+    ruta_storage: string
+    mime_type: string
+    url?: string
+  }[]
+}

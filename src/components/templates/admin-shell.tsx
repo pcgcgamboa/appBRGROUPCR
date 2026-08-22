@@ -19,7 +19,8 @@ import {
   Users,
 } from 'lucide-react'
 import { type ReactNode, useState } from 'react'
-import { Button } from '@/components/atoms/button'
+import { NavLink, useLocation } from 'react-router-dom'
+import { Button, buttonVariants } from '@/components/atoms/button'
 import {
   Sheet,
   SheetContent,
@@ -69,35 +70,34 @@ const configurationNavigation: {
   { id: 'marca', label: 'branding', icon: Palette },
 ]
 
-export function AdminShell({
-  section,
-  onSectionChange,
-  children,
-}: {
-  section: AdminSection
-  onSectionChange: (section: AdminSection) => void
-  children: ReactNode
-}) {
+export function AdminShell({ children }: { children: ReactNode }) {
   const { t } = useI18n()
+  const location = useLocation()
   const notificacionesPendientes = useCantidadNotificacionesPendientes().cantidad
   const menuColapsado = useUiStore((state) => state.menuColapsado)
   const cambiarMenuColapsado = useUiStore((state) => state.cambiarMenuColapsado)
   const menuAbierto = useUiStore((state) => state.menuAbierto)
   const cambiarMenu = useUiStore((state) => state.cambiarMenu)
+  const section = (location.pathname.split('/')[2] || 'home') as AdminSection
   const configuracionActiva = configurationNavigation.some((item) => item.id === section)
   const [configuracionAbierta, setConfiguracionAbierta] = useState(configuracionActiva)
 
-  function navItems(collapsed: boolean, onNavigate: (id: AdminSection) => void) {
+  function navItems(collapsed: boolean, onNavigate?: () => void) {
     return (
       <>
         {navigation.map(({ id, label, icon: Icon }) => (
-          <Button
+          <NavLink
             key={id}
-            variant={section === id ? 'default' : 'outline'}
-            aria-current={section === id ? 'page' : undefined}
-            className={cn('shrink-0 justify-start lg:w-full', collapsed && 'lg:px-0')}
-            onClick={() => onNavigate(id)}
+            to={`/administrador/${id}`}
+            onClick={onNavigate}
             title={collapsed ? t(label) : undefined}
+            className={({ isActive }) =>
+              cn(
+                buttonVariants({ variant: isActive ? 'default' : 'outline' }),
+                'shrink-0 justify-start lg:w-full',
+                collapsed && 'lg:px-0',
+              )
+            }
           >
             <Icon className={cn('size-4 shrink-0', !collapsed && 'mr-2')} />
             <span className={cn(collapsed && 'lg:sr-only')}>{t(label)}</span>
@@ -106,7 +106,7 @@ export function AdminShell({
                 {notificacionesPendientes > 99 ? '99+' : notificacionesPendientes}
               </span>
             )}
-          </Button>
+          </NavLink>
         ))}
         <div className="flex shrink-0 flex-col gap-2 lg:grid lg:gap-1">
           <Button
@@ -134,16 +134,18 @@ export function AdminShell({
           </Button>
           {configuracionAbierta &&
             configurationNavigation.map(({ id, label, icon: Icon }) => (
-              <Button
+              <NavLink
                 key={id}
-                variant={section === id ? 'default' : 'outline'}
-                aria-current={section === id ? 'page' : undefined}
-                className={cn(
-                  'shrink-0 justify-start lg:w-full lg:border-l-2 lg:pl-6',
-                  collapsed && 'lg:px-0',
-                )}
-                onClick={() => onNavigate(id)}
+                to={`/administrador/${id}`}
+                onClick={onNavigate}
                 title={collapsed ? t(label) : undefined}
+                className={({ isActive }) =>
+                  cn(
+                    buttonVariants({ variant: isActive ? 'default' : 'outline' }),
+                    'shrink-0 justify-start lg:w-full lg:border-l-2 lg:pl-6',
+                    collapsed && 'lg:px-0',
+                  )
+                }
               >
                 <Icon className={cn('size-4 shrink-0', !collapsed && 'mr-2')} />
                 <span className={cn(collapsed && 'lg:sr-only')}>{t(label)}</span>
@@ -152,7 +154,7 @@ export function AdminShell({
                     {notificacionesPendientes > 99 ? '99+' : notificacionesPendientes}
                   </span>
                 )}
-              </Button>
+              </NavLink>
             ))}
         </div>
       </>
@@ -177,27 +179,21 @@ export function AdminShell({
             <SheetHeader>
               <Boxes className="size-5 shrink-0 text-primary" />
               <SheetTitle>
-                <button
-                  type="button"
+                <NavLink
+                  to="/administrador/home"
                   className="rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  onClick={() => {
-                    onSectionChange('home')
-                    cambiarMenu()
-                  }}
+                  onClick={() => cambiarMenu()}
                   aria-label={t('goToHome')}
                 >
                   {t('administration')}
-                </button>
+                </NavLink>
               </SheetTitle>
             </SheetHeader>
             <nav
               className="flex flex-1 flex-col gap-2 overflow-y-auto"
               aria-label={t('administration')}
             >
-              {navItems(false, (id) => {
-                onSectionChange(id)
-                cambiarMenu()
-              })}
+              {navItems(false, () => cambiarMenu())}
             </nav>
           </SheetContent>
         </Sheet>
@@ -209,17 +205,15 @@ export function AdminShell({
             menuColapsado && 'lg:justify-center',
           )}
         >
-          <button
-            type="button"
+          <NavLink
+            to="/administrador/home"
             className="flex min-h-9 items-center gap-2 rounded-md text-left transition hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            onClick={() => onSectionChange('home')}
-            aria-current={section === 'home' ? 'page' : undefined}
             aria-label={t('goToHome')}
             title={menuColapsado ? t('goToHome') : undefined}
           >
             <Boxes className="size-5 shrink-0 text-primary" />
             <span className={cn(menuColapsado && 'lg:sr-only')}>{t('administration')}</span>
-          </button>
+          </NavLink>
           <button
             type="button"
             className="ml-auto hidden size-9 items-center justify-center rounded-lg border bg-card text-muted-foreground shadow-sm transition hover:border-primary/30 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:flex"
@@ -238,7 +232,7 @@ export function AdminShell({
           className="lg:grid lg:flex-1 lg:auto-rows-min lg:gap-1"
           aria-label={t('administration')}
         >
-          {navItems(menuColapsado, onSectionChange)}
+          {navItems(menuColapsado)}
         </nav>
       </aside>
       <div className="min-w-0">{children}</div>

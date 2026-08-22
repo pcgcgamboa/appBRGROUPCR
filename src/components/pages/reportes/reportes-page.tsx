@@ -22,10 +22,7 @@ export function ReportesPage() {
           title="Reportes"
           description="Análisis detallado de costos de materiales y operación de la flota."
         />
-        <Button
-          variant="outline"
-          onClick={() => void actualizarReportes()}
-        >
+        <Button variant="outline" onClick={() => void actualizarReportes()}>
           <RefreshCw className="mr-2 size-4" />
           Actualizar
         </Button>

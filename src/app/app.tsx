@@ -1,10 +1,10 @@
-import { HomePage } from '@/components/pages/home-page'
+import { AppRouter } from '@/app/router'
 import { Toaster } from '@/components/atoms/sonner'
 
 export function App() {
   return (
     <>
-      <HomePage />
+      <AppRouter />
       <Toaster />
     </>
   )

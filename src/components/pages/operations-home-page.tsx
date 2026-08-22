@@ -48,10 +48,31 @@ export function OperationsHomePage({ onOpenSolicitudes }: { onOpenSolicitudes: (
       {dashboard.data && (
         <>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <MetricCard label="Solicitudes totales" value={dashboard.data.totales.total} icon={ClipboardList} onClick={onOpenSolicitudes} />
-            <MetricCard label="Solicitudes activas" value={dashboard.data.totales.activas} icon={Clock3} onClick={onOpenSolicitudes} />
-            <MetricCard label="Solicitudes urgentes" value={dashboard.data.totales.urgentes} icon={AlertTriangle} onClick={onOpenSolicitudes} />
-            <MetricCard label="SLA vencidas" value={dashboard.data.totales.sla_vencidas} icon={AlertTriangle} alert onClick={onOpenSolicitudes} />
+            <MetricCard
+              label="Solicitudes totales"
+              value={dashboard.data.totales.total}
+              icon={ClipboardList}
+              onClick={onOpenSolicitudes}
+            />
+            <MetricCard
+              label="Solicitudes activas"
+              value={dashboard.data.totales.activas}
+              icon={Clock3}
+              onClick={onOpenSolicitudes}
+            />
+            <MetricCard
+              label="Solicitudes urgentes"
+              value={dashboard.data.totales.urgentes}
+              icon={AlertTriangle}
+              onClick={onOpenSolicitudes}
+            />
+            <MetricCard
+              label="SLA vencidas"
+              value={dashboard.data.totales.sla_vencidas}
+              icon={AlertTriangle}
+              alert
+              onClick={onOpenSolicitudes}
+            />
           </div>
           <DashboardCharts data={dashboard.data} onOpenSolicitudes={onOpenSolicitudes} />
         </>

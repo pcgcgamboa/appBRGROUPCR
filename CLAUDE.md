@@ -19,21 +19,34 @@ npm run format:check     # prettier --check .
 npm run preview          # serve the production build locally
 ```
 
-CI (`.github/workflows/ci.yml`) runs `npm run lint`, `npm run format:check`, and `npm run build` on push/PR to `main`. There is no test suite in this repo (Playwright is a devDependency but has no config or spec files yet) — verify changes via `npm run build` (which type-checks with `tsc -b`) plus manual/dev-server testing.
+```
+npm run test            # vitest run — unit/component tests (jsdom + Testing Library)
+npm run test:watch      # vitest, watch mode
+npm run test:e2e        # playwright test — E2E against `npm run build && npm run preview`
+```
+
+CI (`.github/workflows/ci.yml`) runs `npm run lint`, `npm run format:check`, `npm run test`, `npm run build`, then `npm run test:e2e` (after installing Playwright's browser) on push/PR to `main`. Test coverage is intentionally small (a few representative unit/component specs plus one credential-free E2E smoke spec covering public routes) rather than exhaustive — extending it is future work, not a completed suite.
 
 Supabase-side changes require a linked project and the Supabase CLI:
+
 ```
 supabase db push                              # apply pending migrations
 supabase functions deploy <name>              # deploy an Edge Function
 supabase secrets set --env-file supabase/.env.local   # SMTP secrets, etc.
 ```
+
 `docs/configuracion-supabase.md` covers linking a remote project and bootstrapping the first `administrador` (must be done via direct SQL against `usuario_roles` — no user can self-assign a role, and there's no in-app path for the very first admin).
 
 ## Architecture
 
-**Stack**: React 18 + TypeScript + Vite, Tailwind CSS with local shadcn/ui-style primitives (not an external component package — extend `src/components/atoms` directly), TanStack Query for server state, Zustand for UI state, React Hook Form + Zod (used in some feature forms, not all — several organisms still validate with plain `useState` + native HTML attributes), Leaflet/React Leaflet for maps, Recharts for charts. Backend is Supabase end-to-end: Postgres + Auth + Storage + Edge Functions, authorization via RLS. There is **no client-side router** — `HomePage` picks the experience by session/active role from local state; the only URL-based exception is the public `/bolsa-empleo` route, detected directly from `window.location.pathname`. Nothing is deep-linkable.
+**Stack**: React 18 + TypeScript + Vite, Tailwind CSS with local shadcn/ui-style primitives (not an external component package — extend `src/components/atoms` directly), TanStack Query for server state, Zustand for UI state, React Hook Form + Zod (used in some feature forms, not all — several organisms still validate with plain `useState` + native HTML attributes), Leaflet/React Leaflet for maps, Recharts for charts. Backend is Supabase end-to-end: Postgres + Auth + Storage + Edge Functions, authorization via RLS.
+
+**Routing**: `react-router-dom` (`BrowserRouter`), wired in `src/app/router.tsx`. `AppShell` is the single root layout route (`<Outlet/>`). `/` (`InicioPage`) redirects to the user's default role branch (`/administrador`, `/encargado`, `/solicitante`, `/operador`, `/cliente`), picking the first role the profile returns that's in `src/app/roles-navegacion.ts`'s navigable list — `RequireSession`/`RequireRole` (`src/app/route-guards.tsx`) guard each branch. Admin/encargado/cliente expose their sections as nested routes (e.g. `/administrador/solicitudes`) rather than internal `useState`. `/login` and `/bolsa-empleo` are explicit public routes. See `docs/informe-arquitectura-fase-1.md` for the full migration rationale.
+
+**Data-access layering**: `solicitudes` and `auth` (`src/features/{solicitudes,auth}/{ports,adapters,lib}`) have a ports/adapters (repository) layer — hooks call a typed repository interface instead of `supabase-js` directly, which is what makes them swappable in unit tests. Other domains under `src/features/**` still call `supabase-js` directly from their hooks; extending this pattern to them is documented future work, not yet done.
 
 **Directory layout** (feature-first + Atomic Design, aliased as `@/*` → `src/*`):
+
 - `src/app` — root component and providers (`AppProviders` wires `QueryClient` with `staleTime: 30_000, retry: 1` for queries only — mutations have no automatic retry).
 - `src/components/{atoms,molecules,organisms,templates,pages}` — atoms are the local primitive library (button, input, dialog, sheet, etc.); templates are shells (`AppShell`, `AdminShell`); pages compose a role/area's screen.
 - `src/features/<domain>/{hooks,types,schemas,lib}` — data fetching/mutation and domain types per feature area (e.g. `operador`, `solicitudes`, `flota`, `catalogos`). Data access stays out of components where practical.

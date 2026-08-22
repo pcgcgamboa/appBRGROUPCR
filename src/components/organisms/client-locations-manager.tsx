@@ -109,7 +109,9 @@ export function ClientLocationsManager({
       activa: values.activa,
     }
     await guardar.mutateAsync({ id: editingId, values: payload })
-    toast.success(editingId ? 'Ubicación actualizada correctamente.' : 'Ubicación creada correctamente.')
+    toast.success(
+      editingId ? 'Ubicación actualizada correctamente.' : 'Ubicación creada correctamente.',
+    )
     setFormVisible(false)
   }
 
@@ -141,12 +143,7 @@ export function ClientLocationsManager({
           <Button onClick={nueva}>
             <Plus className="mr-2 size-4" /> Nueva ubicación
           </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={onClose}
-            aria-label="Cerrar ubicaciones"
-          >
+          <Button variant="outline" size="icon" onClick={onClose} aria-label="Cerrar ubicaciones">
             <X className="size-4" />
           </Button>
         </div>
@@ -237,12 +234,18 @@ export function ClientLocationsManager({
               />
             </div>
             {(latitud === null) !== (longitud === null) && (
-              <p role="alert" className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground sm:col-span-2">
+              <p
+                role="alert"
+                className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground sm:col-span-2"
+              >
                 Latitud y longitud deben completarse juntas.
               </p>
             )}
             {formError && (
-              <p role="alert" className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground sm:col-span-2">
+              <p
+                role="alert"
+                className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground sm:col-span-2"
+              >
                 {formError.message}
               </p>
             )}
@@ -276,7 +279,10 @@ export function ClientLocationsManager({
             <AlertDialogDescription>Esta acción no se puede deshacer.</AlertDialogDescription>
           </AlertDialogHeader>
           {deleteError && (
-            <p role="alert" className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground">
+            <p
+              role="alert"
+              className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground"
+            >
               {deleteError.message}
             </p>
           )}
@@ -296,7 +302,10 @@ export function ClientLocationsManager({
       </AlertDialog>
 
       {pageError && (
-        <p role="alert" className="rounded-lg bg-destructive-soft p-3 text-sm text-destructive-soft-foreground">
+        <p
+          role="alert"
+          className="rounded-lg bg-destructive-soft p-3 text-sm text-destructive-soft-foreground"
+        >
           {pageError.message}
         </p>
       )}

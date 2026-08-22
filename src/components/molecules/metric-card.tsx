@@ -25,7 +25,9 @@ export function MetricCard({
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm font-medium text-muted-foreground">{label}</p>
         <div className="flex items-center gap-2">
-          <Icon className={alert && value > 0 ? 'size-5 text-destructive' : 'size-5 text-primary'} />
+          <Icon
+            className={alert && value > 0 ? 'size-5 text-destructive' : 'size-5 text-primary'}
+          />
           {onClick && (
             <ArrowUpRight className="size-4 text-muted-foreground transition group-hover:text-primary" />
           )}

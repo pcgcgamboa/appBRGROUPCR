@@ -156,7 +156,10 @@ export function VehicleAdministration({ onClose }: { onClose: () => void }) {
         </Button>
       </form>
       {registrar.error && (
-        <p role="alert" className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground">
+        <p
+          role="alert"
+          className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground"
+        >
           {registrar.error.message}
         </p>
       )}

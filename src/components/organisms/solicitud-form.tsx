@@ -167,7 +167,9 @@ export function SolicitudForm({
             No hay ubicaciones activas. Solicite al administrador registrar una ubicación.
           </span>
         )}
-        {errors.ubicacion_id && <span className="text-destructive">{errors.ubicacion_id.message}</span>}
+        {errors.ubicacion_id && (
+          <span className="text-destructive">{errors.ubicacion_id.message}</span>
+        )}
       </label>
       <label className="grid gap-2 text-sm font-medium sm:col-span-2">
         Detalle de la necesidad
@@ -223,12 +225,18 @@ export function SolicitudForm({
         )}
       </fieldset>
       {crear.error && (
-        <p role="alert" className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground sm:col-span-2">
+        <p
+          role="alert"
+          className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground sm:col-span-2"
+        >
           {crear.error.message}
         </p>
       )}
       {crear.isSuccess && (
-        <p role="status" className="rounded-md bg-success-soft p-3 text-sm text-success-soft-foreground sm:col-span-2">
+        <p
+          role="status"
+          className="rounded-md bg-success-soft p-3 text-sm text-success-soft-foreground sm:col-span-2"
+        >
           Solicitud creada correctamente.
         </p>
       )}

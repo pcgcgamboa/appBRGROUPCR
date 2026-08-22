@@ -37,13 +37,7 @@ export function OperatorResolutionRequest({
             Solicitud #{solicitud.numero}: {solicitud.nombre}
           </p>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          onClick={onClose}
-          aria-label="Cerrar"
-        >
+        <Button type="button" variant="outline" size="icon" onClick={onClose} aria-label="Cerrar">
           <X className="size-4" />
         </Button>
       </div>

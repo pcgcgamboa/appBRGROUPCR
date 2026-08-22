@@ -1,25 +1,24 @@
 import type { Session } from '@supabase/supabase-js'
 import { useEffect, useState } from 'react'
-import { supabase, supabaseConfigurado } from '@/lib/supabase'
+import { authRepository } from '@/features/auth/lib/repository'
+import { supabaseConfigurado } from '@/lib/supabase'
 
 export function useSession() {
   const [session, setSession] = useState<Session | null>(null)
   const [cargando, setCargando] = useState(supabaseConfigurado)
 
   useEffect(() => {
-    if (!supabase) return
+    if (!supabaseConfigurado) return
 
-    void supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session)
-      setCargando(false)
-    })
-
-    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    void authRepository.obtenerSesion().then((nextSession) => {
       setSession(nextSession)
       setCargando(false)
     })
 
-    return () => data.subscription.unsubscribe()
+    return authRepository.suscribirCambiosSesion((nextSession) => {
+      setSession(nextSession)
+      setCargando(false)
+    })
   }, [])
 
   return { session, cargando }

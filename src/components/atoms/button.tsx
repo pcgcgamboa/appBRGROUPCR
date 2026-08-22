@@ -34,7 +34,11 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild, ...props }, ref) => {
     const Component = asChild ? Slot : 'button'
     return (
-      <Component ref={ref} className={cn(buttonVariants({ variant, size }), className)} {...props} />
+      <Component
+        ref={ref}
+        className={cn(buttonVariants({ variant, size }), className)}
+        {...props}
+      />
     )
   },
 )

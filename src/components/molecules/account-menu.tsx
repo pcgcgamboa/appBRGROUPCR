@@ -5,15 +5,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/atoms/dropdown-menu'
+import { useLogout } from '@/features/auth/hooks/use-logout'
 import { usePerfilActual } from '@/features/auth/hooks/use-perfil-actual'
 import { useSession } from '@/features/auth/hooks/use-session'
-import { supabase } from '@/lib/supabase'
 import { useI18n } from '@/lib/i18n'
 
 export function AccountMenu() {
   const { t } = useI18n()
   const { session } = useSession()
   const perfil = usePerfilActual(session?.user.id)
+  const logout = useLogout()
 
   if (!session) return null
   const nombre = perfil.data?.nombre_completo || session.user.email || t('profile')
@@ -57,7 +58,7 @@ export function AccountMenu() {
         </div>
         <DropdownMenuItem
           className="m-1.5 text-destructive focus:bg-destructive-soft focus:text-destructive-soft-foreground"
-          onClick={() => void supabase?.auth.signOut()}
+          onClick={() => logout.mutate()}
         >
           <LogOut className="size-4" />
           {t('signOut')}

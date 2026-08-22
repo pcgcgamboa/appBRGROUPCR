@@ -41,7 +41,10 @@ export function RequestTechnicians({ solicitudId }: { solicitudId: string }) {
         ))}
       </div>
       {(datos.error || asignar.error) && (
-        <p role="alert" className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground">
+        <p
+          role="alert"
+          className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground"
+        >
           {(datos.error || asignar.error)?.message}
         </p>
       )}

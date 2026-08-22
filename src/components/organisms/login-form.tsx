@@ -4,12 +4,13 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Button } from '@/components/atoms/button'
 import { FormField } from '@/components/molecules/form-field'
+import { useLogin } from '@/features/auth/hooks/use-login'
 import { loginSchema, type LoginFormData } from '@/features/auth/schemas/login.schema'
-import { supabase } from '@/lib/supabase'
 import { useI18n } from '@/lib/i18n'
 
 export function LoginForm() {
   const { t } = useI18n()
+  const login = useLogin()
   const [errorServidor, setErrorServidor] = useState<string | null>(null)
   const [mostrarPassword, setMostrarPassword] = useState(false)
   const {
@@ -21,10 +22,12 @@ export function LoginForm() {
   })
 
   async function iniciarSesion(values: LoginFormData) {
-    if (!supabase) return
     setErrorServidor(null)
-    const { error } = await supabase.auth.signInWithPassword(values)
-    if (error) setErrorServidor(t('invalidCredentials'))
+    try {
+      await login.mutateAsync(values)
+    } catch {
+      setErrorServidor(t('invalidCredentials'))
+    }
   }
 
   return (

@@ -1,5 +1,6 @@
 import { BriefcaseBusiness, CheckCircle2 } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Button } from '@/components/atoms/button'
 import { Input } from '@/components/atoms/input'
 import { Select } from '@/components/atoms/select'
@@ -159,7 +160,10 @@ export function BolsaEmpleoPage() {
           />
         </label>
         {error && (
-          <p role="alert" className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground sm:col-span-2">
+          <p
+            role="alert"
+            className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground sm:col-span-2"
+          >
             {error}
           </p>
         )}
@@ -168,9 +172,9 @@ export function BolsaEmpleoPage() {
         </Button>
       </form>
       <p className="mt-4 text-center text-sm">
-        <a className="text-primary underline" href="/">
+        <Link className="text-primary underline" to="/login">
           Volver al inicio de sesión
-        </a>
+        </Link>
       </p>
     </section>
   )

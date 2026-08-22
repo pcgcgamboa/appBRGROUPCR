@@ -52,7 +52,10 @@ export function VehiclePhotos({ vehiculo, onClose }: { vehiculo: Vehiculo; onClo
         </Button>
       </form>
       {(fotos.error || gestion.subir.error || gestion.eliminar.error) && (
-        <p role="alert" className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground">
+        <p
+          role="alert"
+          className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground"
+        >
           {(fotos.error || gestion.subir.error || gestion.eliminar.error)?.message}
         </p>
       )}

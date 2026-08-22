@@ -46,7 +46,10 @@ export function TechnicianApplications() {
         </p>
       </div>
       {(listado.error || resolver.error) && (
-        <p role="alert" className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground">
+        <p
+          role="alert"
+          className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground"
+        >
           {(listado.error || resolver.error)?.message}
         </p>
       )}

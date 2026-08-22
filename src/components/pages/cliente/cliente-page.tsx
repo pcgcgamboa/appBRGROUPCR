@@ -1,8 +1,9 @@
 import { ClipboardCheck, FilePlus2, FolderOpen, MessageSquare } from 'lucide-react'
 import { useState } from 'react'
+import { Outlet, useLocation, useNavigate, useOutletContext } from 'react-router-dom'
 import { Badge } from '@/components/atoms/badge'
 import { Button } from '@/components/atoms/button'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/atoms/tabs'
+import { Tabs, TabsList, TabsTrigger } from '@/components/atoms/tabs'
 import { PageHeader } from '@/components/molecules/page-header'
 import { ClientValidationForm } from '@/components/organisms/client-validation-form'
 import { ClientTracking } from '@/components/organisms/client-tracking'
@@ -12,6 +13,11 @@ import { useSolicitudesCliente } from '@/features/cliente/hooks/use-cliente'
 import type { SolicitudCliente } from '@/features/cliente/types/cliente.types'
 import { useI18n } from '@/lib/i18n'
 
+type ClienteRouteContext = { usuarioId: string; clienteId: string }
+
+const SECCIONES = ['solicitudes', 'documentos', 'tracking', 'validaciones'] as const
+type Seccion = (typeof SECCIONES)[number]
+
 export function ClientePage({
   usuarioId,
   clienteId,
@@ -20,11 +26,11 @@ export function ClientePage({
   clienteId: string | null
 }) {
   const { t } = useI18n()
-  const solicitudes = useSolicitudesCliente(clienteId)
-  const [seleccionada, setSeleccionada] = useState<SolicitudCliente | null>(null)
-  const [seccion, setSeccion] = useState<
-    'solicitudes' | 'validaciones' | 'tracking' | 'documentos'
-  >('solicitudes')
+  const location = useLocation()
+  const navigate = useNavigate()
+  const seccion: Seccion =
+    SECCIONES.find((candidata) => location.pathname.endsWith(`/${candidata}`)) ?? 'solicitudes'
+
   if (!clienteId)
     return (
       <p
@@ -34,10 +40,11 @@ export function ClientePage({
         Su usuario necesita estar asociado a un cliente.
       </p>
     )
+
   return (
     <Tabs
       value={seccion}
-      onValueChange={(value) => setSeccion(value as typeof seccion)}
+      onValueChange={(value) => navigate(`/cliente/${value}`)}
       className="space-y-6"
     >
       <TabsList className="w-fit" aria-label={t('serviceValidation')}>
@@ -58,23 +65,36 @@ export function ClientePage({
           {t('serviceValidation')}
         </TabsTrigger>
       </TabsList>
-      <TabsContent value="solicitudes">
-        <SolicitantePage usuarioId={usuarioId} clienteId={clienteId} />
-      </TabsContent>
-      <TabsContent value="documentos">
-        <ClientDocumentsManager clienteId={clienteId} clienteNombre="Mi organización" canUpload />
-      </TabsContent>
-      <TabsContent value="tracking">
-        <ClientTracking clienteId={clienteId} />
-      </TabsContent>
-      <TabsContent value="validaciones">
-        <ValidacionesCliente
-          solicitudes={solicitudes}
-          seleccionada={seleccionada}
-          setSeleccionada={setSeleccionada}
-        />
-      </TabsContent>
+      <Outlet context={{ usuarioId, clienteId } satisfies ClienteRouteContext} />
     </Tabs>
+  )
+}
+
+export function ClienteSolicitudesRoute() {
+  const { usuarioId, clienteId } = useOutletContext<ClienteRouteContext>()
+  return <SolicitantePage usuarioId={usuarioId} clienteId={clienteId} />
+}
+
+export function ClienteDocumentosRoute() {
+  const { clienteId } = useOutletContext<ClienteRouteContext>()
+  return <ClientDocumentsManager clienteId={clienteId} clienteNombre="Mi organización" canUpload />
+}
+
+export function ClienteTrackingRoute() {
+  const { clienteId } = useOutletContext<ClienteRouteContext>()
+  return <ClientTracking clienteId={clienteId} />
+}
+
+export function ClienteValidacionesRoute() {
+  const { clienteId } = useOutletContext<ClienteRouteContext>()
+  const solicitudes = useSolicitudesCliente(clienteId)
+  const [seleccionada, setSeleccionada] = useState<SolicitudCliente | null>(null)
+  return (
+    <ValidacionesCliente
+      solicitudes={solicitudes}
+      seleccionada={seleccionada}
+      setSeleccionada={setSeleccionada}
+    />
   )
 }
 

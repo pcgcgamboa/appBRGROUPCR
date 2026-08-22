@@ -70,12 +70,18 @@ export function MarcaPage() {
           />
         </div>
         {actualizar.error && (
-          <p role="alert" className="rounded-lg bg-destructive-soft p-3 text-sm text-destructive-soft-foreground">
+          <p
+            role="alert"
+            className="rounded-lg bg-destructive-soft p-3 text-sm text-destructive-soft-foreground"
+          >
             {actualizar.error.message}
           </p>
         )}
         {actualizar.isSuccess && !logo && !icono && (
-          <p role="status" className="rounded-lg bg-success-soft p-3 text-sm text-success-soft-foreground">
+          <p
+            role="status"
+            className="rounded-lg bg-success-soft p-3 text-sm text-success-soft-foreground"
+          >
             La identidad visual se actualizó correctamente.
           </p>
         )}

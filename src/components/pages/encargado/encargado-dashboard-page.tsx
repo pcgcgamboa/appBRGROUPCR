@@ -1,32 +1,28 @@
 import { Bell, ChartPie, ClipboardList, MapPinned } from 'lucide-react'
-import { useState } from 'react'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/atoms/tabs'
-import { BandejaEncargadoPage } from '@/components/pages/encargado/bandeja-encargado-page'
-import { ControlRutasPage } from '@/components/pages/encargado/control-rutas-page'
-import { NotificacionesPage } from '@/components/pages/encargado/notificaciones-page'
-import { ReportesPage } from '@/components/pages/reportes/reportes-page'
-import { OperationsHomePage } from '@/components/pages/operations-home-page'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Tabs, TabsList, TabsTrigger } from '@/components/atoms/tabs'
 import { useCantidadNotificacionesPendientes } from '@/features/notificaciones/hooks/use-notificaciones-internas'
 
 type Seccion = 'home' | 'solicitudes' | 'rutas' | 'notificaciones' | 'reportes'
 
 export function EncargadoDashboardPage() {
-  const [section, setSection] = useState<Seccion>('home')
+  const location = useLocation()
+  const navigate = useNavigate()
   const notificacionesPendientes = useCantidadNotificacionesPendientes().cantidad
+  const seccion = (location.pathname.split('/')[2] || 'home') as Seccion
+
   return (
     <Tabs
-      value={section}
-      onValueChange={(value) => setSection(value as Seccion)}
+      value={seccion}
+      onValueChange={(value) => navigate(`/encargado/${value}`)}
       className="space-y-6"
     >
-      <button
-        type="button"
+      <NavLink
+        to="/encargado/home"
         className="rounded-md text-sm font-bold uppercase tracking-wider text-muted-foreground transition hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        onClick={() => setSection('home')}
-        aria-current={section === 'home' ? 'page' : undefined}
       >
         Gestión del proceso
-      </button>
+      </NavLink>
       <TabsList aria-label="Gestión del proceso">
         <TabsTrigger value="solicitudes">
           <ClipboardList className="mr-2 size-4" />
@@ -50,21 +46,7 @@ export function EncargadoDashboardPage() {
           Reportes
         </TabsTrigger>
       </TabsList>
-      <TabsContent value="home">
-        <OperationsHomePage onOpenSolicitudes={() => setSection('solicitudes')} />
-      </TabsContent>
-      <TabsContent value="solicitudes">
-        <BandejaEncargadoPage />
-      </TabsContent>
-      <TabsContent value="rutas">
-        <ControlRutasPage />
-      </TabsContent>
-      <TabsContent value="notificaciones">
-        <NotificacionesPage />
-      </TabsContent>
-      <TabsContent value="reportes">
-        <ReportesPage />
-      </TabsContent>
+      <Outlet />
     </Tabs>
   )
 }

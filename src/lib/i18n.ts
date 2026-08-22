@@ -83,8 +83,7 @@ const mensajes = {
     offlineBanner: 'Sin conexión — los cambios se guardan localmente.',
     photosLabel: 'Fotos o documentos',
     addPhotos: 'Agregar fotos',
-    photosHelp:
-      'Puede tomar fotografías directamente desde el teléfono. Máximo 10 MB por archivo.',
+    photosHelp: 'Puede tomar fotografías directamente desde el teléfono. Máximo 10 MB por archivo.',
     filesReady: 'listas',
     removePhoto: 'Quitar foto',
     statusPending: 'Pendiente',

@@ -12,7 +12,10 @@ export function FleetReports() {
   )
   if (reporte.error)
     return (
-      <p role="alert" className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground">
+      <p
+        role="alert"
+        className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground"
+      >
         {reporte.error.message}
       </p>
     )

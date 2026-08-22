@@ -9,3 +9,6 @@ Thumbs.db
 *.tsbuildinfo
 supabase/.temp/
 *.log
+test-results/
+playwright-report/
+blob-report/

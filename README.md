@@ -14,6 +14,11 @@ Aplicación web responsive para gestionar solicitudes, asignaciones, rutas, avan
 2. Ejecutar `npm install`.
 3. Ejecutar `npm run dev`.
 
+## Pruebas
+
+- `npm run test`: pruebas unitarias y de componentes (Vitest + Testing Library).
+- `npm run test:e2e`: pruebas E2E con Playwright, contra `npm run build && npm run preview`.
+
 ## Organización
 
 - `src/components`: jerarquía Atomic Design (`atoms`, `molecules`, `organisms`, `templates`, `pages`).
@@ -22,7 +27,7 @@ Aplicación web responsive para gestionar solicitudes, asignaciones, rutas, avan
 - `src/stores`: estado global de interfaz con Zustand.
 - `supabase`: migraciones y Edge Functions, a partir de la Fase 1.
 
-La especificación funcional se encuentra en `docs/requerimientos-sistema-solicitudes-servicio.md`. Las mejoras de mobile-first y operación degradada del registro de avance del operador se documentan en `docs/mejoras-mobile-first-operacion-degradada.md`.
+La especificación funcional se encuentra en `docs/requerimientos-sistema-solicitudes-servicio.md`. Las mejoras de mobile-first y operación degradada del registro de avance del operador se documentan en `docs/mejoras-mobile-first-operacion-degradada.md`. La migración a React Router y la capa de puertos/adaptadores (dominios `solicitudes` y `auth`) se documentan en `docs/informe-arquitectura-fase-1.md`.
 
 ## Supabase
 

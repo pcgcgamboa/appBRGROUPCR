@@ -1,10 +1,11 @@
-import { useEffect, type PropsWithChildren } from 'react'
+import { useEffect } from 'react'
+import { Outlet } from 'react-router-dom'
 import { LanguageSwitcher } from '@/components/molecules/language-switcher'
 import { AccountMenu } from '@/components/molecules/account-menu'
 import { useMarca } from '@/features/configuracion/hooks/use-marca'
 import { useI18n } from '@/lib/i18n'
 
-export function AppShell({ children }: PropsWithChildren) {
+export function AppShell() {
   const { t } = useI18n()
   const marca = useMarca()
 
@@ -34,8 +35,12 @@ export function AppShell({ children }: PropsWithChildren) {
           </div>
         </div>
       </header>
-      <main id="contenido-principal" tabIndex={-1} className="container py-3 sm:py-5 focus:outline-none">
-        {children}
+      <main
+        id="contenido-principal"
+        tabIndex={-1}
+        className="container py-3 sm:py-5 focus:outline-none"
+      >
+        <Outlet />
       </main>
     </div>
   )

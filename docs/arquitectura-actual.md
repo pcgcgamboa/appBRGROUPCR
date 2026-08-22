@@ -78,15 +78,17 @@ no tienen reintentos automáticos.
 
 ### 4.2 Navegación
 
-Actualmente no existe un router de cliente. `HomePage` selecciona la experiencia según:
-
-1. La sesión de Supabase.
-2. Los roles obtenidos desde el perfil del usuario.
-3. El rol activo seleccionado en `SessionToolbar`.
-
-Las áreas principales se cambian mediante estado local dentro de los dashboards. La única ruta URL
-especial es `/bolsa-empleo`, detectada directamente desde `window.location.pathname`. Por esta
-razón, las vistas internas no son enlazables individualmente mediante URL.
+Desde la Fase 1 de la propuesta de arquitectura escalable (`docs/informe-arquitectura-fase-1.md`),
+la navegación usa `react-router-dom` (`BrowserRouter`). `src/app/router.tsx` define el árbol de
+rutas; `AppShell` es la única ruta de layout raíz (`&lt;Outlet/&gt;`). `InicioPage` (`/`) decide el
+redirect por rol activo replicando la prioridad que antes calculaba `HomePage`: el primer rol
+navegable, en el orden que devuelve el perfil del usuario. `RequireSession`/`RequireRole`
+(`src/app/route-guards.tsx`) protegen cada rama de rol; `SessionToolbar`/`RoleSwitcher` navegan
+(`navigate('/' + rol)`) en vez de mutar estado local. Los dashboards de administrador, encargado y
+cliente exponen sus secciones internas como rutas anidadas (`/administrador/solicitudes`,
+`/encargado/rutas`, `/cliente/documentos`, etc.) en vez de un `useState` de sección. `/login` y
+`/bolsa-empleo` son rutas públicas explícitas. Las vistas internas ahora sí son enlazables y
+compartibles por URL.
 
 ### 4.3 Estado
 
@@ -287,8 +289,11 @@ npm run build
 `npm run build` ejecuta `tsc -b` antes de Vite, por lo que también valida TypeScript estricto. CI
 ejecuta lint, comprobación de formato y build en cambios hacia `main`.
 
-Playwright está instalado como dependencia de desarrollo, pero actualmente no hay configuración ni
-suite automatizada. La validación se basa en build, lint y pruebas manuales en el servidor local.
+Desde la Fase 1 existe suite automatizada: Vitest + Testing Library (`npm run test`) para pruebas
+unitarias y de componentes, y Playwright (`npm run test:e2e`) para E2E contra el build de
+producción servido con `npm run preview` — ambos wired en CI. La cobertura es inicial (pruebas
+representativas, no exhaustivas); ampliarla es parte de las fases siguientes de la propuesta de
+arquitectura escalable.
 
 Los cambios de backend se despliegan con:
 
@@ -300,12 +305,15 @@ supabase secrets set --env-file supabase/.env.local
 
 ## 12. Restricciones y deuda técnica conocida
 
-- La ausencia de router impide enlaces profundos y navegación basada en URL dentro de la SPA.
 - Conviven formularios con React Hook Form/Zod y formularios controlados manualmente.
 - La internacionalización todavía no cubre todos los textos.
-- No existe una suite automatizada de pruebas.
+- La suite automatizada es inicial (unitarias/componentes y un E2E de humo); falta ampliar
+  cobertura hacia los flujos críticos por rol.
+- Solo `solicitudes` y `auth` tienen capa de puertos/adaptadores; el resto de dominios en
+  `src/features/**` sigue llamando a `supabase-js` directamente desde sus hooks.
 - El modelo antiguo de rutas permanece en esquema y código muerto, aunque el modelo vigente es el de
-  rutas de proceso agrupadas.
+  rutas de proceso agrupadas. De igual forma, `SolicitudesAdminPage` es un componente sin ninguna
+  ruta que lo monte (código muerto no eliminado en esta fase, fuera de su alcance).
 - El bundle principal supera el umbral recomendado de Vite y puede beneficiarse de división de
   código mediante importaciones dinámicas.
 
