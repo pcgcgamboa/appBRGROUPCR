@@ -1,9 +1,10 @@
 import { ClipboardCheck, FilePlus2, FolderOpen, MessageSquare } from 'lucide-react'
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { Outlet, useLocation, useNavigate, useOutletContext } from 'react-router-dom'
 import { Badge } from '@/components/atoms/badge'
 import { Button } from '@/components/atoms/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/atoms/tabs'
+import { CargandoRuta } from '@/components/molecules/cargando-ruta'
 import { PageHeader } from '@/components/molecules/page-header'
 import { ClientValidationForm } from '@/components/organisms/client-validation-form'
 import { ClientTracking } from '@/components/organisms/client-tracking'
@@ -66,7 +67,9 @@ export function ClientePage({
           {t('serviceValidation')}
         </TabsTrigger>
       </TabsList>
-      <Outlet context={{ usuarioId, clienteId } satisfies ClienteRouteContext} />
+      <Suspense fallback={<CargandoRuta />}>
+        <Outlet context={{ usuarioId, clienteId } satisfies ClienteRouteContext} />
+      </Suspense>
     </Tabs>
   )
 }

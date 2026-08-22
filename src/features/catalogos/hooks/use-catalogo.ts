@@ -9,6 +9,11 @@ export function useCatalogo<T extends EntidadBase>(tabla: string) {
   const listado = useQuery({
     queryKey,
     queryFn: () => catalogoRepository.listar<T>(tabla),
+    // Datos de catálogo (clientes, tipos, materiales, vehículos, ubicaciones, roles) son de baja
+    // volatilidad y administrados por roles de gestión — un cambio propio invalida al instante vía
+    // `guardar`/`eliminar` abajo; el único costo de un staleTime mayor es no ver de inmediato un
+    // cambio hecho por OTRA sesión, aceptable para datos de referencia. Mismo valor que `useMarca`.
+    staleTime: 5 * 60_000,
   })
 
   const guardar = useMutation({

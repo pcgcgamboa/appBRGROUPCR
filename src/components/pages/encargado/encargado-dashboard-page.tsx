@@ -1,6 +1,8 @@
 import { Bell, ChartPie, ClipboardList, MapPinned } from 'lucide-react'
+import { Suspense } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { Tabs, TabsList, TabsTrigger } from '@/components/atoms/tabs'
+import { CargandoRuta } from '@/components/molecules/cargando-ruta'
 import { useCantidadNotificacionesPendientes } from '@/features/notificaciones/hooks/use-notificaciones-internas'
 
 type Seccion = 'home' | 'solicitudes' | 'rutas' | 'notificaciones' | 'reportes'
@@ -46,7 +48,9 @@ export function EncargadoDashboardPage() {
           Reportes
         </TabsTrigger>
       </TabsList>
-      <Outlet />
+      <Suspense fallback={<CargandoRuta />}>
+        <Outlet />
+      </Suspense>
     </Tabs>
   )
 }
