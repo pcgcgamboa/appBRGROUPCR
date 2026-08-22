@@ -7,6 +7,7 @@ import { TrackingControls } from '@/components/molecules/tracking-controls'
 import { useTrackingRuta } from '@/features/flota/hooks/use-tracking-ruta'
 import type { RutaProceso } from '@/features/flota/types/flota.types'
 import { useTrackingFilters } from '@/hooks/use-tracking-filters'
+import { normalizarError } from '@/lib/errores'
 
 const fecha = new Intl.DateTimeFormat('es-CR', { dateStyle: 'medium', timeStyle: 'short' })
 
@@ -32,7 +33,7 @@ export function RouteTimeline({ ruta, onClose }: { ruta: RutaProceso; onClose: (
             role="alert"
             className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground"
           >
-            {tracking.error.message}
+            {normalizarError(tracking.error).mensaje}
           </p>
         )}
         {tracking.isLoading && (

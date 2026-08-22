@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/molecules/page-header'
 import { RequestCommunications } from '@/components/organisms/request-communications'
 import { SolicitudForm } from '@/components/organisms/solicitud-form'
 import { useMisSolicitudes } from '@/features/solicitudes/hooks/use-mis-solicitudes'
+import { normalizarError } from '@/lib/errores'
 
 export function SolicitantePage({
   usuarioId,
@@ -52,7 +53,7 @@ export function SolicitantePage({
           role="alert"
           className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground"
         >
-          {solicitudes.error.message}
+          {normalizarError(solicitudes.error).mensaje}
         </p>
       )}
       {comunicacionId && (

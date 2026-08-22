@@ -5,6 +5,7 @@ import { MetricCard } from '@/components/molecules/metric-card'
 import { PageHeader } from '@/components/molecules/page-header'
 import { DashboardCharts } from '@/components/organisms/dashboard-charts'
 import { useDashboardSolicitudes } from '@/features/reportes/hooks/use-dashboard'
+import { normalizarError } from '@/lib/errores'
 
 export function OperationsHomePage({ onOpenSolicitudes }: { onOpenSolicitudes: () => void }) {
   const dashboard = useDashboardSolicitudes()
@@ -32,7 +33,7 @@ export function OperationsHomePage({ onOpenSolicitudes }: { onOpenSolicitudes: (
           role="alert"
           className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground"
         >
-          {dashboard.error.message}
+          {normalizarError(dashboard.error).mensaje}
         </p>
       )}
       {dashboard.isLoading && (

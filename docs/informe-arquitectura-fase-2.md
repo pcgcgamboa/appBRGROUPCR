@@ -12,12 +12,13 @@ segura"): normalización de errores y desacople del envío de notificaciones del
 | Elemento | Estado |
 |---|---|
 | Puertos/adaptadores en los 10 dominios restantes (`flota`, `cliente`, `catalogos`, `tecnicos`, `usuarios`, `configuracion`, `notificaciones`, `reportes`, `operador`, `rutas`) | ✅ Hecho — los 12 dominios de `src/features/**` quedan con el mismo patrón |
-| Fase 2: utilidad de normalización de errores (`src/lib/errores.ts`) | ✅ Hecho, aplicada en 3 componentes representativos (1 por tipo de fuente de error); el resto queda documentado como trabajo futuro |
+| Fase 2: utilidad de normalización de errores (`src/lib/errores.ts`) | ✅ Aplicada en los 19 bloques de error restantes del repo (ver sección 8) — cobertura completa |
 | Fase 2: desacoplar el envío de notificaciones del camino crítico | ✅ Hecho — corregido además un problema de diseño detectado en verificación (ver sección 4) |
-| Fase 2: `correlacion_id` en respuestas de Edge Functions | ✅ Hecho (alcance acotado, ver sección 6) |
+| Fase 2: `correlacion_id` en respuestas de Edge Functions | ✅ Hecho (alcance acotado, ver sección 5) |
 | Fase 2: matriz de decisión (consulta directa / RPC / Edge Function) | ✅ Documentada en `CLAUDE.md` |
-| Fase 2: outbox con reintentos (`pg_cron`) | ✅ Migración y Edge Function escritas con política por defecto (cada 5 min, 3 intentos, backoff simple) — **no desplegado**, requiere un paso manual de configuración (ver sección 7) |
-| Fase 2: idempotencia de mutaciones | ✅ Backend completo en 3 funciones críticas; frontend cableado solo en `registrar_avance_operador` (ver sección 8) |
+| Fase 2: outbox con reintentos (`pg_cron`) | ✅ Migración y Edge Function escritas con política por defecto (cada 5 min, 3 intentos, backoff simple) — **no desplegado**, requiere un paso manual de configuración (ver sección 6) |
+| Fase 2: idempotencia de mutaciones | ✅ Completo en las 3 funciones — frontend ya cableado también en `crear_solicitud_portal`/`crear_solicitud_gestor` (ver sección 8) |
+| Fase 2: correlación extendida a `automatizacion_ejecuciones` | ✅ Cubre las 4 acciones de `gestionar-solicitud`; avances y notificaciones quedan pendientes (ver sección 8) |
 
 Ejecutado con 7 agentes en paralelo (4 para los dominios restantes, agrupados por tamaño; 2 para
 los ítems de Fase 2; 1 adicional para dos dominios que faltaron en el primer lote), cero
@@ -173,7 +174,7 @@ original (sección 7.2) contra las convenciones reales de este proyecto.
 
 ---
 
-## 7. Fase 2 — outbox con reintentos para notificaciones
+## 6. Fase 2 — outbox con reintentos para notificaciones
 
 Política acordada con el usuario: pg_cron cada 5 minutos, 3 intentos con backoff simple (5/15/30
 minutos), sin habilitar un vendor externo. Verificada la sintaxis exacta contra la documentación
@@ -226,7 +227,7 @@ se recomienda verificar en un entorno de pruebas antes de aplicar en producción
 
 ---
 
-## 8. Fase 2 — idempotencia de mutaciones críticas
+## 7. Fase 2 — idempotencia de mutaciones críticas
 
 ### Diseño
 
@@ -284,6 +285,82 @@ asumió ningún cuerpo). `tsc -b`, `npm run lint`, `npm run format:check`, `npm 
 `npm run test` (14/14) y `npm run test:e2e` (2/2) limpios sobre el cambio de frontend. La migración
 SQL en sí **no se probó contra una base de datos real** (misma limitación que el resto de los
 cambios de esquema de esta sesión) — se recomienda aplicarla primero en un entorno de pruebas.
+
+---
+
+## 8. Cierre de los pendientes de Fase 2
+
+Ronda final: se recorrieron en orden los 5 pendientes que quedaban documentados (idempotencia en
+creación, normalización de errores, correlación, despliegue del outbox, y el límite de
+concurrencia). Se detalla qué se cerró y qué se mantiene como límite aceptado.
+
+### Idempotencia en `crear_solicitud_portal`/`crear_solicitud_gestor`
+
+`solicitud-form.tsx` no tenía una infraestructura de sesión estable equivalente al borrador del
+operador (sección 7), así que se generó una directamente en el componente: `useRef(crypto.randomUUID())`,
+estable mientras el usuario reintenta el mismo envío, y **rotada explícitamente después de un envío
+exitoso** (`claveIdempotencia.current = crypto.randomUUID()`) — necesario para que una segunda
+solicitud genuina, creada con el mismo formulario ya limpiado, no reciba por error el resultado
+cacheado de la primera. `CrearSolicitudInput` gana `idempotencia_clave: string`; el adaptador la
+reenvía como `p_idempotencia_clave` en ambas llamadas RPC (portal y gestor).
+
+### Normalización de errores — cobertura completa
+
+Los 16 archivos restantes (19 bloques `role="alert"` — uno tenía 4 fuentes de error distintas en la
+misma página) se migraron a `normalizarError(...).mensaje`, mismo patrón que los 3 de referencia.
+Ejecutado por un agente dedicado, con `tsc -b`/`lint`/`build`/`test` limpios y confirmación por grep
+de que no quedó ningún `.error.message` crudo en los archivos objetivo. `route-control-form.tsx`
+(código muerto) se dejó fuera, tal como estaba previsto.
+
+### Correlación extendida a `automatizacion_ejecuciones`
+
+Al investigar el mecanismo real de los triggers sobre `solicitudes` se encontró una alternativa más
+simple que la descartada en la sección 5 (convertir `gestionar-solicitud` a funciones RPC): el
+trigger `BEFORE UPDATE` `validar_cambio_solicitud` (que deriva `atendida_en`/`cerrada_en` desde
+`estado`) y el trigger `AFTER UPDATE` `trazar_automatizaciones_solicitud` **disparan sobre la misma
+sentencia** `UPDATE` que ya emite `gestionar-solicitud` — no hace falta `set_config` de sesión ni
+convertir nada a RPC, basta con incluir un valor en la propia fila.
+
+- Nueva columna `solicitudes.correlacion_id_operacion` (transitoria, sin default).
+- `gestionar-solicitud/index.ts` la incluye en las 4 actualizaciones que ya hacía (asignar,
+  rechazar, reabrir, cambiar_estado), con el mismo `correlacionId` que ya usa en su respuesta HTTP.
+- `registrar_ejecucion_automatica` gana `p_correlacion_id uuid default null` (mismo patrón
+  drop+create que en la migración de idempotencia, por la misma razón: `create or replace` con la
+  lista de parámetros modificada crea una sobrecarga nueva en vez de reemplazar la existente).
+  `trazar_odometro_automatico` y `trazar_notificacion_automatica` la siguen llamando con sus mismos
+  14 argumentos posicionales de siempre, sin cambios — el 15° parámetro es opcional y no los afecta.
+- `trazar_automatizaciones_solicitud` solo confía en `correlacion_id_operacion` cuando **cambió**
+  respecto al valor anterior en esa misma sentencia (`new.… is distinct from old.…`) — evita que un
+  `UPDATE` futuro que no fije la columna reutilice por error un id de una operación anterior, ya
+  que la columna no se limpia entre updates.
+
+**Alcance no cubierto, documentado como pendiente**: `registrar_avance_operador` (cuyas propias
+actualizaciones de `estado` también disparan `trazar_automatizaciones_solicitud`) y
+`notificaciones_envios`/`trazar_notificacion_automatica` no se tocaron en esta ronda — extenderlos
+sigue el mismo patrón ya establecido aquí, pero se dejó fuera para no acumular una tercera
+modificación de firma sobre `registrar_avance_operador` en la misma sesión.
+
+### Despliegue del outbox
+
+No se ejecutó `supabase db push` — sigue siendo, deliberadamente, un paso manual del usuario (mismo
+límite que el resto de cambios de esquema de esta sesión).
+
+### Límite de concurrencia
+
+Se revisó y se mantiene como estaba documentado: el patrón verificar-luego-insertar de idempotencia
+y outbox no es perfectamente atómico ante solicitudes verdaderamente concurrentes con la misma
+clave. No se encontró una razón para endurecerlo en esta ronda — sigue siendo un límite aceptado,
+no un defecto pendiente de arreglar.
+
+### Verificación
+
+Migraciones nuevas: se releyó el mecanismo real de los triggers sobre `solicitudes` antes de
+diseñar (no se asumió), y se verificó por conteo de argumentos que las dos llamadas existentes a
+`registrar_ejecucion_automatica` (`trazar_odometro_automatico`, `trazar_notificacion_automatica`)
+siguen siendo válidas con la nueva firma. Frontend: `tsc -b`, `npm run lint`, `npm run format:check`,
+`npm run build`, `npm run test` (14/14) y `npm run test:e2e` (2/2) limpios sobre el estado
+integrado final (idempotencia + correlación + normalización de errores juntas). Las migraciones SQL
+en sí, igual que en el resto de esta sesión, no se probaron contra una base de datos real.
 
 ---
 

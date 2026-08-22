@@ -33,6 +33,10 @@ export function SolicitudForm({
   const [clienteSeleccionado, setClienteSeleccionado] = useState(clienteId ?? '')
   const [archivos, setArchivos] = useState<File[]>([])
   const archivoInput = useRef<HTMLInputElement>(null)
+  // Estable mientras el usuario reintenta el mismo envío (p. ej. tras un error de red); se rota
+  // solo después de una creación exitosa, para que una solicitud nueva no reutilice la clave de
+  // la anterior y reciba por error su resultado cacheado.
+  const claveIdempotencia = useRef(crypto.randomUUID())
   const disponibles = useMemo(
     () =>
       ubicaciones.data?.filter((item) => item.cliente_id === clienteSeleccionado && item.activa) ??
@@ -62,7 +66,9 @@ export function SolicitudForm({
       solicitante_id: usuarioId,
       archivos,
       como_gestor: comoGestor,
+      idempotencia_clave: claveIdempotencia.current,
     })
+    claveIdempotencia.current = crypto.randomUUID()
     reset()
     setArchivos([])
     if (archivoInput.current) archivoInput.current.value = ''

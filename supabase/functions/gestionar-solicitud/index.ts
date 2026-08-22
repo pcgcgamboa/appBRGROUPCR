@@ -96,6 +96,9 @@ Deno.serve(async (request) => {
           sla_vence_en: vence,
           estado: solicitud.estado === 'creada' ? 'asignada' : solicitud.estado,
           motivo_rechazo_cancelacion: null,
+          // Mismo UPDATE que dispara los triggers de trazabilidad: quedan enlazados a esta
+          // invocación en automatizacion_ejecuciones sin depender de set_config de sesión.
+          correlacion_id_operacion: correlacionId,
         })
         .eq('id', payload.solicitud_id)
       if (error) throw error
@@ -136,7 +139,11 @@ Deno.serve(async (request) => {
         )
       const { error } = await caller
         .from('solicitudes')
-        .update({ estado: 'rechazada', motivo_rechazo_cancelacion: payload.motivo.trim() })
+        .update({
+          estado: 'rechazada',
+          motivo_rechazo_cancelacion: payload.motivo.trim(),
+          correlacion_id_operacion: correlacionId,
+        })
         .eq('id', payload.solicitud_id)
       if (error) throw error
       // El registro `pendiente` se inserta antes de responder; el envío SMTP es en segundo plano.
@@ -152,7 +159,7 @@ Deno.serve(async (request) => {
         )
       const { error } = await caller
         .from('solicitudes')
-        .update({ estado: 'asignada' })
+        .update({ estado: 'asignada', correlacion_id_operacion: correlacionId })
         .eq('id', payload.solicitud_id)
       if (error) throw error
       // El registro `pendiente` se inserta antes de responder; el envío SMTP es en segundo plano.
@@ -172,6 +179,7 @@ Deno.serve(async (request) => {
         .update({
           estado: payload.estado,
           motivo_rechazo_cancelacion: payload.motivo?.trim() || null,
+          correlacion_id_operacion: correlacionId,
         })
         .eq('id', payload.solicitud_id)
       if (error) throw error

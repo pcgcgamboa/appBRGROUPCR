@@ -4,6 +4,7 @@ import { Textarea } from '@/components/atoms/textarea'
 import { RadioGroup, RadioGroupItem } from '@/components/atoms/radio-group'
 import { useValidarAtencion } from '@/features/cliente/hooks/use-cliente'
 import type { SolicitudCliente } from '@/features/cliente/types/cliente.types'
+import { normalizarError } from '@/lib/errores'
 
 export function ClientValidationForm({
   solicitud,
@@ -57,7 +58,7 @@ export function ClientValidationForm({
           role="alert"
           className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground"
         >
-          {validar.error.message}
+          {normalizarError(validar.error).mensaje}
         </p>
       )}
       <div className="flex gap-3">

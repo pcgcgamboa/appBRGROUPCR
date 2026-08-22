@@ -11,6 +11,7 @@ import { ClientDocumentsManager } from '@/components/organisms/client-documents-
 import { SolicitantePage } from '@/components/pages/solicitante/solicitante-page'
 import { useSolicitudesCliente } from '@/features/cliente/hooks/use-cliente'
 import type { SolicitudCliente } from '@/features/cliente/types/cliente.types'
+import { normalizarError } from '@/lib/errores'
 import { useI18n } from '@/lib/i18n'
 
 type ClienteRouteContext = { usuarioId: string; clienteId: string }
@@ -120,7 +121,7 @@ function ValidacionesCliente({
           role="alert"
           className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground"
         >
-          {solicitudes.error.message}
+          {normalizarError(solicitudes.error).mensaje}
         </p>
       )}
       {seleccionada && (

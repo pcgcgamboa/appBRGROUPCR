@@ -8,6 +8,7 @@ import { useCatalogo } from '@/features/catalogos/hooks/use-catalogo'
 import type { Cliente, TipoSolicitud, Ubicacion } from '@/features/catalogos/types/catalogos.types'
 import { useEditarSolicitud } from '@/features/solicitudes/hooks/use-editar-solicitud'
 import type { SolicitudAdmin } from '@/features/solicitudes/types/solicitudes.types'
+import { normalizarError } from '@/lib/errores'
 
 export function RequestGeneralDataForm({
   solicitud,
@@ -189,7 +190,7 @@ export function RequestGeneralDataForm({
           role="alert"
           className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground sm:col-span-2"
         >
-          {editar.error.message}
+          {normalizarError(editar.error).mensaje}
         </p>
       )}
       <div className="sm:col-span-2">

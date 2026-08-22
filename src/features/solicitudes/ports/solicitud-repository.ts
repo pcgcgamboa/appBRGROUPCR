@@ -21,6 +21,9 @@ export interface CrearSolicitudInput extends SolicitudFormData {
   solicitante_id: string
   archivos: File[]
   como_gestor?: boolean
+  /** Estable mientras el cliente reintenta el mismo envío. Un reintento con la misma clave
+   * devuelve la solicitud ya creada en vez de duplicarla. */
+  idempotencia_clave: string
 }
 
 export interface EditarSolicitudInput {

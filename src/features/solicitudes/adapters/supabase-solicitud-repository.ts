@@ -77,6 +77,7 @@ export function createSupabaseSolicitudRepository(
         p_tipo_solicitud_id: values.tipo_solicitud_id,
         p_ubicacion_id: values.ubicacion_id,
         p_detalle: values.detalle,
+        p_idempotencia_clave: values.idempotencia_clave,
       }
       const { data, error } = como_gestor
         ? await client.rpc('crear_solicitud_gestor', {

@@ -5,6 +5,7 @@ import { SessionPanel } from '@/components/organisms/session-panel'
 import { LoginPage } from '@/components/pages/login-page'
 import { usePerfilActual } from '@/features/auth/hooks/use-perfil-actual'
 import { useSession } from '@/features/auth/hooks/use-session'
+import { normalizarError } from '@/lib/errores'
 import { supabaseConfigurado } from '@/lib/supabase'
 import { calcularRolesDisponibles } from '@/app/roles-navegacion'
 
@@ -40,7 +41,7 @@ export function InicioPage() {
           role="alert"
           className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground"
         >
-          No fue posible consultar el perfil: {perfil.error.message}
+          No fue posible consultar el perfil: {normalizarError(perfil.error).mensaje}
         </p>
       ) : (
         <p className="rounded-md bg-primary-soft p-3 text-sm text-primary-soft-foreground">

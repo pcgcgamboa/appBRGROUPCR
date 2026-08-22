@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Select } from '@/components/atoms/select'
 import { useReporteFlota } from '@/features/flota/hooks/use-flota'
+import { normalizarError } from '@/lib/errores'
 
 const dinero = (n: number) => `₡${Number(n).toLocaleString('es-CR', { maximumFractionDigits: 2 })}`
 export function FleetReports() {
@@ -16,7 +17,7 @@ export function FleetReports() {
         role="alert"
         className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground"
       >
-        {reporte.error.message}
+        {normalizarError(reporte.error).mensaje}
       </p>
     )
   if (!reporte.data)

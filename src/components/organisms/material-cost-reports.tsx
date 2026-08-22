@@ -2,6 +2,7 @@ import { CircleDollarSign, PackageSearch } from 'lucide-react'
 import { Skeleton } from '@/components/atoms/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/atoms/tabs'
 import { useReporteCostosMateriales } from '@/features/reportes/hooks/use-dashboard'
+import { normalizarError } from '@/lib/errores'
 
 const moneda = new Intl.NumberFormat('es-CR', {
   style: 'currency',
@@ -104,7 +105,7 @@ export function MaterialCostReports() {
           role="alert"
           className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground"
         >
-          {reporte.error.message}
+          {normalizarError(reporte.error).mensaje}
         </p>
       )}
       {reporte.isLoading ? (

@@ -31,6 +31,7 @@ import { useCatalogo } from '@/features/catalogos/hooks/use-catalogo'
 import type { Cliente, Rol } from '@/features/catalogos/types/catalogos.types'
 import { useUsuariosAdmin } from '@/features/usuarios/hooks/use-usuarios-admin'
 import type { DatosUsuarioAdmin, UsuarioAdmin } from '@/features/usuarios/types/usuarios.types'
+import { normalizarError } from '@/lib/errores'
 import { useI18n } from '@/lib/i18n'
 import { TechniciansManager } from '@/components/organisms/technicians-manager'
 
@@ -244,7 +245,7 @@ export function UsuariosPage() {
                 role="alert"
                 className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground sm:col-span-2"
               >
-                {formError.message}
+                {normalizarError(formError).mensaje}
               </p>
             )}
             <DialogFooter className="sm:col-span-2">
@@ -320,7 +321,7 @@ export function UsuariosPage() {
                 role="alert"
                 className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground"
               >
-                {cambiarClave.error.message}
+                {normalizarError(cambiarClave.error).mensaje}
               </p>
             )}
             <DialogFooter>
@@ -363,7 +364,7 @@ export function UsuariosPage() {
               role="alert"
               className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground"
             >
-              {deleteError.message}
+              {normalizarError(deleteError).mensaje}
             </p>
           )}
           <AlertDialogFooter>
@@ -386,7 +387,7 @@ export function UsuariosPage() {
           role="alert"
           className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground"
         >
-          {pageError.message}
+          {normalizarError(pageError).mensaje}
         </p>
       )}
       <WorkspacePanel

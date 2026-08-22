@@ -8,6 +8,7 @@ import {
   useRegistrarMovimientoVehiculo,
 } from '@/features/flota/hooks/use-flota'
 import type { RutaProceso, TipoMovimientoVehiculo } from '@/features/flota/types/flota.types'
+import { normalizarError } from '@/lib/errores'
 
 export function VehicleMovementForm({ ruta, onClose }: { ruta: RutaProceso; onClose: () => void }) {
   const movimientos = useMovimientosVehiculo()
@@ -176,7 +177,7 @@ export function VehicleMovementForm({ ruta, onClose }: { ruta: RutaProceso; onCl
           role="alert"
           className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground"
         >
-          {registrar.error.message}
+          {normalizarError(registrar.error).mensaje}
         </p>
       )}
       {historial?.length ? (

@@ -3,6 +3,7 @@ import { type ChangeEvent, type FormEvent, useEffect, useState } from 'react'
 import { Button } from '@/components/atoms/button'
 import { PageHeader } from '@/components/molecules/page-header'
 import { useActualizarMarca, useMarca } from '@/features/configuracion/hooks/use-marca'
+import { normalizarError } from '@/lib/errores'
 
 const tiposPermitidos = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml']
 
@@ -74,7 +75,7 @@ export function MarcaPage() {
             role="alert"
             className="rounded-lg bg-destructive-soft p-3 text-sm text-destructive-soft-foreground"
           >
-            {actualizar.error.message}
+            {normalizarError(actualizar.error).mensaje}
           </p>
         )}
         {actualizar.isSuccess && !logo && !icono && (

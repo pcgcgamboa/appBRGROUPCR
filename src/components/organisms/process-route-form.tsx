@@ -9,6 +9,7 @@ import type { Vehiculo } from '@/features/catalogos/types/catalogos.types'
 import { useGuardarRutaProceso, useResponsablesRuta } from '@/features/flota/hooks/use-flota'
 import type { EstadoRutaProceso, RutaProceso } from '@/features/flota/types/flota.types'
 import { useSolicitudesParaRuta } from '@/features/rutas/hooks/use-control-rutas'
+import { normalizarError } from '@/lib/errores'
 
 export function ProcessRouteForm({ ruta, onClose }: { ruta?: RutaProceso; onClose: () => void }) {
   const solicitudes = useSolicitudesParaRuta()
@@ -146,7 +147,7 @@ export function ProcessRouteForm({ ruta, onClose }: { ruta?: RutaProceso; onClos
           role="alert"
           className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground"
         >
-          {guardar.error.message}
+          {normalizarError(guardar.error).mensaje}
         </p>
       )}
       <Button

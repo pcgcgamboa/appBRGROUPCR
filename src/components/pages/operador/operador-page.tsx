@@ -13,6 +13,7 @@ import { RequestTimeline } from '@/components/organisms/request-timeline'
 import { marcarSolicitudAbierta } from '@/features/operador/hooks/use-avance-draft'
 import { useSolicitudesOperador } from '@/features/operador/hooks/use-operador'
 import type { SolicitudOperador } from '@/features/operador/types/operador.types'
+import { normalizarError } from '@/lib/errores'
 
 type ModoPanel = 'detalle' | 'avance'
 
@@ -52,7 +53,7 @@ export function OperadorPage({ usuarioId }: { usuarioId: string }) {
           role="alert"
           className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground"
         >
-          {solicitudes.error.message}
+          {normalizarError(solicitudes.error).mensaje}
         </p>
       )}
 

@@ -9,6 +9,7 @@ import {
   useHistorialVehiculos,
   useRegistrarGestionVehiculo,
 } from '@/features/flota/hooks/use-flota'
+import { normalizarError } from '@/lib/errores'
 
 export function VehicleAdministration({ onClose }: { onClose: () => void }) {
   const { listado } = useCatalogo<Vehiculo>('vehiculos')
@@ -160,7 +161,7 @@ export function VehicleAdministration({ onClose }: { onClose: () => void }) {
           role="alert"
           className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground"
         >
-          {registrar.error.message}
+          {normalizarError(registrar.error).mensaje}
         </p>
       )}
       <div className="grid gap-4 lg:grid-cols-2">

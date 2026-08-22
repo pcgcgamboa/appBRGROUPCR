@@ -3,6 +3,7 @@ import { Input } from '@/components/atoms/input'
 import { Select } from '@/components/atoms/select'
 import { GridPagination } from '@/components/molecules/grid-pagination'
 import { useTrackingCliente } from '@/features/cliente/hooks/use-tracking-cliente'
+import { normalizarError } from '@/lib/errores'
 
 const fecha = new Intl.DateTimeFormat('es-CR', { dateStyle: 'medium', timeStyle: 'short' })
 const pageSize = 10
@@ -63,7 +64,7 @@ export function ClientTracking({ clienteId }: { clienteId: string }) {
           role="alert"
           className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground"
         >
-          {tracking.error.message}
+          {normalizarError(tracking.error).mensaje}
         </p>
       )}
       <div className="grid gap-3 rounded-lg border bg-card p-4 sm:grid-cols-2 lg:grid-cols-4">

@@ -13,6 +13,7 @@ import { VehicleMovementForm } from '@/components/organisms/vehicle-movement-for
 import { RouteTimeline } from '@/components/organisms/route-timeline'
 import { useRutasProceso } from '@/features/flota/hooks/use-flota'
 import type { RutaProceso } from '@/features/flota/types/flota.types'
+import { normalizarError } from '@/lib/errores'
 
 export function ControlRutasPage() {
   const rutas = useRutasProceso()
@@ -80,7 +81,7 @@ export function ControlRutasPage() {
           role="alert"
           className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground"
         >
-          {rutas.error.message}
+          {normalizarError(rutas.error).mensaje}
         </p>
       )}
       <WorkspacePanel
