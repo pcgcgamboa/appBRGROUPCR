@@ -1,5 +1,6 @@
 import nodemailer from 'npm:nodemailer@7.0.6'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4'
+import { logError } from './logger.ts'
 
 interface ClienteNotificacion {
   nombre: string
@@ -83,6 +84,7 @@ export async function iniciarNotificacion(
 export async function enviarNotificacionPendiente(
   pendiente: NotificacionPendiente,
   estado: string,
+  correlacionId?: string,
 ) {
   const admin = clienteAdmin()
   try {
@@ -114,6 +116,16 @@ export async function enviarNotificacionPendiente(
       .eq('id', pendiente.id)
   } catch (error) {
     const detalle = error instanceof Error ? error.message : 'Error desconocido de correo.'
+    // El resultado ya queda en notificaciones_envios (fuente de verdad consultable), pero un log
+    // estructurado con correlacion_id permite verlo de inmediato en el explorador de logs de
+    // Supabase sin necesidad de consultar la base — útil porque esto corre en segundo plano,
+    // después de que la respuesta HTTP de la operación de negocio ya se envió.
+    logError(detalle, {
+      funcion: 'enviarNotificacionPendiente',
+      correlacion_id: correlacionId ?? 'sin-correlacion',
+      notificacion_id: pendiente.id,
+      estado,
+    })
     await admin
       .from('notificaciones_envios')
       .update({ resultado: 'error', detalle_error: detalle })
@@ -125,11 +137,21 @@ export async function enviarNotificacionPendiente(
 // constancia del intento (síncrono, latencia despreciable) y despacha el envío SMTP real en
 // segundo plano. Un fallo al iniciar la notificación no debe convertir la respuesta de la
 // operación de negocio, ya exitosa, en un error — por eso captura sus propios errores.
-export async function notificarEnSegundoPlano(solicitudId: string, estado: string) {
+export async function notificarEnSegundoPlano(
+  solicitudId: string,
+  estado: string,
+  correlacionId?: string,
+) {
   try {
     const { pendiente } = await iniciarNotificacion(solicitudId, estado)
-    if (pendiente) EdgeRuntime.waitUntil(enviarNotificacionPendiente(pendiente, estado))
+    if (pendiente)
+      EdgeRuntime.waitUntil(enviarNotificacionPendiente(pendiente, estado, correlacionId))
   } catch (error) {
-    console.error(error)
+    logError(error instanceof Error ? error.message : 'Error desconocido al notificar.', {
+      funcion: 'notificarEnSegundoPlano',
+      correlacion_id: correlacionId ?? 'sin-correlacion',
+      solicitud_id: solicitudId,
+      estado,
+    })
   }
 }

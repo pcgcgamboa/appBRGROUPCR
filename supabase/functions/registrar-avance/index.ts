@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4'
 import { corsHeaders } from '../_shared/cors.ts'
+import { logError } from '../_shared/logger.ts'
 import { notificarEnSegundoPlano } from '../_shared/notificaciones.ts'
 
 Deno.serve(async (request) => {
@@ -46,9 +47,11 @@ Deno.serve(async (request) => {
     if (error) throw error
     // El registro `pendiente` se inserta antes de responder; el envío SMTP es en segundo plano.
     if (solicitudActual.estado !== payload.estado_nuevo)
-      await notificarEnSegundoPlano(payload.solicitud_id, payload.estado_nuevo)
+      await notificarEnSegundoPlano(payload.solicitud_id, payload.estado_nuevo, correlacionId)
     return respuesta({ avance_id: data }, 201)
   } catch (error) {
-    return respuesta({ error: error instanceof Error ? error.message : 'Error inesperado.' }, 400)
+    const mensaje = error instanceof Error ? error.message : 'Error inesperado.'
+    logError(mensaje, { funcion: 'registrar-avance', correlacion_id: correlacionId })
+    return respuesta({ error: mensaje }, 400)
   }
 })

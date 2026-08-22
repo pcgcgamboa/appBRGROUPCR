@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4'
 import { corsHeaders } from '../_shared/cors.ts'
+import { logError } from '../_shared/logger.ts'
 
 interface SolicitudAdmin {
   accion: 'listar' | 'crear' | 'actualizar' | 'cambiar_clave' | 'eliminar'
@@ -160,6 +161,8 @@ Deno.serve(async (request) => {
 
     return respuesta({ error: 'Acción desconocida.' }, 400)
   } catch (error) {
-    return respuesta({ error: error instanceof Error ? error.message : 'Error inesperado.' }, 500)
+    const mensaje = error instanceof Error ? error.message : 'Error inesperado.'
+    logError(mensaje, { funcion: 'admin-users', correlacion_id: correlacionId })
+    return respuesta({ error: mensaje }, 500)
   }
 })

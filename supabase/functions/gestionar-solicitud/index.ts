@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4'
 import { corsHeaders } from '../_shared/cors.ts'
+import { logError } from '../_shared/logger.ts'
 import { notificarEnSegundoPlano } from '../_shared/notificaciones.ts'
 
 type Prioridad = 'baja' | 'media' | 'alta' | 'urgente'
@@ -123,7 +124,7 @@ Deno.serve(async (request) => {
       // El registro `pendiente` se inserta antes de responder; el envío SMTP se despacha en
       // segundo plano y no bloquea la respuesta HTTP.
       if (solicitud.estado !== 'asignada')
-        await notificarEnSegundoPlano(payload.solicitud_id, 'asignada')
+        await notificarEnSegundoPlano(payload.solicitud_id, 'asignada', correlacionId)
       return respuesta({
         solicitud_id: payload.solicitud_id,
         sla_horas: horas,
@@ -147,7 +148,7 @@ Deno.serve(async (request) => {
         .eq('id', payload.solicitud_id)
       if (error) throw error
       // El registro `pendiente` se inserta antes de responder; el envío SMTP es en segundo plano.
-      await notificarEnSegundoPlano(payload.solicitud_id, 'rechazada')
+      await notificarEnSegundoPlano(payload.solicitud_id, 'rechazada', correlacionId)
       return respuesta({ solicitud_id: payload.solicitud_id })
     }
 
@@ -163,7 +164,7 @@ Deno.serve(async (request) => {
         .eq('id', payload.solicitud_id)
       if (error) throw error
       // El registro `pendiente` se inserta antes de responder; el envío SMTP es en segundo plano.
-      await notificarEnSegundoPlano(payload.solicitud_id, 'asignada')
+      await notificarEnSegundoPlano(payload.solicitud_id, 'asignada', correlacionId)
       return respuesta({ solicitud_id: payload.solicitud_id })
     }
 
@@ -185,12 +186,14 @@ Deno.serve(async (request) => {
       if (error) throw error
       // El registro `pendiente` se inserta antes de responder; el envío SMTP es en segundo plano.
       if (payload.estado !== solicitud.estado)
-        await notificarEnSegundoPlano(payload.solicitud_id, payload.estado)
+        await notificarEnSegundoPlano(payload.solicitud_id, payload.estado, correlacionId)
       return respuesta({ solicitud_id: payload.solicitud_id })
     }
 
     return respuesta({ error: 'Acción desconocida.' }, 400)
   } catch (error) {
-    return respuesta({ error: error instanceof Error ? error.message : 'Error inesperado.' }, 500)
+    const mensaje = error instanceof Error ? error.message : 'Error inesperado.'
+    logError(mensaje, { funcion: 'gestionar-solicitud', correlacion_id: correlacionId })
+    return respuesta({ error: mensaje }, 500)
   }
 })
