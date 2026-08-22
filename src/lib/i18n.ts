@@ -103,6 +103,7 @@ const mensajes = {
     avanceSaved: 'Avance registrado correctamente.',
     saveProgress: 'Guardar avance',
     savingProgress: 'Registrando…',
+    unexpectedError: 'Ocurrió un error inesperado. Intente nuevamente.',
   },
   en: {
     appName: 'Service requests',
@@ -203,6 +204,7 @@ const mensajes = {
     avanceSaved: 'Progress saved successfully.',
     saveProgress: 'Save progress',
     savingProgress: 'Saving…',
+    unexpectedError: 'An unexpected error occurred. Please try again.',
   },
 } as const
 

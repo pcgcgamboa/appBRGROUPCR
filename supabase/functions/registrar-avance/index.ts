@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4'
 import { corsHeaders } from '../_shared/cors.ts'
-import { notificarEstado } from '../_shared/notificaciones.ts'
+import { notificarEnSegundoPlano } from '../_shared/notificaciones.ts'
 
 function respuesta(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -37,8 +37,9 @@ Deno.serve(async (request) => {
       p_adjuntos: payload.adjuntos ?? [],
     })
     if (error) throw error
+    // El registro `pendiente` se inserta antes de responder; el envío SMTP es en segundo plano.
     if (solicitudActual.estado !== payload.estado_nuevo)
-      await notificarEstado(payload.solicitud_id, payload.estado_nuevo).catch(console.error)
+      await notificarEnSegundoPlano(payload.solicitud_id, payload.estado_nuevo)
     return respuesta({ avance_id: data }, 201)
   } catch (error) {
     return respuesta({ error: error instanceof Error ? error.message : 'Error inesperado.' }, 400)

@@ -64,6 +64,69 @@ export interface FotoVehiculo {
   url?: string
 }
 
+export interface SubirFotosVehiculoInput {
+  vehiculoId: string
+  archivos: File[]
+  descripcion: string
+}
+
+export interface GestionVehiculoInput {
+  clase: 'indisponibilidad' | 'gasto'
+  vehiculo_id: string
+  razon?: string
+  detalle?: string
+  inicio?: string
+  fin?: string | null
+  tipo?: string
+  concepto?: string
+  monto?: number
+  fecha?: string
+}
+
+export interface MovimientoVehiculoResumen {
+  id: string
+  tipo: TipoMovimientoVehiculo
+  cantidad: number | null
+  unidad: string | null
+  monto: number
+  detalle: string | null
+  fecha: string
+  ruta: { codigo: string } | null
+  vehiculo: { placa: string } | null
+}
+
+export interface VehiculoIndisponibilidad {
+  id: string
+  razon: string
+  detalle: string | null
+  inicio: string
+  fin: string | null
+  vehiculo: { placa: string } | null
+}
+
+export interface VehiculoGasto {
+  id: string
+  tipo: string
+  concepto: string
+  monto: number
+  fecha: string
+  vehiculo: { placa: string } | null
+}
+
+export interface HistorialVehiculos {
+  indisponibilidades: VehiculoIndisponibilidad[]
+  gastos: VehiculoGasto[]
+}
+
+export interface ActividadRuta {
+  id: number
+  tipo: string
+  titulo: string
+  descripcion: string | null
+  creado_en: string
+  actor: { nombre_completo: string } | null
+}
+
 export interface ReporteFlota {
   totales: { rutas: number; kilometros: number; gasto_operativo: number; gasto_flota: number }
   rutas: Array<{

@@ -21,6 +21,7 @@ import type {
 } from '@/features/operador/types/operador.types'
 import type { EstadoSolicitud } from '@/features/solicitudes/types/solicitudes.types'
 import { useNetworkStatus } from '@/hooks/use-network-status'
+import { normalizarError } from '@/lib/errores'
 import { useI18n } from '@/lib/i18n'
 
 function materialVacio(): MaterialAvanceInput {
@@ -403,7 +404,7 @@ export function OperatorProgressForm({
           role="alert"
           className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground"
         >
-          {registrar.error.message}
+          {normalizarError(registrar.error).mensaje}
         </p>
       )}
 

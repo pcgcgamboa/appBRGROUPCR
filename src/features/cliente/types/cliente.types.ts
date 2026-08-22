@@ -14,3 +14,30 @@ export interface SolicitudCliente {
     validado_en: string
   } | null
 }
+
+export type DocumentoCliente = {
+  id: string
+  cliente_id: string
+  tipo: 'contrato' | 'identificacion' | 'factura' | 'proforma' | 'otro'
+  nombre: string
+  descripcion: string | null
+  fecha_documento: string | null
+  nombre_archivo: string
+  ruta_storage: string
+  mime_type: string
+  tamano_bytes: number
+  creado_en: string
+  usuario: { nombre_completo: string } | null
+  url?: string
+}
+
+export type TrackingCliente = {
+  id: number
+  solicitud_id: string
+  tipo: string
+  titulo: string
+  descripcion: string | null
+  creado_en: string
+  solicitud: { numero: number; nombre: string } | null
+  actor: { nombre_completo: string } | null
+}

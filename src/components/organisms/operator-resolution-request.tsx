@@ -5,6 +5,7 @@ import { Select } from '@/components/atoms/select'
 import { Textarea } from '@/components/atoms/textarea'
 import { useSolicitarResolucion } from '@/features/operador/hooks/use-operador'
 import type { SolicitudOperador } from '@/features/operador/types/operador.types'
+import { normalizarError } from '@/lib/errores'
 
 export function OperatorResolutionRequest({
   solicitud,
@@ -60,7 +61,7 @@ export function OperatorResolutionRequest({
       </label>
       {solicitar.error && (
         <p role="alert" className="text-sm text-destructive">
-          {solicitar.error.message}
+          {normalizarError(solicitar.error).mensaje}
         </p>
       )}
       <Button type="submit" disabled={solicitar.isPending || motivo.trim().length < 5}>

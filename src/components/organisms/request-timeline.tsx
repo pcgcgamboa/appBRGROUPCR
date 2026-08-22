@@ -4,6 +4,7 @@ import { GridPagination } from '@/components/molecules/grid-pagination'
 import { TrackingControls } from '@/components/molecules/tracking-controls'
 import { useTrackingSolicitud } from '@/features/solicitudes/hooks/use-tracking-solicitud'
 import { useTrackingFilters } from '@/hooks/use-tracking-filters'
+import { normalizarError } from '@/lib/errores'
 
 const formatoFecha = new Intl.DateTimeFormat('es-CR', { dateStyle: 'medium', timeStyle: 'short' })
 
@@ -35,7 +36,7 @@ export function RequestTimeline({ solicitudId }: { solicitudId: string }) {
           role="alert"
           className="mt-4 rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground"
         >
-          {tracking.error.message}
+          {normalizarError(tracking.error).mensaje}
         </p>
       )}
       {tracking.isLoading && (

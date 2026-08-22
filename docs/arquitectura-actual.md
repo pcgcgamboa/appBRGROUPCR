@@ -309,11 +309,14 @@ supabase secrets set --env-file supabase/.env.local
 - La internacionalización todavía no cubre todos los textos.
 - La suite automatizada es inicial (unitarias/componentes y un E2E de humo); falta ampliar
   cobertura hacia los flujos críticos por rol.
-- Solo `solicitudes` y `auth` tienen capa de puertos/adaptadores; el resto de dominios en
-  `src/features/**` sigue llamando a `supabase-js` directamente desde sus hooks.
+- La normalización de errores (`src/lib/errores.ts`) solo se aplicó en 3 componentes
+  representativos; el resto sigue mostrando `error.message` crudo.
 - El modelo antiguo de rutas permanece en esquema y código muerto, aunque el modelo vigente es el de
   rutas de proceso agrupadas. De igual forma, `SolicitudesAdminPage` es un componente sin ninguna
   ruta que lo monte (código muerto no eliminado en esta fase, fuera de su alcance).
+- El patrón outbox con reintentos (Fase 2, `docs/informe-arquitectura-fase-2.md`) sigue pendiente:
+  hoy el envío de notificaciones se despacha en segundo plano (`EdgeRuntime.waitUntil`) pero sin
+  reintento automático si la instancia se apaga a mitad del envío.
 - El bundle principal supera el umbral recomendado de Vite y puede beneficiarse de división de
   código mediante importaciones dinámicas.
 

@@ -7,8 +7,8 @@ import { Textarea } from '@/components/atoms/textarea'
 import {
   useDocumentosCliente,
   useGestionDocumentosCliente,
-  type DocumentoCliente,
 } from '@/features/cliente/hooks/use-documentos-cliente'
+import type { DocumentoCliente } from '@/features/cliente/types/cliente.types'
 
 const tipos: Array<{ value: DocumentoCliente['tipo']; label: string }> = [
   { value: 'contrato', label: 'Contrato' },

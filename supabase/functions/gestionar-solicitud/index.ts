@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4'
 import { corsHeaders } from '../_shared/cors.ts'
-import { notificarEstado } from '../_shared/notificaciones.ts'
+import { notificarEnSegundoPlano } from '../_shared/notificaciones.ts'
 
 type Prioridad = 'baja' | 'media' | 'alta' | 'urgente'
 type Estado =
@@ -113,8 +113,10 @@ Deno.serve(async (request) => {
             estado: 'disponible',
           })
       }
+      // El registro `pendiente` se inserta antes de responder; el envío SMTP se despacha en
+      // segundo plano y no bloquea la respuesta HTTP.
       if (solicitud.estado !== 'asignada')
-        await notificarEstado(payload.solicitud_id, 'asignada').catch(console.error)
+        await notificarEnSegundoPlano(payload.solicitud_id, 'asignada')
       return respuesta({
         solicitud_id: payload.solicitud_id,
         sla_horas: horas,
@@ -133,7 +135,8 @@ Deno.serve(async (request) => {
         .update({ estado: 'rechazada', motivo_rechazo_cancelacion: payload.motivo.trim() })
         .eq('id', payload.solicitud_id)
       if (error) throw error
-      await notificarEstado(payload.solicitud_id, 'rechazada').catch(console.error)
+      // El registro `pendiente` se inserta antes de responder; el envío SMTP es en segundo plano.
+      await notificarEnSegundoPlano(payload.solicitud_id, 'rechazada')
       return respuesta({ solicitud_id: payload.solicitud_id })
     }
 
@@ -148,7 +151,8 @@ Deno.serve(async (request) => {
         .update({ estado: 'asignada' })
         .eq('id', payload.solicitud_id)
       if (error) throw error
-      await notificarEstado(payload.solicitud_id, 'asignada').catch(console.error)
+      // El registro `pendiente` se inserta antes de responder; el envío SMTP es en segundo plano.
+      await notificarEnSegundoPlano(payload.solicitud_id, 'asignada')
       return respuesta({ solicitud_id: payload.solicitud_id })
     }
 
@@ -167,8 +171,9 @@ Deno.serve(async (request) => {
         })
         .eq('id', payload.solicitud_id)
       if (error) throw error
+      // El registro `pendiente` se inserta antes de responder; el envío SMTP es en segundo plano.
       if (payload.estado !== solicitud.estado)
-        await notificarEstado(payload.solicitud_id, payload.estado).catch(console.error)
+        await notificarEnSegundoPlano(payload.solicitud_id, payload.estado)
       return respuesta({ solicitud_id: payload.solicitud_id })
     }
 
