@@ -30,7 +30,7 @@ returns table (
   id uuid,
   destinatario text,
   estado text,
-  numero integer,
+  numero bigint,
   nombre text,
   cliente_nombre text
 )
@@ -88,7 +88,13 @@ select cron.schedule(
     url := (select decrypted_secret from vault.decrypted_secrets where name = 'notif_functions_base_url') || '/functions/v1/procesar-notificaciones-pendientes',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
-      'apikey', (select decrypted_secret from vault.decrypted_secrets where name = 'notif_publishable_key')
+      'apikey', (select decrypted_secret from vault.decrypted_secrets where name = 'notif_publishable_key'),
+      -- El gateway de Edge Functions exige `Authorization: Bearer <jwt>` cuando verify_jwt está
+      -- activo (el caso por defecto: procesar-notificaciones-pendientes no tiene una excepción
+      -- propia en supabase/config.toml). La clave anon/publishable ya ES un JWT válido firmado por
+      -- el proyecto, así que sirve como portador aquí igual que `apikey` — sin este header, el
+      -- gateway rechaza la llamada con 401 antes de que el código de la función se ejecute nunca.
+      'Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'notif_publishable_key')
     ),
     body := '{}'::jsonb
   ) as request_id;

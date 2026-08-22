@@ -1,26 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { supabase } from '@/lib/supabase'
 import { nombreSeguro, validarArchivo } from '@/features/operador/lib/adjuntos'
+import { operadorRepository } from '@/features/operador/lib/repository'
 import type {
   AdjuntoAvanceInput,
   AttachmentUploadItem,
 } from '@/features/operador/types/operador.types'
 
-const BUCKET = 'solicitudes-adjuntos'
-
 async function subirArchivo(
   solicitudId: string,
   item: AttachmentUploadItem,
 ): Promise<AttachmentUploadItem> {
-  if (!supabase) return { ...item, estado: 'error', error: 'Supabase no está configurado.' }
   if (!item.file) return item
   try {
     const id = crypto.randomUUID()
     const ruta_storage = `${solicitudId}/${id}/${nombreSeguro(item.file.name)}`
-    const { error } = await supabase.storage
-      .from(BUCKET)
-      .upload(ruta_storage, item.file, { contentType: item.file.type, upsert: false })
-    if (error) throw error
+    await operadorRepository.subirAdjunto(ruta_storage, item.file)
     const adjunto: AdjuntoAvanceInput = {
       id,
       nombre_archivo: item.file.name,
@@ -118,11 +112,15 @@ export function useAttachmentUploads() {
   )
 
   async function cancelar() {
-    if (supabase) {
+    try {
       const rutas = items
         .filter((item) => item.estado === 'listo' && item.adjunto)
         .map((item) => item.adjunto!.ruta_storage)
-      if (rutas.length) await supabase.storage.from(BUCKET).remove(rutas)
+      await operadorRepository.eliminarAdjuntos(rutas)
+    } catch {
+      // Rollback de mejor esfuerzo: si no se pudo limpiar el bucket (o Supabase no está
+      // configurado), igual se descarta el estado local — no hay nada más que el usuario pueda
+      // hacer desde aquí.
     }
     items.forEach((item) => item.previewUrl && URL.revokeObjectURL(item.previewUrl))
     setItems([])

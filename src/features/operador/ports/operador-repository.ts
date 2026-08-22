@@ -20,4 +20,6 @@ export interface OperadorRepository {
     tipo: 'cierre' | 'cancelacion'
     motivo: string
   }): Promise<string>
+  subirAdjunto(rutaStorage: string, archivo: File): Promise<void>
+  eliminarAdjuntos(rutasStorage: string[]): Promise<void>
 }

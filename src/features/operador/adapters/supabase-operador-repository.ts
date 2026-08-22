@@ -6,6 +6,8 @@ import type {
   SolicitudOperador,
 } from '@/features/operador/types/operador.types'
 
+const BUCKET_ADJUNTOS = 'solicitudes-adjuntos'
+
 /**
  * Adaptador concreto de `OperadorRepository` sobre supabase-js. Cada método
  * verifica que el cliente esté configurado (`client` puede ser `null` cuando
@@ -69,6 +71,19 @@ export function createSupabaseOperadorRepository(
       })
       if (error) throw error
       return data as string
+    },
+
+    async subirAdjunto(rutaStorage: string, archivo: File): Promise<void> {
+      const { error } = await requerirCliente()
+        .storage.from(BUCKET_ADJUNTOS)
+        .upload(rutaStorage, archivo, { contentType: archivo.type, upsert: false })
+      if (error) throw error
+    },
+
+    async eliminarAdjuntos(rutasStorage: string[]): Promise<void> {
+      if (!rutasStorage.length) return
+      const { error } = await requerirCliente().storage.from(BUCKET_ADJUNTOS).remove(rutasStorage)
+      if (error) throw error
     },
   }
 }

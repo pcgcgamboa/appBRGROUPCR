@@ -2,11 +2,16 @@
 -- cambio, para las 4 acciones de gestionar-solicitud (asignar, rechazar, reabrir, cambiar_estado)
 -- — la fuente más frecuente de automatizaciones sobre `solicitudes`. Mecanismo: la Edge Function
 -- incluye `correlacion_id_operacion` en el mismo UPDATE que ya hace sobre `solicitudes`; el
--- trigger BEFORE `validar_cambio_solicitud` y el trigger AFTER `trazar_automatizaciones_solicitud`
--- disparan sobre esa MISMA sentencia, así que ambos ven el valor sin necesidad de `set_config` de
--- sesión (que no es confiable con el connection pooling de Supabase — ver
--- docs/informe-arquitectura-fase-2.md sección 5). No cubre avances (`registrar_avance_operador`)
--- ni notificaciones (`notificaciones_envios`) todavía — queda documentado como alcance pendiente.
+-- trigger AFTER `trazar_automatizaciones_solicitud` dispara sobre esa MISMA sentencia y lee
+-- `new.correlacion_id_operacion` directamente de la fila, sin necesidad de `set_config` de sesión
+-- (que no es confiable con el connection pooling de Supabase — ver
+-- docs/informe-arquitectura-fase-2.md sección 5). El trigger BEFORE `validar_cambio_solicitud`
+-- también dispara sobre la misma sentencia (deriva `atendida_en`/`cerrada_en`) pero no lee ni usa
+-- esta columna — solo aparece como el literal `origen` que trazar_automatizaciones_solicitud le
+-- pasa a `registrar_ejecucion_automatica`, documentando de qué cambio de estado derivó la
+-- automatización, no como una segunda fuente que consulte correlacion_id_operacion. No cubre
+-- avances (`registrar_avance_operador`) ni notificaciones (`notificaciones_envios`) todavía — queda
+-- documentado como alcance pendiente.
 
 alter table public.solicitudes add column correlacion_id_operacion uuid;
 

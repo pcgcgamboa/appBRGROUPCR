@@ -66,10 +66,10 @@ create trigger notificar_cambio_bolsa_empleo after insert or update of estado on
 for each row execute function public.notificar_cambio_bolsa_empleo();
 
 -- El Cliente puede aportar documentos a su expediente, pero no editarlos ni eliminarlos.
-drop policy cliente_documentos_crear on public.cliente_documentos;
+drop policy if exists cliente_documentos_crear on public.cliente_documentos;
 create policy cliente_documentos_crear on public.cliente_documentos for insert to authenticated
 with check(subido_por=auth.uid() and (public.es_gestor() or cliente_id=public.cliente_del_usuario()));
-drop policy storage_clientes_documentos_crear on storage.objects;
+drop policy if exists storage_clientes_documentos_crear on storage.objects;
 create policy storage_clientes_documentos_crear on storage.objects for insert to authenticated
 with check(bucket_id='clientes-documentos' and owner_id=auth.uid()::text and (
   public.es_gestor() or ((storage.foldername(name))[1])::uuid=public.cliente_del_usuario()
