@@ -1,343 +1,247 @@
 # Estado de la arquitectura según la propuesta escalable
 
-**Fecha de evaluación:** 21 de agosto de 2026  
-**Documento de referencia:** `Propuesta_Arquitectura_Escalable_React_Supabase.md`  
-**Alcance:** evaluación documental y del repositorio; no se realizaron cambios en el sistema.
+**Fecha:** 22 de agosto de 2026 (actualizado el mismo día tras verificación en navegador real)
+**Origen:** ejecución multi-agente de `Propuesta_Arquitectura_Escalable_React_Supabase.md` (propuesta
+adjuntada por el usuario) sobre el Sistema de Solicitudes de Servicio, en una sesión única orquestada
+con Claude Code.
+
+Este documento es el punto de entrada a la iniciativa completa: resume qué cambió, muestra la
+arquitectura resultante con su diagrama, justifica cada elemento importante, documenta una corrección
+real encontrada al probar en navegador después del cierre de la iniciativa, y remite a los 5 informes
+detallados (uno por fase) para el detalle línea-por-línea de cada cambio y su verificación.
+
+---
 
 ## 1. Resumen ejecutivo
 
-La arquitectura actual cumple la base recomendada por la propuesta: continúa como un **monolito
-modular**, utiliza React y TypeScript, organiza el frontend por dominios y Atomic Design, y conserva
-PostgreSQL como fuente de verdad con RLS, RPC, Edge Functions y Storage.
+| Fase | Nombre (propuesta original) | Estado | Informe detallado |
+|---|---|---|---|
+| 0 | Medición y decisiones | ✅ Completa | `informe-arquitectura-fase-1.md` §6.1 |
+| 1 | Fronteras y calidad | ✅ Completa | `informe-arquitectura-fase-1.md`, `-fase-2.md` §1-2 |
+| 2 | Integración segura | ✅ Completa | `informe-arquitectura-fase-2.md` |
+| 3 | Rendimiento y datos | ✅ Completa (2 de 5 sub-ítems ejecutables; 3 diferidos con evidencia) | `informe-arquitectura-fase-3.md` |
+| 4 | Observabilidad y continuidad | ✅ Completa (logs + runbook; métricas/APM diferidos) | `informe-arquitectura-fase-4.md` |
+| 5 | Escalamiento basado en evidencia | ⏸️ Documentada, sin cambios de código — explícitamente condicionada a evidencia de producción inexistente hoy | `informe-arquitectura-fase-5.md` |
 
-La evolución estructural propuesta todavía no ha comenzado formalmente. No existen React Router,
-puertos y adaptadores, outbox, workers, observabilidad correlacionada ni pruebas automatizadas. El
-sistema sí presenta avances parciales importantes: los comandos críticos de solicitudes y usuarios
-ya utilizan Edge Functions/RPC, la auditoría se genera en PostgreSQL, los archivos están separados de
-los datos estructurados y existe una disciplina de migraciones y CI básico.
+**Lo que cambió, en una frase por fase**: pruebas automatizadas + patrón puertos/adaptadores en los
+12 dominios de `src/features/**` + router real por URL (Fase 0-1) → normalización de errores +
+notificaciones desacopladas del camino crítico + `correlacion_id` de extremo a extremo + outbox con
+reintentos + idempotencia en las 3 mutaciones críticas (Fase 2) → code-splitting por ruta + caché
+selectiva para catálogos (Fase 3) → logs estructurados en todos los Edge Functions + runbook de
+restauración (Fase 4) → criterios de activación documentados para réplicas/particiones/almacén
+analítico/extracción de servicios, sin implementarlos todavía (Fase 5).
 
-### Estado global estimado
+**Lo que deliberadamente no se hizo, y por qué** (no son omisiones, son decisiones documentadas):
 
-| Área | Estado |
-| --- | --- |
-| Base tecnológica recomendada | Implementada |
-| Monolito modular | Implementado de forma práctica |
-| Seguridad PostgreSQL/RLS/RPC | Implementada, requiere pruebas automatizadas |
-| BFF selectivo para comandos críticos | Parcialmente implementado |
-| Fronteras, puertos y adaptadores | Pendiente |
-| Router y carga diferida | Pendiente |
-| Procesamiento asíncrono/outbox | Pendiente |
-| Estrategia de pruebas | Pendiente |
-| Rendimiento y crecimiento gobernados por métricas | Pendiente |
-| Observabilidad y continuidad | Pendiente/no evidenciado |
+- Paginación por cursor en `listarAdmin()`, revisión de índices con planes reales, política de
+  retención — Fase 3, requieren datos/tráfico de producción que no existen en este entorno.
+- Un proveedor de observabilidad para métricas/alertas/APM — Fase 4, decisión de presupuesto y
+  negocio.
+- Réplicas, particionamiento, almacén analítico, extracción de servicios — Fase 5, la propia
+  propuesta original los condiciona a evidencia que hoy no existe; implementarlos ahora sería
+  sobre-ingeniería.
+- Ejecutar el simulacro de restauración de respaldo — Fase 4, requiere crear un proyecto Supabase de
+  prueba y presencia humana en la consola; solo se documentó el procedimiento
+  (`runbook-restauracion-respaldo.md`).
 
-La implementación se encuentra principalmente en el estado previo a la **Fase 0**, aunque algunos
-elementos de las fases 1 y 2 ya existen parcialmente por decisiones anteriores.
+### Verificación acumulada
 
-## 2. Criterio de clasificación
+Cada fase se verificó de forma independiente e íntegra (no solo por el reporte de cada agente) antes
+de comitear: `npx tsc -b`, `npm run lint`, `npm run format:check`, `npm run build`, `npm run test`
+(Vitest), `npm run test:e2e` (Playwright contra el build de producción). El detalle de cada corrida
+está en la sección "Verificación" de cada informe de fase; todas terminaron limpias. Ningún cambio se
+desplegó (`supabase db push` / `supabase functions deploy`) — eso permanece como paso manual del
+usuario, por instrucción explícita.
 
-- **Implementado:** existe evidencia directa en el repositorio y corresponde sustancialmente a la
-  propuesta.
-- **Parcial:** existe una solución útil, pero falta formalización, cobertura o alcance.
-- **Pendiente:** no se encontró la capacidad propuesta.
-- **No evidenciado:** puede existir en la plataforma o en procesos externos, pero no está documentado
-  ni verificable desde el repositorio.
-- **Condicionado:** solo debe implementarse cuando métricas o necesidades reales lo justifiquen.
+---
 
-## 3. Comparación de la arquitectura objetivo
+## 2. Arquitectura resultante
 
-| Capacidad propuesta | Estado | Evidencia o situación actual | Brecha principal |
-| --- | --- | --- | --- |
-| React SPA/PWA | Parcial | Existe SPA en React 18, TypeScript y Vite | No se evidencia configuración PWA ni operación offline completa |
-| Capa de aplicación por dominio | Parcial | `src/features` agrupa hooks, tipos y esquemas | Los hooks mezclan caso de uso y acceso a Supabase |
-| Puertos y contratos independientes | Pendiente | Los tipos existen por dominio | No hay interfaces de repositorio o servicios independientes del proveedor |
-| Adaptadores de infraestructura | Pendiente | `src/lib/supabase.ts` centraliza el cliente | Los hooks conocen tablas, RPC, buckets y Edge Functions |
-| API/BFF selectivo | Parcial | `gestionar-solicitud`, `registrar-avance` y `admin-users` | No existe política formal para decidir qué comandos deben pasar por BFF |
-| RPC y servicios transaccionales | Implementado | Las migraciones contienen funciones transaccionales y reglas | Falta una matriz automatizada de contratos y permisos |
-| PostgreSQL + RLS | Implementado | Esquema, políticas y funciones viven en migraciones | No hay pruebas automáticas de la matriz de acceso |
-| Outbox | Pendiente | Auditoría y notificaciones se generan en transacciones/triggers | No existe `integration_outbox` ni entrega desacoplada |
-| Workers e integraciones asíncronas | Pendiente | No se encontraron workers | Los efectos externos futuros podrían quedar acoplados al comando |
-| Storage para binarios | Implementado | Evidencias, documentos, comunicaciones y fotos usan Storage | Falta documentar ciclo de vida, retención y análisis de archivos |
-| Observabilidad central | Pendiente | Hay tracking funcional de negocio | No hay logs estructurados, métricas técnicas ni trazas correlacionadas |
+### 2.1 Diagrama general
 
-## 4. Estado de las fortalezas que la propuesta recomienda conservar
+```mermaid
+flowchart TB
+  U["Usuario (navegador)"]
 
-### 4.1 PostgreSQL como fuente de verdad — Implementado
+  subgraph FE["Frontend — React 18 + TypeScript + Vite"]
+    direction TB
+    R["React Router<br/>rutas reales por rol, lazy-loaded (React.lazy + Suspense en 2 niveles)"]
+    SP["SessionProvider<br/>única suscripción a auth-js, compartida por Context"]
+    Guard["RequireSession / RequireRole<br/>(route-guards.tsx)"]
+    Shell["Shells por rol<br/>AppShell → AdminShell / EncargadoDashboard / ClientePage"]
+    Pages["Páginas por rol y sección<br/>(Atomic Design: atoms → molecules → organisms → templates → pages)"]
+    Hooks["Hooks de dominio<br/>TanStack Query (server state) + Zustand (UI state)"]
+    Port["Puerto: *Repository (interfaz)<br/>12 dominios en src/features/**"]
+    Adapter["Adaptador Supabase<br/>supabase-js"]
 
-El dominio permanece relacional y transaccional. Las migraciones constituyen la fuente de verdad del
-esquema, restricciones, relaciones, funciones, triggers, RLS y buckets.
+    SP --> Guard
+    R --> Guard --> Shell --> Pages --> Hooks --> Port --> Adapter
+  end
 
-### 4.2 RLS como frontera de autorización — Implementado
+  U --> R
 
-La autorización no depende exclusivamente de la interfaz. Existen migraciones específicas para
-roles, RLS, acceso por cliente y protección de operaciones sensibles.
+  subgraph BE["Backend — Supabase"]
+    direction TB
+    DB[("PostgreSQL + RLS<br/>autorización a nivel de fila")]
+    RPC["Funciones transaccionales<br/>security definer, idempotencia en 3 mutaciones críticas"]
+    AUD["Triggers de auditoría<br/>automatizacion_ejecuciones + correlacion_id_operacion"]
+    EF["Edge Functions<br/>gestionar-solicitud · registrar-avance · admin-users<br/>procesar-notificaciones-pendientes"]
+    Log["Logs estructurados JSON<br/>correlacion_id + funcion, por logger.ts"]
+    CRON["pg_cron (cada 5 min)"]
+    SMTP["Envío SMTP<br/>en segundo plano vía EdgeRuntime.waitUntil"]
 
-**Estado de calidad:** funcional, pero sin una suite automatizada que verifique cada rol y política.
+    DB --> RPC --> AUD
+    EF --> DB
+    EF --> Log
+    EF -.-> SMTP
+    CRON --> EF
+  end
 
-### 4.3 Operaciones atómicas mediante RPC — Implementado
-
-Los cambios complejos de solicitudes, rutas y avances se apoyan en funciones PostgreSQL. Las
-funciones privilegiadas utilizan `security definer` y control de `search_path` según la convención
-del proyecto.
-
-### 4.4 Edge Functions para orquestación — Implementado parcialmente
-
-Existen tres Edge Functions:
-
-- `admin-users`;
-- `gestionar-solicitud`;
-- `registrar-avance`.
-
-Cubren administración de Auth y comandos sensibles del ciclo de solicitudes. La propuesta requiere
-formalizar los criterios para que nuevos comandos no elijan arbitrariamente entre SDK, RPC y Edge
-Function.
-
-### 4.5 Archivos fuera de PostgreSQL — Implementado
-
-Los binarios se almacenan en Supabase Storage y PostgreSQL conserva metadatos y relaciones. Este
-patrón ya se aplica a solicitudes, documentos de clientes, comunicaciones y vehículos.
-
-### 4.6 Organización feature-first y Atomic Design — Implementado
-
-El frontend separa `features` por dominio y componentes por nivel de composición. Se añadieron
-patrones visuales reutilizables como `WorkspacePanel` y `DisclosurePanel`.
-
-### 4.7 Auditoría transaccional — Implementado
-
-Existen líneas de tiempo para solicitudes y rutas. Los triggers registran cambios de estado,
-asignaciones, avances, materiales, adjuntos, técnicos, validaciones, rutas y automatizaciones.
-
-La auditoría funcional no equivale aún a observabilidad técnica: faltan correlación, latencia,
-métricas y trazas entre navegador, funciones y base.
-
-## 5. Estado de las brechas prioritarias
-
-### 5.1 Acoplamiento directo con Supabase — Pendiente
-
-Los hooks de `src/features` importan el cliente de Supabase y conocen nombres físicos de tablas,
-relaciones, RPC y funciones. La división por dominio mejora la organización, pero no constituye una
-frontera de infraestructura.
-
-La propuesta plantea introducir gradualmente:
-
-```text
-Componente
-  → caso de uso
-  → puerto tipado
-  → adaptador Supabase/API
+  Adapter --> DB
+  Adapter --> EF
 ```
 
-Este cambio todavía no está implementado.
+### 2.2 Diagrama de secuencia — resolución de sesión (el punto que se corrigió)
 
-### 5.2 React Router y carga diferida — Pendiente
+```mermaid
+sequenceDiagram
+  participant N as Navegación (React Router)
+  participant SP as SessionProvider (única instancia, montada en AppProviders)
+  participant RS as RequireSession
+  participant RR as RequireRole
+  participant AJ as auth-js (Supabase)
 
-`HomePage` selecciona la experiencia mediante sesión, rol y estado local. Los dashboards cambian de
-módulo sin URL. Solo `/bolsa-empleo` se detecta mediante `window.location.pathname`.
+  N->>SP: Monta una sola vez, al arrancar la app
+  SP->>AJ: getSession() + onAuthStateChange()
+  AJ-->>SP: session resuelta (una vez)
+  Note over SP: session guardada en Context — visible<br/>de inmediato para cualquier componente que se monte después
+  N->>RS: Navega a /administrador
+  RS->>SP: useSession() → lee del Context (sin re-suscribir)
+  RS->>RR: Sesión válida → renderiza Outlet
+  RR->>SP: useSession() → misma sesión ya resuelta, sin flash en null
+  RR->>RR: Rol incluido → renderiza contenido real
+```
 
-Consecuencias actuales:
+Antes del fix, cada flecha `useSession()` de este diagrama era una suscripción **nueva e independiente**
+a `auth-js`, que arrancaba en `session: null` por un instante — ver sección 5.
 
-- no existen enlaces profundos;
-- el historial del navegador no representa la navegación interna;
-- no hay separación de bundles por ruta;
-- una recarga no conserva el módulo interno seleccionado.
+Cambios centrales frente al estado previo a esta iniciativa:
 
-El build actual también advierte que el bundle principal supera 500 kB, lo que refuerza la
-recomendación de lazy loading.
+1. **Navegación por URL real**, no por `useState` — cada vista de cada rol es enlazable, y desde la
+   Fase 3 además carga en su propio chunk (`React.lazy`), bajando el bundle principal de 673 kB a
+   260,58 kB.
+2. **Cero llamadas a `supabase-js` directamente desde hooks** — los 12 dominios pasan por un
+   puerto/adaptador, lo que los hace sustituibles en pruebas unitarias sin tocar componentes.
+3. **El camino crítico de una mutación de negocio nunca espera una notificación por correo** — el
+   registro de auditoría se escribe síncronamente, el envío SMTP se despacha después de responder.
+4. **Toda invocación de Edge Function es correlacionable de extremo a extremo**: un mismo
+   `correlacion_id` viaja en la respuesta HTTP al cliente, en `automatizacion_ejecuciones` (para las
+   4 acciones de `gestionar-solicitud`), y ahora también en los logs estructurados de cualquier fallo
+   — incluido el de un envío SMTP fallido en segundo plano o de una corrida del worker de outbox.
+5. **Un reintento del cliente tras un timeout no duplica datos** — las 3 mutaciones que crean filas
+   nuevas (`crear_solicitud_portal`, `crear_solicitud_gestor`, `registrar_avance_operador`) aceptan
+   una clave de idempotencia opcional.
 
-### 5.3 Pruebas automatizadas — Pendiente
+---
 
-Playwright figura como dependencia, pero no existe configuración ni archivos de prueba. CI ejecuta:
+## 3. Justificación de cada elemento importante
 
-- lint;
-- comprobación de formato;
-- TypeScript y build.
+Por qué existe cada pieza de la arquitectura — el problema concreto que resuelve, no solo qué hace.
 
-No se encontraron pruebas unitarias, de componentes, contratos, integración, RLS, RPC, E2E,
-rendimiento o resiliencia.
+| Elemento | Justificación (el problema que resuelve) | Archivos clave |
+|---|---|---|
+| **React Router + rutas por URL** | Antes, la vista activa vivía en un `useState` de `HomePage` — ninguna pantalla interna era enlazable ni recargable. Rompe deep-linking, botón atrás del navegador, y compartir un enlace a una sección específica. | `src/app/router.tsx`, `route-guards.tsx` |
+| **Code-splitting por ruta (`React.lazy`)** | Sin esto, entrar como cualquier rol descargaba el código de los otros 4 roles — bundle principal de 673 kB. Cada rol/sección ahora es su propio chunk, descargado solo cuando se visita. | `router.tsx`, `cargando-ruta.tsx` |
+| **`Suspense` en 2 niveles (raíz + anidado)** | Un solo `Suspense` en la raíz haría parpadear el shell/sidebar completo al cambiar de sub-sección dentro de un mismo rol. El nivel anidado limita el indicador de carga solo al área de contenido. | `admin-dashboard-page.tsx`, `encargado-dashboard-page.tsx`, `cliente-page.tsx` |
+| **`SessionProvider` (Context, única suscripción)** | Cada uno de los 7 lugares que necesitan la sesión mantenía su propia suscripción independiente a `auth-js` — causaba un loop real de redirección al navegar entre rutas protegidas (sección 5). Un único Provider comparte el mismo estado ya resuelto. | `src/features/auth/hooks/use-session.tsx`, `src/app/providers.tsx` |
+| **`StrictMode` desactivado** | Su doble-montaje de desarrollo duplica llamadas concurrentes a `getSession()`/`onAuthStateChange` sobre el cliente singleton de Supabase, entrando en una condición de carrera de `auth-js` que cuelga la pestaña. Sin impacto en producción — nunca duplica efectos fuera de desarrollo. | `src/main.tsx` |
+| **Puertos/adaptadores (repository) en los 12 dominios** | Sin esta capa, los hooks llamaban a `supabase-js` directamente — imposible sustituir por un doble de prueba en tests unitarios sin tocar componentes, y cada dominio reinventaba su propio manejo de errores/config. | `src/features/*/{ports,adapters,lib}/*` |
+| **TanStack Query (server state)** | Deduplica peticiones idénticas simultáneas (varios componentes pidiendo el mismo perfil no disparan 2 fetches), cachea con invalidación explícita en vez de refetch manual, y da estados de carga/error consistentes sin reinventar una máquina de estados por hook. | `AppProviders`, cada hook en `src/features/*/hooks/*` |
+| **`staleTime` selectivo (catálogos = 5 min)** | El `staleTime` global de 30s es correcto para datos operativos volátiles (solicitudes), pero desperdicia peticiones en catálogos de baja volatilidad (clientes, tipos, materiales) — mutaciones propias igual invalidan al instante. | `use-catalogo.ts`, `use-marca.ts` |
+| **Zustand (UI state)** | Estado de interfaz puro (idioma, menú colapsado) no necesita el peso de un Context re-renderizando todo el árbol, ni la semántica de "server state" de TanStack Query — Zustand da un store mínimo con persistencia selectiva a `localStorage`. | `src/stores/ui.store.ts` |
+| **Normalización de errores (`normalizarError`)** | Sin esto, cada componente decidía por su cuenta cómo mostrar un error de Postgres/PostgREST/Edge Function — mensajes inconsistentes, algunos crudos (`error.message` de una excepción JS genérica) filtrándose a la UI. | `src/lib/errores.ts` |
+| **Notificaciones desacopladas del camino crítico** | Antes, `gestionar-solicitud` esperaba (`await`) el envío SMTP completo antes de responder — un SMTP lento o caído retrasaba una operación de negocio ya exitosa. Ahora el registro de auditoría es síncrono (sin ventana de carrera) y el envío real corre después de responder. | `supabase/functions/_shared/notificaciones.ts` |
+| **`correlacion_id` de extremo a extremo** | Sin un identificador común, un reporte de usuario ("me dio error") no se podía cruzar con el log del servidor ni con el registro de auditoría de esa operación puntual — soporte tenía que adivinar cuál fue la invocación. | Edge Functions (`respuesta()` closure), `automatizacion_ejecuciones.correlacion_id_operacion`, `logger.ts` |
+| **Idempotencia en las 3 mutaciones que crean filas** | Un reintento del cliente tras un timeout de red (señal débil, típico del operador en campo) repetía la creación completa — solicitudes o avances duplicados. La clave de idempotencia hace que un reintento con la misma clave devuelva el resultado ya creado. | `crear_solicitud_portal`, `crear_solicitud_gestor`, `registrar_avance_operador`, `idempotencia_claves` |
+| **Outbox con `pg_cron` (reintentos de notificación)** | Una notificación que falla en el envío en segundo plano (SMTP caído en ese instante) antes se perdía silenciosamente — no había ningún mecanismo de reintento. El worker programado reclama y reintenta con backoff hasta 3 veces. | `20260822120000_outbox_notificaciones.sql`, `procesar-notificaciones-pendientes` |
+| **Logs estructurados JSON (`logger.ts`)** | Ningún Edge Function dejaba rastro en el servidor cuando fallaba — el error solo viajaba en la respuesta HTTP al cliente. Un log JSON con `correlacion_id`/`funcion` es inmediatamente buscable en el explorador de logs de Supabase, sin contratar ningún proveedor externo. | `supabase/functions/_shared/logger.ts` |
+| **Matriz de decisión (consulta directa / RPC / Edge Function)** | Sin un criterio explícito, cada mutación nueva reinventaba dónde debía vivir su lógica — algunas reglas de negocio terminaban en el cliente, rompiendo la garantía de que RLS + funciones `security definer` son la única fuente de verdad de las reglas. | `CLAUDE.md` §Decision matrix |
+| **RLS como autorización única** | Centraliza el control de acceso en la base de datos misma (no en cada endpoint/componente) — un bug en el frontend no puede exponer datos que la política RLS ya prohíbe a nivel de fila. | `supabase/migrations/*_autorizacion_rls.sql` |
+| **Atomic Design (`atoms/molecules/organisms/templates/pages`)** | Sin una jerarquía de composición clara, componentes de UI se duplican (3 versiones ligeramente distintas de un mismo botón) o se acoplan a una sola pantalla en vez de reutilizarse — la jerarquía obliga a preguntar "¿en qué nivel vive esto?" antes de crear algo nuevo. | `src/components/{atoms,molecules,organisms,templates,pages}` |
 
-### 5.4 Selección uniforme de SDK/RPC/Edge — Parcial
+---
 
-La práctica actual es razonable: lecturas y CRUD autorizados usan el SDK, mientras operaciones
-críticas usan RPC o Edge Functions. Sin embargo, esta decisión vive en convenciones y conocimiento
-del equipo; no existe una matriz de comandos, un puerto común ni una regla verificable.
+## 4. Corrección post-cierre: sesión de autenticación compartida
 
-### 5.5 Notificaciones dentro de la transacción — Pendiente de desacoplamiento
+Descubierta y corregida el mismo día, al probar la aplicación en un navegador real (Chrome/Edge) con
+una sesión autenticada — fuera del alcance de las Fases 0-5 (que ya habían cerrado), pero
+suficientemente importante como para documentarse aquí en vez de perderse en el historial de commits.
 
-Las notificaciones y actividades internas se generan mediante funciones y triggers. Esto garantiza
-consistencia, pero no existe un outbox ni procesamiento asíncrono con reintentos, idempotencia y
-estado de entrega.
+### 4.1 Síntoma
 
-El tracking interno puede permanecer transaccional. Correos, mensajería e integraciones externas
-deberían migrar a outbox antes de crecer en volumen o criticidad.
+Al iniciar sesión, la aplicación colgaba la pestaña del navegador con el aviso de Chrome/Edge
+*"Throttling navigation to prevent the browser from hanging"* — el shell de la aplicación (menú
+lateral) llegaba a dibujarse, pero el contenido de cada pantalla nunca se estabilizaba.
 
-### 5.6 Observabilidad — Pendiente
+### 4.2 Causa raíz
 
-No se encontraron:
+`useSession()` (el hook que expone la sesión activa) mantenía su propio `useState`/`useEffect`
+**local e independiente en cada uno de los 7 componentes que lo llaman** (`RequireSession`,
+`RequireRole`, `InicioPage`, `LoginRoute`, `role-shell.tsx`, `account-menu.tsx`,
+`bandeja-encargado-page.tsx`) — sin ningún estado compartido entre ellos.
 
-- SLO formalizados;
-- `correlation_id` de extremo a extremo;
-- logs estructurados comunes;
-- métricas p50/p95/p99;
-- trazas distribuidas;
-- alertas basadas en objetivos de servicio;
-- tableros técnicos de capacidad y errores.
+Cada navegación a una ruta protegida por rol desmonta el árbol de rutas anterior y monta uno nuevo.
+El componente recién montado (p. ej. `RequireRole` bajo `/administrador`) arrancaba **su propia**
+instancia de `useSession()` desde cero — `session: null` por un instante, aun cuando la sesión real ya
+existía en otro componente hermano. `RequireRole` no esperaba su propio estado de carga antes de
+decidir el rol, así que con `session` todavía en `null` redirigía por error a `/`. Esa redirección
+desmonta el árbol de rutas y monta uno nuevo, cuyo `useSession()` vuelve a arrancar en `null`,
+repitiendo el ciclo indefinidamente — el diagrama de secuencia de la sección 2.2 muestra el flujo
+correcto ya corregido; antes del fix, cada flecha `useSession()` era una suscripción nueva.
 
-Los reportes y el tracking existentes son capacidades funcionales, no una plataforma de
-observabilidad.
+Una investigación paralela (documentada en el historial de conversación, no en un archivo separado)
+descartó dos hipótesis relacionadas antes de encontrar esta causa real:
 
-### 5.7 Formularios — Parcial
+- **Claves de firma JWT ECC (P-256)**: el proyecto de Supabase sí las usa, y coincide con un bug
+  documentado por el propio equipo de Supabase (`supabase-js#2126`) — pero ese bug requiere una sesión
+  próxima a vencer para refrescar, y el loop reproducía incluso sin sesión previa (incógnito), así que
+  no era la causa completa.
+- **`StrictMode` de React**: su doble-montaje de desarrollo sí reproducía un loop similar (confirmado
+  empíricamente), pero es un mecanismo puramente de desarrollo — no explica que el problema persistiera
+  con una sesión real ya autenticada, donde el verdadero mecanismo era el descrito arriba.
 
-React Hook Form y Zod están instalados y se utilizan en algunas áreas. Otros organismos continúan
-con estado React y validación HTML manual. No existe todavía un estándar único por tipo de
-formulario.
+### 4.3 Corrección
 
-### 5.8 Datos, paginación y retención — Parcial
+`src/features/auth/hooks/use-session.ts` → `use-session.tsx`: ahora expone `SessionProvider` (un
+Context con la **única** suscripción real a `auth-js`, montado una vez en `AppProviders`) y
+`useSession()` (que solo lee ese Context, ya no re-suscribe). Los 7 sitios de uso no cambiaron ni una
+línea — mismo import, misma forma de retorno `{ session, cargando }`.
 
-La interfaz ofrece filtros y paginación de diez elementos en varios listados y tracking. En varios
-casos, sin embargo, los datos se descargan primero y se filtran o paginan en memoria.
+`StrictMode` se dejó desactivado en `src/main.tsx` como decisión aparte, documentada en el propio
+archivo: su doble-montaje seguiría ejercitando una condición de carrera real dentro de `auth-js`
+(confirmada, no solo teórica) incluso con el `SessionProvider` ya centralizado — pero sin ningún
+impacto en producción, ya que React nunca duplica efectos fuera de desarrollo.
 
-Falta:
+### 4.4 Verificación
 
-- paginación por cursor desde servidor para tablas crecientes;
-- límites obligatorios en todas las consultas;
-- revisión documentada de planes de ejecución;
-- umbrales para índices o particionamiento;
-- políticas de retención, archivado y eliminación;
-- ciclo de vida de archivos.
+`tsc -b`, `lint` (1 warning nuevo — mismo patrón ya aceptado en `button.tsx`: un archivo que exporta un
+componente y un hook rompe Fast Refresh, no es error), `format:check`, `build`, `test` (14/14),
+`test:e2e` (2/2), más confirmación manual del usuario en Chrome y Edge con sesión autenticada real.
 
-### 5.9 Reportes — Parcial
+---
 
-Existen funciones y vistas de reporte, paneles de métricas, costos de materiales y flota. No hay
-evidencia de contención actual ni justificación para separar analítica todavía.
+## 5. Índice de informes detallados
 
-Las vistas materializadas, réplicas o un almacén analítico son decisiones condicionadas a mediciones
-de carga y consultas lentas.
+- `docs/informe-arquitectura-fase-1.md` — Fase 0 (checkpoint, medición) y Fase 1 (pruebas
+  automatizadas, puertos/adaptadores en `solicitudes`/`auth`, React Router).
+- `docs/informe-arquitectura-fase-2.md` — resto de dominios con puertos/adaptadores, normalización de
+  errores, notificaciones desacopladas, `correlacion_id`, matriz de decisión, outbox, idempotencia.
+- `docs/informe-arquitectura-fase-3.md` — code-splitting por ruta, caché selectiva, paginación/índices
+  diferidos con razonamiento.
+- `docs/informe-arquitectura-fase-4.md` — logs estructurados, runbook de restauración, métricas/APM
+  diferidos con razonamiento.
+- `docs/informe-arquitectura-fase-5.md` — criterios de activación para réplicas, particionamiento,
+  almacén analítico y extracción de servicios; cierre de la hoja de ruta.
 
-## 6. Estado del plan incremental
-
-### Fase 0 — Medición y decisiones
-
-| Entregable | Estado | Observación |
-| --- | --- | --- |
-| SLO | Pendiente | No se encontraron objetivos operativos aprobados |
-| Volúmenes esperados | Pendiente | No están documentados a 1, 3 y 5 años |
-| Clasificación de datos | Pendiente | Existen controles, no una clasificación formal |
-| RPO/RTO | Pendiente | No están documentados por proceso |
-| Registro ADR | Pendiente | No existe directorio o plantilla de decisiones |
-| Medición del bundle | Parcial | Vite reporta tamaño; no hay presupuesto o histórico |
-| Consultas lentas y latencias | Pendiente | No hay medición documentada |
-| Crecimiento por tabla/bucket | Pendiente | No hay umbrales definidos |
-
-**Estado de fase:** no iniciada formalmente.
-
-### Fase 1 — Fronteras y calidad
-
-| Entregable | Estado | Observación |
-| --- | --- | --- |
-| React Router | Pendiente | Navegación basada en estado |
-| Lazy loading por módulo | Pendiente | No se encontraron imports dinámicos por ruta |
-| Puertos/adaptadores en `solicitudes` | Pendiente | Hooks acoplados al SDK |
-| Puertos/adaptadores en `auth` | Pendiente | Hooks acoplados a Supabase Auth |
-| Unificación de formularios | Parcial | RHF/Zod convive con `useState` |
-| Pruebas unitarias/componentes | Pendiente | Sin framework o suite configurada |
-| Playwright | Pendiente | Dependencia sin configuración ni specs |
-| Pruebas RLS/RPC en CI | Pendiente | CI no inicia una base de pruebas |
-
-**Estado de fase:** avances de organización, sin ejecución de los entregables principales.
-
-### Fase 2 — Integración segura
-
-| Entregable | Estado | Observación |
-| --- | --- | --- |
-| Matriz de comandos críticos | Pendiente | Hay criterios implícitos, no formalizados |
-| BFF para comandos sensibles | Parcial | Tres Edge Functions cubren capacidades clave |
-| Errores estandarizados | Parcial | Hay manejo por función, no contrato transversal |
-| Correlación | Pendiente | Sin identificador propagado |
-| Idempotencia | Parcial/no evidenciada | Atomicidad sí; claves idempotentes no formalizadas |
-| Contratos independientes | Pendiente | Se exponen formas cercanas al esquema físico |
-| Outbox | Pendiente | No existe tabla ni procesador |
-| Workers | Pendiente | No existen consumidores asíncronos |
-
-**Estado de fase:** parcialmente anticipada por Edge Functions y RPC existentes.
-
-### Fase 3 — Rendimiento y datos
-
-| Entregable | Estado | Observación |
-| --- | --- | --- |
-| Carga diferida | Pendiente | Bundle principal monolítico |
-| Proyecciones específicas | Parcial | Los hooks seleccionan columnas explícitas en muchos casos |
-| Paginación por cursor | Pendiente | Predomina paginación local |
-| Revisión de índices con métricas | No evidenciado | Existen índices, no una revisión basada en planes |
-| Caché selectiva | Parcial | React Query usa `staleTime` global de 30 s |
-| Retención y archivado | Pendiente | Sin políticas documentadas |
-
-**Estado de fase:** prácticas básicas presentes; estrategia de escala pendiente.
-
-### Fase 4 — Observabilidad y continuidad
-
-| Entregable | Estado | Observación |
-| --- | --- | --- |
-| Logs estructurados | Pendiente | Sin esquema común verificable |
-| Métricas y trazas | Pendiente | Sin instrumentación de extremo a extremo |
-| Tableros técnicos | Pendiente | Los tableros actuales son funcionales |
-| Alertas por SLO | Pendiente | No existen SLO definidos |
-| Pruebas de restauración | No evidenciado | Puede depender de operación externa |
-| Simulacros de fallos | No evidenciado | No se encuentran procedimientos |
-
-**Estado de fase:** no iniciada.
-
-### Fase 5 — Escalamiento basado en evidencia
-
-| Entregable | Estado | Observación |
-| --- | --- | --- |
-| Réplicas o particiones | Condicionado | Correctamente no implementadas sin métricas |
-| Almacén analítico | Condicionado | No se ha demostrado necesidad |
-| Extracción de servicios | Condicionado | El monolito modular sigue siendo apropiado |
-| Revisión periódica de costos | No evidenciado | Proceso operativo externo al repositorio |
-
-**Estado de fase:** no corresponde iniciar antes de completar medición y calidad.
-
-## 7. Recomendaciones priorizadas actualizadas
-
-El orden propuesto sigue siendo válido, pero conviene insertar una etapa de evidencia antes de
-modificar la estructura:
-
-1. **Completar la Fase 0:** acordar SLO, RPO/RTO, volúmenes y ADR antes de refactorizar.
-2. **Configurar pruebas de RLS/RPC y recorridos críticos:** proteger el comportamiento existente.
-3. **Introducir puertos y adaptadores de forma piloto:** comenzar con una lectura y un comando de
-   `solicitudes`, sin reescribir todos los hooks.
-4. **Adoptar Router y lazy loading:** conservar el cambio de rol, pero representar módulos y vistas
-   en URLs navegables.
-5. **Formalizar la matriz SDK/RPC/BFF:** clasificar los comandos actuales y usarla para cambios
-   nuevos.
-6. **Implementar outbox antes de ampliar integraciones:** mantener auditoría local transaccional y
-   desacoplar entregas externas.
-7. **Mover tracking y listados crecientes a paginación de servidor:** priorizar actividades,
-   comunicaciones y notificaciones.
-8. **Instrumentar correlación y latencia:** medir antes de introducir caché, particiones o réplicas.
-9. **Definir retención y ciclo de vida:** incluir auditoría, notificaciones, adjuntos y documentos.
-10. **Mantener el monolito modular:** no existe evidencia actual que justifique microservicios o
-    Kubernetes.
-
-## 8. Próximo hito recomendado
-
-El siguiente hito no debería ser una migración tecnológica amplia. Se recomienda un **Hito de
-Fundación Arquitectónica** con entregables acotados:
-
-1. Documento de SLO, RPO/RTO, volúmenes y clasificación de datos.
-2. Carpeta de ADR con decisiones sobre router, BFF, puertos y pruebas.
-3. Base de pruebas para una política RLS, una RPC y un flujo E2E crítico.
-4. Piloto de puerto/adaptador para `solicitudes` sin cambiar el contrato visual.
-5. Medición inicial de bundle, latencia, consultas lentas y crecimiento.
-
-Este hito reduce el riesgo de la evolución propuesta y permite cuantificar el resultado de cada fase.
-
-## 9. Conclusión
-
-El sistema conserva una arquitectura adecuada para su etapa actual y no requiere reemplazo. Las
-fortalezas centrales de la propuesta ya están presentes: monolito modular, PostgreSQL, RLS, RPC,
-Edge Functions, Storage, migraciones y auditoría transaccional.
-
-La deuda principal no es de capacidad funcional, sino de **fronteras técnicas, verificabilidad y
-operación**. La prioridad debe ser medir, automatizar pruebas y desacoplar progresivamente los casos
-de uso del SDK antes de incorporar procesamiento asíncrono o infraestructura especializada.
+`CLAUDE.md` refleja el estado final de cada uno de estos cambios como guía viva para trabajo futuro —
+es la referencia a mantener actualizada, no estos informes (que son un registro histórico del proceso).

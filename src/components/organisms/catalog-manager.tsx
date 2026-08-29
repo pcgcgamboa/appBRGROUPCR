@@ -1,4 +1,4 @@
-import { ListChecks, Pencil, Plus, Trash2 } from 'lucide-react'
+﻿import { ListChecks, Pencil, Plus, Trash2 } from 'lucide-react'
 import {
   type Dispatch,
   type FormEvent,
@@ -60,6 +60,9 @@ interface CatalogManagerProps<T> {
   onSaved?: (id: string | number) => Promise<void>
   extraActions?: (item: T) => ReactNode
   headerActions?: ReactNode
+  defaultValues?: DatosFormulario
+  filterItem?: (item: T) => boolean
+  renderCell?: (item: T, column: string) => ReactNode
 }
 
 function valoresIniciales(fields: CampoCatalogo[]) {
@@ -81,9 +84,15 @@ export function CatalogManager<T extends EntidadBase>({
   onSaved,
   extraActions,
   headerActions,
+  defaultValues,
+  filterItem,
+  renderCell,
 }: CatalogManagerProps<T>) {
   const { listado, guardar, eliminar } = useCatalogo<T>(tabla)
-  const initialValues = useMemo(() => valoresIniciales(fields), [fields])
+  const initialValues = useMemo(
+    () => ({ ...valoresIniciales(fields), ...defaultValues }),
+    [defaultValues, fields],
+  )
   const [formVisible, setFormVisible] = useState(false)
   const [editingId, setEditingId] = useState<string | number | undefined>()
   const [values, setValues] = useState<DatosFormulario>(initialValues)
@@ -98,6 +107,7 @@ export function CatalogManager<T extends EntidadBase>({
   const processed = useMemo(() => {
     const term = search.trim().toLocaleLowerCase('es')
     return [...(listado.data ?? [])]
+      .filter((item) => !filterItem || filterItem(item))
       .filter((item) => {
         const record = item as unknown as Record<string, unknown>
         const matchesSearch =
@@ -127,7 +137,7 @@ export function CatalogManager<T extends EntidadBase>({
           return String(right.creado_en).localeCompare(String(left.creado_en))
         return String(left[columns[0]] ?? '').localeCompare(String(right[columns[0]] ?? ''), 'es')
       })
-  }, [columns, listado.data, search, status, tabla])
+  }, [columns, filterItem, listado.data, search, status, tabla])
   const currentPage = Math.min(page, Math.max(1, Math.ceil(processed.length / pageSize)))
   const paginated = processed.slice((currentPage - 1) * pageSize, currentPage * pageSize)
   const supportsStatus = (listado.data ?? []).some((item) => {
@@ -150,34 +160,41 @@ export function CatalogManager<T extends EntidadBase>({
     const record = item as unknown as Record<string, unknown>
     setEditingId(item.id)
     setExtraError(null)
-    setValues(
-      Object.fromEntries(
+    setValues({
+      ...defaultValues,
+      ...Object.fromEntries(
         fields.map((field) => [
           field.name,
           (record[field.name] as string | number | boolean | null) ?? '',
         ]),
       ),
-    )
+    })
     setFormVisible(true)
     onOpenEdit?.(item)
   }
 
   async function enviar(event: FormEvent) {
     event.preventDefault()
-    const payload = Object.fromEntries(
-      fields.map((field) => {
-        const value = values[field.name]
-        if (field.type === 'number') return [field.name, value === '' ? null : Number(value)]
-        if (!field.required && value === '') return [field.name, null]
-        return [field.name, value]
-      }),
-    ) as DatosFormulario
+    const payload = {
+      ...defaultValues,
+      ...Object.fromEntries(
+        fields.map((field) => {
+          const visible =
+            !field.visibleWhen || values[field.visibleWhen.field] === field.visibleWhen.equals
+          if (!visible) return [field.name, null]
+          const value = values[field.name]
+          if (field.type === 'number') return [field.name, value === '' ? null : Number(value)]
+          if (!field.required && value === '') return [field.name, null]
+          return [field.name, value]
+        }),
+      ),
+    } as DatosFormulario
     const idGuardado = await guardar.mutateAsync({ id: editingId, values: payload })
     try {
       await onSaved?.(idGuardado)
     } catch (error) {
       setExtraError(
-        error instanceof Error ? error : new Error('No fue posible completar la operación.'),
+        error instanceof Error ? error : new Error('No fue posible completar la operaciÃ³n.'),
       )
       return
     }
@@ -227,75 +244,86 @@ export function CatalogManager<T extends EntidadBase>({
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={enviar} className="grid gap-4 sm:grid-cols-2">
-            {fields.map((field) => (
-              <div
-                key={field.name}
-                className={
-                  field.type === 'textarea' || field.type === 'checkbox'
-                    ? 'sm:col-span-2'
-                    : undefined
-                }
-              >
-                {field.type === 'textarea' ? (
-                  <label htmlFor={`campo-${field.name}`} className="grid gap-2 text-sm font-medium">
-                    {field.label}
-                    <Textarea
-                      id={`campo-${field.name}`}
-                      required={field.required}
-                      value={String(values[field.name] ?? '')}
-                      onChange={(event) =>
-                        setValues((current) => ({ ...current, [field.name]: event.target.value }))
-                      }
-                    />
-                  </label>
-                ) : field.type === 'select' ? (
-                  <label htmlFor={`campo-${field.name}`} className="grid gap-2 text-sm font-medium">
-                    {field.label}
-                    <Select
-                      id={`campo-${field.name}`}
-                      required={field.required}
-                      value={String(values[field.name] ?? '')}
-                      onChange={(event) =>
-                        setValues((current) => ({ ...current, [field.name]: event.target.value }))
-                      }
+            {fields.map((field) => {
+              const visible =
+                !field.visibleWhen || values[field.visibleWhen.field] === field.visibleWhen.equals
+              if (!visible) return null
+              return (
+                <div
+                  key={field.name}
+                  className={
+                    field.type === 'textarea' || field.type === 'checkbox'
+                      ? 'sm:col-span-2'
+                      : undefined
+                  }
+                >
+                  {field.type === 'textarea' ? (
+                    <label
+                      htmlFor={`campo-${field.name}`}
+                      className="grid gap-2 text-sm font-medium"
                     >
-                      <option value="">Seleccione…</option>
-                      {field.options?.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </Select>
-                  </label>
-                ) : field.type === 'checkbox' ? (
-                  <label
-                    htmlFor={`campo-${field.name}`}
-                    className="flex items-center gap-2 text-sm font-medium"
-                  >
-                    <Checkbox
+                      {field.label}
+                      <Textarea
+                        id={`campo-${field.name}`}
+                        required={field.required}
+                        value={String(values[field.name] ?? '')}
+                        onChange={(event) =>
+                          setValues((current) => ({ ...current, [field.name]: event.target.value }))
+                        }
+                      />
+                    </label>
+                  ) : field.type === 'select' ? (
+                    <label
+                      htmlFor={`campo-${field.name}`}
+                      className="grid gap-2 text-sm font-medium"
+                    >
+                      {field.label}
+                      <Select
+                        id={`campo-${field.name}`}
+                        required={field.required}
+                        value={String(values[field.name] ?? '')}
+                        onChange={(event) =>
+                          setValues((current) => ({ ...current, [field.name]: event.target.value }))
+                        }
+                      >
+                        <option value="">Seleccioneâ€¦</option>
+                        {field.options?.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </Select>
+                    </label>
+                  ) : field.type === 'checkbox' ? (
+                    <label
+                      htmlFor={`campo-${field.name}`}
+                      className="flex items-center gap-2 text-sm font-medium"
+                    >
+                      <Checkbox
+                        id={`campo-${field.name}`}
+                        checked={Boolean(values[field.name])}
+                        onCheckedChange={(checked) =>
+                          setValues((current) => ({ ...current, [field.name]: checked === true }))
+                        }
+                      />
+                      {field.label}
+                    </label>
+                  ) : (
+                    <FormField
                       id={`campo-${field.name}`}
-                      checked={Boolean(values[field.name])}
-                      onCheckedChange={(checked) =>
-                        setValues((current) => ({ ...current, [field.name]: checked === true }))
+                      label={field.label}
+                      type={field.type ?? 'text'}
+                      step={field.step}
+                      required={field.required}
+                      value={String(values[field.name] ?? '')}
+                      onChange={(event) =>
+                        setValues((current) => ({ ...current, [field.name]: event.target.value }))
                       }
                     />
-                    {field.label}
-                  </label>
-                ) : (
-                  <FormField
-                    id={`campo-${field.name}`}
-                    label={field.label}
-                    type={field.type ?? 'text'}
-                    step={field.step}
-                    required={field.required}
-                    value={String(values[field.name] ?? '')}
-                    onChange={(event) =>
-                      setValues((current) => ({ ...current, [field.name]: event.target.value }))
-                    }
-                  />
-                )}
-              </div>
-            ))}
+                  )}
+                </div>
+              )
+            })}
             {typeof extraFormContent === 'function'
               ? extraFormContent(values, setValues)
               : extraFormContent}
@@ -312,7 +340,7 @@ export function CatalogManager<T extends EntidadBase>({
                 Cancelar
               </Button>
               <Button type="submit" disabled={guardar.isPending}>
-                {guardar.isPending ? 'Guardando…' : 'Guardar'}
+                {guardar.isPending ? 'Guardandoâ€¦' : 'Guardar'}
               </Button>
             </DialogFooter>
           </form>
@@ -330,9 +358,9 @@ export function CatalogManager<T extends EntidadBase>({
           }}
         >
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar este registro?</AlertDialogTitle>
+            <AlertDialogTitle>Â¿Eliminar este registro?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción puede estar restringida si el registro tiene información asociada. No se
+              Esta acciÃ³n puede estar restringida si el registro tiene informaciÃ³n asociada. No se
               puede deshacer.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -353,7 +381,7 @@ export function CatalogManager<T extends EntidadBase>({
                 void confirmarEliminar()
               }}
             >
-              {eliminar.isPending ? 'Eliminando…' : 'Eliminar'}
+              {eliminar.isPending ? 'Eliminandoâ€¦' : 'Eliminar'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -377,7 +405,7 @@ export function CatalogManager<T extends EntidadBase>({
         <div className="grid gap-3 sm:grid-cols-[minmax(220px,1fr)_220px]">
           <Input
             type="search"
-            placeholder="Buscar en el listado…"
+            placeholder="Buscar en el listadoâ€¦"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -426,11 +454,13 @@ export function CatalogManager<T extends EntidadBase>({
                     <tr key={item.id} className="border-t transition-colors hover:bg-accent/50">
                       {columns.map((column) => (
                         <td key={column} className="px-4 py-3">
-                          {typeof record[column] === 'boolean'
-                            ? record[column]
-                              ? 'Sí'
-                              : 'No'
-                            : String(record[column] ?? '—')}
+                          {renderCell
+                            ? renderCell(item, column)
+                            : typeof record[column] === 'boolean'
+                              ? record[column]
+                                ? 'SÃ­'
+                                : 'No'
+                              : String(record[column] ?? 'â€”')}
                         </td>
                       ))}
                       <td className="px-4 py-3">

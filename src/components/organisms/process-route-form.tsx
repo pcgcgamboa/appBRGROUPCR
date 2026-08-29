@@ -1,15 +1,21 @@
-import { type FormEvent, useState } from 'react'
+﻿import { type FormEvent, useState } from 'react'
 import { Button } from '@/components/atoms/button'
+import { Checkbox } from '@/components/atoms/checkbox'
 import { Input } from '@/components/atoms/input'
 import { Select } from '@/components/atoms/select'
 import { Textarea } from '@/components/atoms/textarea'
-import { Checkbox } from '@/components/atoms/checkbox'
 import { useCatalogo } from '@/features/catalogos/hooks/use-catalogo'
 import type { Vehiculo } from '@/features/catalogos/types/catalogos.types'
 import { useGuardarRutaProceso, useResponsablesRuta } from '@/features/flota/hooks/use-flota'
 import type { EstadoRutaProceso, RutaProceso } from '@/features/flota/types/flota.types'
 import { useSolicitudesParaRuta } from '@/features/rutas/hooks/use-control-rutas'
 import { normalizarError } from '@/lib/errores'
+
+interface ParticipanteFormulario {
+  usuario_id: string
+  viatico: number
+  detalle_viatico: string
+}
 
 export function ProcessRouteForm({ ruta, onClose }: { ruta?: RutaProceso; onClose: () => void }) {
   const solicitudes = useSolicitudesParaRuta()
@@ -18,6 +24,15 @@ export function ProcessRouteForm({ ruta, onClose }: { ruta?: RutaProceso; onClos
   const guardar = useGuardarRutaProceso()
   const responsableActualDisponible =
     !ruta || responsables.data?.some((responsable) => responsable.id === ruta.responsable_id)
+  const participantesIniciales: ParticipanteFormulario[] = ruta?.ruta_participantes.length
+    ? ruta.ruta_participantes.map((participante) => ({
+        usuario_id: participante.usuario_id,
+        viatico: participante.viatico,
+        detalle_viatico: participante.detalle_viatico ?? '',
+      }))
+    : ruta
+      ? [{ usuario_id: ruta.responsable_id, viatico: 0, detalle_viatico: '' }]
+      : []
   const [values, setValues] = useState({
     codigo: ruta?.codigo ?? `RUTA-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}`,
     nombre: ruta?.nombre ?? '',
@@ -25,19 +40,65 @@ export function ProcessRouteForm({ ruta, onClose }: { ruta?: RutaProceso; onClos
     fecha: ruta?.fecha_programada ?? new Date().toISOString().slice(0, 10),
     estado: ruta?.estado ?? ('planificada' as EstadoRutaProceso),
     responsable_id: ruta?.responsable_id ?? '',
-    solicitudes: ruta?.ruta_solicitudes.map((x) => x.solicitud_id) ?? [],
-    vehiculos: ruta?.ruta_vehiculos.map((x) => x.vehiculo_id) ?? [],
+    solicitudes: ruta?.ruta_solicitudes.map((item) => item.solicitud_id) ?? [],
+    vehiculos: ruta?.ruta_vehiculos.map((item) => item.vehiculo_id) ?? [],
+    participantes: participantesIniciales,
   })
+
   const toggle = (campo: 'solicitudes' | 'vehiculos', id: string, checked: boolean) =>
-    setValues((v) => ({
-      ...v,
-      [campo]: checked ? [...v[campo], id] : v[campo].filter((x) => x !== id),
+    setValues((actual) => ({
+      ...actual,
+      [campo]: checked
+        ? [...actual[campo], id]
+        : actual[campo].filter((elemento) => elemento !== id),
     }))
+
+  function cambiarResponsable(responsableId: string) {
+    setValues((actual) => ({
+      ...actual,
+      responsable_id: responsableId,
+      participantes:
+        responsableId && !actual.participantes.some((item) => item.usuario_id === responsableId)
+          ? [
+              ...actual.participantes,
+              { usuario_id: responsableId, viatico: 0, detalle_viatico: '' },
+            ]
+          : actual.participantes,
+    }))
+  }
+
+  function toggleParticipante(usuarioId: string, checked: boolean) {
+    setValues((actual) => ({
+      ...actual,
+      participantes: checked
+        ? [...actual.participantes, { usuario_id: usuarioId, viatico: 0, detalle_viatico: '' }]
+        : actual.participantes.filter((item) => item.usuario_id !== usuarioId),
+    }))
+  }
+
+  function actualizarParticipante(
+    usuarioId: string,
+    cambios: Partial<Pick<ParticipanteFormulario, 'viatico' | 'detalle_viatico'>>,
+  ) {
+    setValues((actual) => ({
+      ...actual,
+      participantes: actual.participantes.map((item) =>
+        item.usuario_id === usuarioId ? { ...item, ...cambios } : item,
+      ),
+    }))
+  }
+
   async function submit(event: FormEvent) {
     event.preventDefault()
     await guardar.mutateAsync({ id: ruta?.id, ...values })
     onClose()
   }
+
+  const totalViaticos = values.participantes.reduce(
+    (total, participante) => total + Number(participante.viatico || 0),
+    0,
+  )
+
   return (
     <form onSubmit={submit} className="space-y-5 rounded-lg border bg-card p-5 shadow-sm">
       <div className="flex items-center justify-between">
@@ -52,7 +113,7 @@ export function ProcessRouteForm({ ruta, onClose }: { ruta?: RutaProceso; onClos
           <Input
             required
             value={values.codigo}
-            onChange={(e) => setValues({ ...values, codigo: e.target.value })}
+            onChange={(event) => setValues({ ...values, codigo: event.target.value })}
           />
         </label>
         <label className="grid gap-2 text-sm font-medium">
@@ -60,7 +121,7 @@ export function ProcessRouteForm({ ruta, onClose }: { ruta?: RutaProceso; onClos
           <Input
             required
             value={values.nombre}
-            onChange={(e) => setValues({ ...values, nombre: e.target.value })}
+            onChange={(event) => setValues({ ...values, nombre: event.target.value })}
           />
         </label>
         <label className="grid gap-2 text-sm font-medium">
@@ -69,14 +130,16 @@ export function ProcessRouteForm({ ruta, onClose }: { ruta?: RutaProceso; onClos
             required
             type="date"
             value={values.fecha}
-            onChange={(e) => setValues({ ...values, fecha: e.target.value })}
+            onChange={(event) => setValues({ ...values, fecha: event.target.value })}
           />
         </label>
         <label className="grid gap-2 text-sm font-medium">
           Estado
           <Select
             value={values.estado}
-            onChange={(e) => setValues({ ...values, estado: e.target.value as EstadoRutaProceso })}
+            onChange={(event) =>
+              setValues({ ...values, estado: event.target.value as EstadoRutaProceso })
+            }
           >
             <option value="planificada">Planificada</option>
             <option value="en_curso">En curso</option>
@@ -89,7 +152,7 @@ export function ProcessRouteForm({ ruta, onClose }: { ruta?: RutaProceso; onClos
           <Select
             required
             value={values.responsable_id}
-            onChange={(e) => setValues({ ...values, responsable_id: e.target.value })}
+            onChange={(event) => cambiarResponsable(event.target.value)}
           >
             <option value="">Seleccione operario o encargado…</option>
             {ruta && !responsableActualDisponible && (
@@ -97,9 +160,9 @@ export function ProcessRouteForm({ ruta, onClose }: { ruta?: RutaProceso; onClos
                 {ruta.responsable?.nombre_completo ?? 'Responsable actual'} (no disponible)
               </option>
             )}
-            {responsables.data?.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.nombre_completo}
+            {responsables.data?.map((usuario) => (
+              <option key={usuario.id} value={usuario.id}>
+                {usuario.nombre_completo}
               </option>
             ))}
           </Select>
@@ -108,20 +171,83 @@ export function ProcessRouteForm({ ruta, onClose }: { ruta?: RutaProceso; onClos
           Descripción
           <Textarea
             value={values.descripcion}
-            onChange={(e) => setValues({ ...values, descripcion: e.target.value })}
+            onChange={(event) => setValues({ ...values, descripcion: event.target.value })}
           />
         </label>
       </div>
       <fieldset>
+        <legend className="mb-2 font-semibold">Participantes y viáticos</legend>
+        <p className="mb-3 text-sm text-muted-foreground">
+          Seleccione cada persona involucrada y defina su viático individual. El responsable siempre
+          debe permanecer incluido.
+        </p>
+        <div className="space-y-3 rounded-md border p-3">
+          {responsables.data?.map((usuario) => {
+            const participante = values.participantes.find((item) => item.usuario_id === usuario.id)
+            const esResponsable = usuario.id === values.responsable_id
+            return (
+              <div
+                key={usuario.id}
+                className="grid gap-3 rounded-md border bg-muted/20 p-3 md:grid-cols-[minmax(12rem,1fr)_10rem_minmax(14rem,1fr)] md:items-end"
+              >
+                <label className="flex min-h-11 items-center gap-2 text-sm font-medium">
+                  <Checkbox
+                    checked={Boolean(participante)}
+                    disabled={esResponsable}
+                    onCheckedChange={(checked) => toggleParticipante(usuario.id, checked === true)}
+                  />
+                  {usuario.nombre_completo}
+                  {esResponsable ? ' (responsable)' : ''}
+                </label>
+                <label className="grid gap-2 text-sm font-medium">
+                  Viático
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    disabled={!participante}
+                    value={participante?.viatico ?? 0}
+                    onChange={(event) =>
+                      actualizarParticipante(usuario.id, {
+                        viatico: Number(event.target.value),
+                      })
+                    }
+                  />
+                </label>
+                <label className="grid gap-2 text-sm font-medium">
+                  Detalle
+                  <Input
+                    disabled={!participante}
+                    placeholder="Alimentación, hospedaje, traslado…"
+                    value={participante?.detalle_viatico ?? ''}
+                    onChange={(event) =>
+                      actualizarParticipante(usuario.id, {
+                        detalle_viatico: event.target.value,
+                      })
+                    }
+                  />
+                </label>
+              </div>
+            )
+          })}
+          {!responsables.isLoading && !responsables.data?.length && (
+            <p className="text-sm text-muted-foreground">No hay participantes disponibles.</p>
+          )}
+        </div>
+        <p className="mt-3 text-right text-sm font-semibold">
+          Total de viáticos: ₡{totalViaticos.toLocaleString('es-CR')}
+        </p>
+      </fieldset>
+      <fieldset>
         <legend className="mb-2 font-semibold">Solicitudes incluidas</legend>
         <div className="grid max-h-52 gap-2 overflow-auto rounded-md border p-3 sm:grid-cols-2">
-          {solicitudes.data?.map((s) => (
-            <label key={s.id} className="flex items-center gap-2 text-sm">
+          {solicitudes.data?.map((solicitud) => (
+            <label key={solicitud.id} className="flex items-center gap-2 text-sm">
               <Checkbox
-                checked={values.solicitudes.includes(s.id)}
-                onCheckedChange={(checked) => toggle('solicitudes', s.id, checked === true)}
+                checked={values.solicitudes.includes(solicitud.id)}
+                onCheckedChange={(checked) => toggle('solicitudes', solicitud.id, checked === true)}
               />
-              #{s.numero} · {s.nombre}
+              #{solicitud.numero} · {solicitud.nombre}
             </label>
           ))}
         </div>
@@ -130,14 +256,14 @@ export function ProcessRouteForm({ ruta, onClose }: { ruta?: RutaProceso; onClos
         <legend className="mb-2 font-semibold">Vehículos asociados</legend>
         <div className="grid gap-2 rounded-md border p-3 sm:grid-cols-2">
           {vehiculos.data
-            ?.filter((v) => v.activo && v.estado !== 'mantenimiento')
-            .map((v) => (
-              <label key={v.id} className="flex items-center gap-2 text-sm">
+            ?.filter((vehiculo) => vehiculo.activo && vehiculo.estado !== 'mantenimiento')
+            .map((vehiculo) => (
+              <label key={vehiculo.id} className="flex items-center gap-2 text-sm">
                 <Checkbox
-                  checked={values.vehiculos.includes(v.id)}
-                  onCheckedChange={(checked) => toggle('vehiculos', v.id, checked === true)}
+                  checked={values.vehiculos.includes(vehiculo.id)}
+                  onCheckedChange={(checked) => toggle('vehiculos', vehiculo.id, checked === true)}
                 />
-                {v.placa} · {v.tipo}
+                {vehiculo.placa} · {vehiculo.tipo}
               </label>
             ))}
         </div>
@@ -156,7 +282,8 @@ export function ProcessRouteForm({ ruta, onClose }: { ruta?: RutaProceso; onClos
           guardar.isPending ||
           !values.responsable_id ||
           !values.solicitudes.length ||
-          !values.vehiculos.length
+          !values.vehiculos.length ||
+          !values.participantes.length
         }
       >
         {guardar.isPending ? 'Guardando…' : 'Guardar ruta'}

@@ -1,85 +1,109 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, X } from 'lucide-react'
+﻿import { Check, ExternalLink, FileText, X } from 'lucide-react'
 import { Button } from '@/components/atoms/button'
-import { supabase } from '@/lib/supabase'
+import {
+  abrirDocumentoPostulacion,
+  usePostulacionesPendientes,
+  useResolverPostulacion,
+} from '@/features/tecnicos/hooks/use-postulaciones-tecnicos'
+import type { TipoDocumentoPostulacion } from '@/features/tecnicos/ports/tecnicos-repository'
+import { normalizarError } from '@/lib/errores'
+
+const nombresDocumento: Record<TipoDocumentoPostulacion, string> = {
+  hoja_vida: 'Hoja de vida',
+  hoja_delincuencia: 'Hoja de delincuencia',
+  cedula: 'CÃ©dula',
+  fotografia: 'Fotografía',
+}
+
 export function TechnicianApplications() {
-  const qc = useQueryClient()
-  const listado = useQuery({
-    queryKey: ['postulaciones-tecnicos'],
-    queryFn: async () => {
-      if (!supabase) throw new Error('Supabase no está configurado.')
-      const { data, error } = await supabase
-        .from('postulaciones_tecnicos')
-        .select('*')
-        .eq('estado', 'pendiente')
-        .order('creado_en', { ascending: false })
-      if (error) throw error
-      return data
-    },
-  })
-  const resolver = useMutation({
-    mutationFn: async ({ id, aprobar }: { id: string; aprobar: boolean }) => {
-      if (!supabase) return
-      const comentario =
-        window.prompt(aprobar ? 'Comentario de aprobación (opcional)' : 'Motivo del rechazo') ?? ''
-      if (!aprobar && !comentario.trim()) throw new Error('Indique el motivo del rechazo.')
-      const { error } = await supabase.rpc('resolver_postulacion_tecnico', {
-        p_postulacion_id: id,
-        p_aprobar: aprobar,
-        p_comentario: comentario,
-      })
-      if (error) throw error
-    },
-    onSuccess: async () => {
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: ['postulaciones-tecnicos'] }),
-        qc.invalidateQueries({ queryKey: ['catalogo', 'tecnicos'] }),
-      ])
-    },
-  })
+  const listado = usePostulacionesPendientes()
+  const resolver = useResolverPostulacion()
+
+  async function resolverPostulacion(id: string, aprobar: boolean) {
+    const comentario =
+      window.prompt(aprobar ? 'Comentario de aprobaciÃ³n (opcional)' : 'Motivo del rechazo') ?? ''
+    if (!aprobar && !comentario.trim()) throw new Error('Indique el motivo del rechazo.')
+    await resolver.mutateAsync({ id, aprobar, comentario })
+  }
+
+  const error = listado.error ?? resolver.error
+
   return (
     <section className="space-y-4">
       <div>
         <h2 className="text-lg font-semibold">Postulaciones pendientes</h2>
         <p className="text-sm text-muted-foreground">
-          Confirme los candidatos antes de incorporarlos como técnicos activos.
+          Revise la pretensiÃ³n salarial y los documentos antes de incorporar al candidato.
         </p>
       </div>
-      {(listado.error || resolver.error) && (
+      {error && (
         <p
           role="alert"
           className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground"
         >
-          {(listado.error || resolver.error)?.message}
+          {normalizarError(error).mensaje}
         </p>
       )}
       <div className="grid gap-3">
-        {listado.data?.map((p) => (
-          <article key={p.id} className="rounded-lg border bg-card p-4">
+        {listado.data?.map((postulacion) => (
+          <article key={postulacion.id} className="space-y-4 rounded-lg border bg-card p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h3 className="font-semibold">{p.nombre_completo}</h3>
+                <h3 className="font-semibold">{postulacion.nombre_completo}</h3>
                 <p className="text-sm">
-                  {p.especialidad} · {p.celular} · {p.correo || 'Sin correo'}
+                  {postulacion.especialidad} Â· {postulacion.celular} Â·{' '}
+                  {postulacion.correo || 'Sin correo'}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  {p.canton}, {p.provincia}
+                  {postulacion.canton}, {postulacion.provincia}
                 </p>
-                <p className="mt-2 text-sm">{p.experiencia}</p>
+                <p className="mt-2 text-sm">{postulacion.experiencia}</p>
+                <p className="mt-2 text-sm font-semibold text-primary">
+                  PretensiÃ³n salarial:{' '}
+                  {new Intl.NumberFormat('es-CR', {
+                    style: 'currency',
+                    currency: 'CRC',
+                    maximumFractionDigits: 2,
+                  }).format(postulacion.pretension_salarial)}
+                </p>
               </div>
               <div className="flex gap-2">
-                <Button onClick={() => void resolver.mutateAsync({ id: p.id, aprobar: true })}>
+                <Button
+                  disabled={resolver.isPending}
+                  onClick={() => void resolverPostulacion(postulacion.id, true)}
+                >
                   <Check className="mr-2 size-4" />
                   Aprobar
                 </Button>
                 <Button
                   variant="outline"
                   className="text-destructive hover:bg-destructive-soft"
-                  onClick={() => void resolver.mutateAsync({ id: p.id, aprobar: false })}
+                  disabled={resolver.isPending}
+                  onClick={() => void resolverPostulacion(postulacion.id, false)}
                 >
                   <X className="mr-2 size-4" />
                   Rechazar
                 </Button>
+              </div>
+            </div>
+
+            <div className="rounded-lg border bg-muted/30 p-3">
+              <h4 className="flex items-center gap-2 text-sm font-semibold">
+                <FileText className="size-4 text-primary" />
+                Documentos adjuntos
+              </h4>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {postulacion.documentos.map((documento) => (
+                  <Button
+                    key={documento.id}
+                    type="button"
+                    variant="outline"
+                    onClick={() => void abrirDocumentoPostulacion(documento.ruta_storage)}
+                  >
+                    <ExternalLink className="mr-2 size-4" />
+                    {nombresDocumento[documento.tipo]}
+                  </Button>
+                ))}
               </div>
             </div>
           </article>

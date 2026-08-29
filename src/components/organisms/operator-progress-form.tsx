@@ -292,7 +292,7 @@ export function OperatorProgressForm({
 
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-3">
-          <h3 className="font-semibold">Materiales utilizados</h3>
+          <h3 className="font-semibold">Inventario utilizado</h3>
           <Button
             type="button"
             variant="outline"

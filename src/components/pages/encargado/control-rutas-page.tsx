@@ -1,4 +1,4 @@
-import { ClipboardPlus, ListChecks, MapPinned, Plus, Settings2 } from 'lucide-react'
+﻿import { ClipboardPlus, ListChecks, MapPinned, Plus, Settings2 } from 'lucide-react'
 import { useState } from 'react'
 import { Badge } from '@/components/atoms/badge'
 import { Button } from '@/components/atoms/button'
@@ -11,6 +11,7 @@ import { WorkspacePanel } from '@/components/molecules/workspace-panel'
 import { ProcessRouteForm } from '@/components/organisms/process-route-form'
 import { VehicleMovementForm } from '@/components/organisms/vehicle-movement-form'
 import { RouteTimeline } from '@/components/organisms/route-timeline'
+import { RouteExpenses } from '@/components/organisms/route-expenses'
 import { useRutasProceso } from '@/features/flota/hooks/use-flota'
 import type { RutaProceso } from '@/features/flota/types/flota.types'
 import { normalizarError } from '@/lib/errores'
@@ -20,6 +21,7 @@ export function ControlRutasPage() {
   const [editando, setEditando] = useState<RutaProceso | null | undefined>(undefined)
   const [registroRuta, setRegistroRuta] = useState<RutaProceso | null>(null)
   const [trackingRuta, setTrackingRuta] = useState<RutaProceso | null>(null)
+  const [gastosRuta, setGastosRuta] = useState<RutaProceso | null>(null)
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('activas')
   const [page, setPage] = useState(1)
@@ -55,7 +57,7 @@ export function ControlRutasPage() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <PageHeader
           title="Rutas de proceso"
-          description="Agrupe solicitudes, asocie uno o varios vehículos y defina un responsable."
+          description="Agrupe solicitudes, vehículos y participantes con sus viáticos individuales."
         />
         <Button onClick={() => setEditando(null)}>
           <Plus className="mr-2 size-4" />
@@ -67,7 +69,7 @@ export function ControlRutasPage() {
           variant="management"
           icon={Settings2}
           title={editando ? `Administrar ruta ${editando.codigo}` : 'Crear ruta'}
-          description="Configure la ruta, las solicitudes, los vehículos y su responsable."
+          description="Configure solicitudes, vehículos, participantes y viáticos de la ruta."
         >
           <ProcessRouteForm
             key={editando?.id ?? 'nueva'}
@@ -93,7 +95,7 @@ export function ControlRutasPage() {
         <div className="grid gap-3 rounded-lg border bg-card p-4 sm:grid-cols-[minmax(220px,1fr)_220px]">
           <Input
             type="search"
-            placeholder="Buscar por ruta o responsable…"
+            placeholder="Buscar por ruta o responsableâ€¦"
             value={search}
             onChange={(e) => {
               setSearch(e.target.value)
@@ -130,7 +132,7 @@ export function ControlRutasPage() {
                   <div className="flex justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground">
-                        {r.codigo} · {r.fecha_programada}
+                        {r.codigo} Â· {r.fecha_programada}
                       </p>
                       <h2 className="font-semibold">{r.nombre}</h2>
                     </div>
@@ -139,7 +141,13 @@ export function ControlRutasPage() {
                   <p className="mt-3 text-sm">Responsable: {r.responsable?.nombre_completo}</p>
                   <p className="text-sm text-muted-foreground">
                     {r.ruta_solicitudes.length} solicitud(es) ·{' '}
-                    {r.ruta_vehiculos.map((x) => x.vehiculo?.placa).join(', ')}
+                    {r.ruta_vehiculos.map((item) => item.vehiculo?.placa).join(', ')}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {r.ruta_participantes.length} participante(s) · Viáticos: ₡
+                    {r.ruta_participantes
+                      .reduce((total, item) => total + Number(item.viatico), 0)
+                      .toLocaleString('es-CR')}
                   </p>
                   <div className="mt-4 flex flex-wrap gap-2">
                     <Button variant="outline" onClick={() => setEditando(r)}>
@@ -148,6 +156,9 @@ export function ControlRutasPage() {
                     </Button>
                     <Button variant="outline" onClick={() => setTrackingRuta(r)}>
                       Ver tracking
+                    </Button>{' '}
+                    <Button variant="outline" onClick={() => setGastosRuta(r)}>
+                      Gastos
                     </Button>
                     <Button
                       variant="outline"
@@ -155,7 +166,7 @@ export function ControlRutasPage() {
                       onClick={() => setRegistroRuta(r)}
                     >
                       <ClipboardPlus className="mr-2 size-4" />
-                      Registro del vehículo
+                      Registro del vehÃ­culo
                     </Button>
                   </div>
                 </article>
@@ -182,6 +193,7 @@ export function ControlRutasPage() {
       {registroRuta && (
         <VehicleMovementForm ruta={registroRuta} onClose={() => setRegistroRuta(null)} />
       )}
+      {gastosRuta && <RouteExpenses ruta={gastosRuta} onClose={() => setGastosRuta(null)} />}
       {trackingRuta && <RouteTimeline ruta={trackingRuta} onClose={() => setTrackingRuta(null)} />}
     </section>
   )

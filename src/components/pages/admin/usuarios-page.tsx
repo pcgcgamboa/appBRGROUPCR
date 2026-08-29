@@ -1,4 +1,4 @@
-import { HardHat, KeyRound, ListChecks, Pencil, Plus, Trash2, UserRound } from 'lucide-react'
+﻿import { HardHat, KeyRound, ListChecks, Pencil, Plus, Trash2, UserRound } from 'lucide-react'
 import { type FormEvent, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/atoms/badge'
@@ -33,6 +33,7 @@ import { useUsuariosAdmin } from '@/features/usuarios/hooks/use-usuarios-admin'
 import type { DatosUsuarioAdmin, UsuarioAdmin } from '@/features/usuarios/types/usuarios.types'
 import { normalizarError } from '@/lib/errores'
 import { useI18n } from '@/lib/i18n'
+import { useActualizarFotoPerfil } from '@/features/auth/hooks/use-actualizar-foto-perfil'
 import { TechniciansManager } from '@/components/organisms/technicians-manager'
 
 const initialValues: DatosUsuarioAdmin = {
@@ -41,6 +42,7 @@ const initialValues: DatosUsuarioAdmin = {
   nombre_completo: '',
   telefono: null,
   cliente_id: null,
+  costo_hora: 0,
   activo: true,
   roles: [],
 }
@@ -58,6 +60,7 @@ export function UsuariosPage() {
   const [nuevaClave, setNuevaClave] = useState('')
   const [confirmacionClave, setConfirmacionClave] = useState('')
   const ultimoDisparadorRef = useRef<HTMLElement | null>(null)
+  const actualizarFoto = useActualizarFotoPerfil(values.id)
 
   if (submodulo === 'tecnicos')
     return (
@@ -69,7 +72,7 @@ export function UsuariosPage() {
           </Button>
           <Button>
             <HardHat className="mr-2 size-4" />
-            Técnicos
+            TÃ©cnicos
           </Button>
         </div>
         <TechniciansManager />
@@ -89,6 +92,7 @@ export function UsuariosPage() {
       nombre_completo: usuario.nombre_completo,
       telefono: usuario.telefono,
       cliente_id: usuario.cliente_id,
+      costo_hora: usuario.costo_hora,
       activo: usuario.activo,
       roles: usuario.usuario_roles.map((item) => item.rol_id),
     })
@@ -127,7 +131,7 @@ export function UsuariosPage() {
     event.preventDefault()
     if (!usuarioClave || nuevaClave !== confirmacionClave) return
     await cambiarClave.mutateAsync({ id: usuarioClave.id, password: nuevaClave })
-    toast.success('Contraseña actualizada correctamente.')
+    toast.success('ContraseÃ±a actualizada correctamente.')
     setUsuarioClave(null)
     setNuevaClave('')
     setConfirmacionClave('')
@@ -143,7 +147,7 @@ export function UsuariosPage() {
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => setSubmodulo('tecnicos')}>
             <HardHat className="mr-2 size-4" />
-            Técnicos
+            TÃ©cnicos
           </Button>
           <Button onClick={nuevo}>
             <Plus className="mr-2 size-4" />
@@ -219,6 +223,18 @@ export function UsuariosPage() {
                 ))}
               </Select>
             </label>
+            <label className="grid gap-2 text-sm font-medium">
+              Costo por hora (₡)
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={values.costo_hora}
+                onChange={(event) =>
+                  setValues({ ...values, costo_hora: Number(event.target.value) })
+                }
+              />
+            </label>{' '}
             <label className="flex items-center gap-3 text-sm font-medium">
               <Checkbox
                 checked={values.activo}
@@ -226,6 +242,20 @@ export function UsuariosPage() {
               />
               {t('activeUser')}
             </label>
+            {values.id && (
+              <label className="grid gap-2 text-sm font-medium sm:col-span-2">
+                Fotografía del usuario
+                <Input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  disabled={actualizarFoto.isPending}
+                  onChange={(event) => {
+                    const archivo = event.target.files?.[0]
+                    if (archivo) actualizarFoto.mutate(archivo)
+                  }}
+                />
+              </label>
+            )}{' '}
             <fieldset className="grid gap-3 sm:col-span-2">
               <legend className="mb-2 text-sm font-semibold">Roles</legend>
               <div className="flex flex-wrap gap-4">
@@ -278,15 +308,15 @@ export function UsuariosPage() {
           }}
         >
           <DialogHeader>
-            <DialogTitle>Cambiar contraseña</DialogTitle>
+            <DialogTitle>Cambiar contraseÃ±a</DialogTitle>
             <DialogDescription>
-              Establezca una contraseña nueva para {usuarioClave?.nombre_completo}. El usuario
-              deberá utilizarla en su próximo inicio de sesión.
+              Establezca una contraseÃ±a nueva para {usuarioClave?.nombre_completo}. El usuario
+              deberÃ¡ utilizarla en su prÃ³ximo inicio de sesiÃ³n.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={guardarClave} className="grid gap-4">
             <label className="grid gap-2 text-sm font-medium">
-              Nueva contraseña
+              Nueva contraseÃ±a
               <Input
                 type="password"
                 minLength={8}
@@ -300,7 +330,7 @@ export function UsuariosPage() {
               </span>
             </label>
             <label className="grid gap-2 text-sm font-medium">
-              Confirmar contraseña
+              Confirmar contraseÃ±a
               <Input
                 type="password"
                 minLength={8}
@@ -312,7 +342,7 @@ export function UsuariosPage() {
               />
               {confirmacionClave && nuevaClave !== confirmacionClave && (
                 <span role="alert" className="text-xs font-normal text-destructive">
-                  Las contraseñas no coinciden.
+                  Las contraseÃ±as no coinciden.
                 </span>
               )}
             </label>
@@ -336,7 +366,7 @@ export function UsuariosPage() {
                   nuevaClave !== confirmacionClave
                 }
               >
-                {cambiarClave.isPending ? 'Actualizando…' : 'Cambiar contraseña'}
+                {cambiarClave.isPending ? 'Actualizandoâ€¦' : 'Cambiar contraseÃ±a'}
               </Button>
             </DialogFooter>
           </form>
@@ -356,7 +386,7 @@ export function UsuariosPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>{t('deleteUserConfirm')}</AlertDialogTitle>
             <AlertDialogDescription>
-              {usuarioAEliminar?.nombre_completo} · {usuarioAEliminar?.email}
+              {usuarioAEliminar?.nombre_completo} Â· {usuarioAEliminar?.email}
             </AlertDialogDescription>
           </AlertDialogHeader>
           {deleteError && (
@@ -376,7 +406,7 @@ export function UsuariosPage() {
                 void confirmarEliminar()
               }}
             >
-              {eliminar.isPending ? '…' : t('save')}
+              {eliminar.isPending ? 'â€¦' : t('save')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -394,7 +424,7 @@ export function UsuariosPage() {
         variant="list"
         icon={ListChecks}
         title="Cuentas de acceso"
-        description="Consulte las cuentas y seleccione las acciones de administración disponibles."
+        description="Consulte las cuentas y seleccione las acciones de administraciÃ³n disponibles."
         actions={<Badge variant="default">{usuarios.data?.length ?? 0} usuarios</Badge>}
       >
         <div className="overflow-x-auto rounded-lg border bg-card shadow-sm">
@@ -446,8 +476,8 @@ export function UsuariosPage() {
                             variant="outline"
                             size="icon"
                             onClick={() => abrirCambioClave(usuario)}
-                            aria-label={`Cambiar contraseña de ${usuario.nombre_completo}`}
-                            title="Cambiar contraseña"
+                            aria-label={`Cambiar contraseÃ±a de ${usuario.nombre_completo}`}
+                            title="Cambiar contraseÃ±a"
                           >
                             <KeyRound className="size-4" />
                           </Button>

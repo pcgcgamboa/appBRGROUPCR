@@ -20,7 +20,7 @@ export function ReportesPage() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <PageHeader
           title="Reportes"
-          description="Análisis detallado de costos de materiales y operación de la flota."
+          description="Análisis detallado de costos de inventario y operación de la flota."
         />
         <Button variant="outline" onClick={() => void actualizarReportes()}>
           <RefreshCw className="mr-2 size-4" />

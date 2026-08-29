@@ -1,4 +1,4 @@
-export type EstadoRutaProceso = 'planificada' | 'en_curso' | 'finalizada' | 'cancelada'
+﻿export type EstadoRutaProceso = 'planificada' | 'en_curso' | 'finalizada' | 'cancelada'
 export type TipoMovimientoVehiculo = 'combustible' | 'kilometraje' | 'lavado' | 'otro'
 
 export interface RutaProceso {
@@ -20,6 +20,14 @@ export interface RutaProceso {
     es_principal: boolean
     vehiculo: { placa: string; tipo: string; kilometraje_actual: number } | null
   }[]
+  ruta_participantes: ParticipanteRuta[]
+}
+
+export interface ParticipanteRuta {
+  usuario_id: string
+  viatico: number
+  detalle_viatico: string | null
+  usuario: { nombre_completo: string } | null
 }
 
 export interface ResponsableRuta {
@@ -38,8 +46,32 @@ export interface RutaProcesoInput {
   responsable_id: string
   solicitudes: string[]
   vehiculos: string[]
+  participantes: Array<{
+    usuario_id: string
+    viatico: number
+    detalle_viatico: string
+  }>
 }
 
+export interface RutaGasto {
+  id: string
+  ruta_id: string
+  participante_id: string | null
+  concepto: string
+  monto: number
+  fecha: string
+  detalle: string | null
+  participante: { nombre_completo: string } | null
+}
+
+export interface RutaGastoInput {
+  ruta_id: string
+  participante_id: string | null
+  concepto: string
+  monto: number
+  fecha: string
+  detalle: string | null
+}
 export interface MovimientoVehiculoInput {
   ruta_id: string
   vehiculo_id: string
@@ -128,7 +160,13 @@ export interface ActividadRuta {
 }
 
 export interface ReporteFlota {
-  totales: { rutas: number; kilometros: number; gasto_operativo: number; gasto_flota: number }
+  totales: {
+    rutas: number
+    kilometros: number
+    gasto_operativo: number
+    gasto_flota: number
+    viaticos: number
+  }
   rutas: Array<{
     id: string
     codigo: string
@@ -139,6 +177,7 @@ export interface ReporteFlota {
     solicitudes: number
     vehiculos: number
     kilometros: number
+    viaticos: number
     gastos: number
   }>
   vehiculos: Array<{

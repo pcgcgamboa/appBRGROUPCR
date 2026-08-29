@@ -60,7 +60,7 @@ function TablaCostos({
                 colSpan={encabezados.length}
                 className="px-4 py-10 text-center text-muted-foreground"
               >
-                No hay costos de materiales registrados para este análisis.
+                No hay costos de inventario registrados para este análisis.
               </td>
             </tr>
           )}
@@ -79,7 +79,7 @@ export function MaterialCostReports() {
         <div>
           <h2 id="titulo-costos-materiales" className="flex items-center gap-2 text-xl font-bold">
             <PackageSearch className="size-5 text-primary" />
-            Costos de materiales
+            Costos de inventario
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Costo histórico calculado con la cantidad y el precio aplicado al registrar cada
@@ -116,7 +116,7 @@ export function MaterialCostReports() {
         </div>
       ) : reporte.data ? (
         <Tabs defaultValue="solicitud" className="space-y-4">
-          <TabsList aria-label="Agrupar costos de materiales">
+          <TabsList aria-label="Agrupar costos de inventario">
             <TabsTrigger value="solicitud">Por solicitud</TabsTrigger>
             <TabsTrigger value="ruta">Por ruta</TabsTrigger>
             <TabsTrigger value="encargado">Por encargado</TabsTrigger>

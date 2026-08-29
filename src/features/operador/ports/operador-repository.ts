@@ -1,5 +1,9 @@
 import type {
+  ActualizarPerfilTecnicoInput,
   AvanceResumen,
+  ContextoSolicitudTecnico,
+  HerramientaTecnico,
+  PerfilTecnico,
   RegistrarAvanceInput,
   SolicitudOperador,
 } from '@/features/operador/types/operador.types'
@@ -12,6 +16,10 @@ import type {
  * tocar los hooks ni los componentes.
  */
 export interface OperadorRepository {
+  perfilTecnico(usuarioId: string): Promise<PerfilTecnico>
+  actualizarPerfilTecnico(input: ActualizarPerfilTecnicoInput): Promise<void>
+  herramientasTecnico(usuarioId: string): Promise<HerramientaTecnico[]>
+  contextoSolicitudTecnico(solicitudId: string): Promise<ContextoSolicitudTecnico>
   solicitudesOperador(usuarioId: string): Promise<SolicitudOperador[]>
   avancesSolicitud(solicitudId: string): Promise<AvanceResumen[]>
   registrarAvance(input: RegistrarAvanceInput): Promise<{ avance_id: string }>

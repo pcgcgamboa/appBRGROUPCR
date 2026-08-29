@@ -1,4 +1,4 @@
-import type {
+﻿import type {
   ActividadRuta,
   FotoVehiculo,
   GestionVehiculoInput,
@@ -9,6 +9,8 @@ import type {
   ResponsableRuta,
   RutaProceso,
   RutaProcesoInput,
+  RutaGasto,
+  RutaGastoInput,
   SubirFotosVehiculoInput,
 } from '@/features/flota/types/flota.types'
 
@@ -24,6 +26,8 @@ export interface FlotaRepository {
   responsablesRuta(): Promise<ResponsableRuta[]>
   guardarRutaProceso(input: RutaProcesoInput): Promise<string>
   registrarMovimientoVehiculo(input: MovimientoVehiculoInput): Promise<void>
+  gastosRuta(rutaId: string): Promise<RutaGasto[]>
+  registrarGastoRuta(input: RutaGastoInput): Promise<void>
   fotosVehiculo(vehiculoId: string): Promise<FotoVehiculo[]>
   subirFotosVehiculo(input: SubirFotosVehiculoInput): Promise<void>
   eliminarFotoVehiculo(foto: FotoVehiculo): Promise<void>

@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4'
+﻿import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4'
 import { corsHeaders } from '../_shared/cors.ts'
 import { logError } from '../_shared/logger.ts'
 
@@ -12,6 +12,7 @@ interface SolicitudAdmin {
     telefono?: string | null
     cliente_id?: string | null
     activo?: boolean
+    costo_hora?: number
     roles?: number[]
   }
 }
@@ -19,8 +20,8 @@ interface SolicitudAdmin {
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
-  // Identificador único por solicitud, incluido en toda respuesta (éxito o error) para poder
-  // correlacionar un reporte de usuario/soporte con esta invocación puntual de la función.
+  // Identificador Ãºnico por solicitud, incluido en toda respuesta (Ã©xito o error) para poder
+  // correlacionar un reporte de usuario/soporte con esta invocaciÃ³n puntual de la funciÃ³n.
   const correlacionId = crypto.randomUUID()
   function respuesta(body: Record<string, unknown>, status = 200) {
     return new Response(JSON.stringify({ ...body, correlacion_id: correlacionId }), {
@@ -29,7 +30,7 @@ Deno.serve(async (request) => {
     })
   }
 
-  if (request.method !== 'POST') return respuesta({ error: 'Método no permitido.' }, 405)
+  if (request.method !== 'POST') return respuesta({ error: 'MÃ©todo no permitido.' }, 405)
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
@@ -44,7 +45,7 @@ Deno.serve(async (request) => {
     })
     if (roleError || !esAdmin) return respuesta({ error: 'Acceso denegado.' }, 403)
     const { data: callerData, error: callerError } = await caller.auth.getUser()
-    if (callerError || !callerData.user) return respuesta({ error: 'Sesión inválida.' }, 401)
+    if (callerError || !callerData.user) return respuesta({ error: 'SesiÃ³n invÃ¡lida.' }, 401)
 
     const admin = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } })
     const payload = (await request.json()) as SolicitudAdmin
@@ -56,7 +57,7 @@ Deno.serve(async (request) => {
           admin
             .from('usuarios')
             .select(
-              'id, nombre_completo, telefono, cliente_id, activo, usuario_roles!usuario_roles_usuario_id_fkey(rol_id)',
+              'id, nombre_completo, telefono, cliente_id, costo_hora, activo, usuario_roles!usuario_roles_usuario_id_fkey(rol_id)',
             ),
         ])
       if (authError || perfilesError) throw authError ?? perfilesError
@@ -71,7 +72,7 @@ Deno.serve(async (request) => {
 
     if (payload.accion === 'crear') {
       if (!usuario.email || !usuario.password || !usuario.nombre_completo)
-        return respuesta({ error: 'Correo, contraseña y nombre son obligatorios.' }, 400)
+        return respuesta({ error: 'Correo, contraseÃ±a y nombre son obligatorios.' }, 400)
       const { data, error } = await admin.auth.admin.createUser({
         email: usuario.email,
         password: usuario.password,
@@ -87,6 +88,7 @@ Deno.serve(async (request) => {
           telefono: usuario.telefono,
           cliente_id: usuario.cliente_id,
           activo: true,
+          costo_hora: usuario.costo_hora ?? 0,
         })
         .eq('id', id)
       if (profileError) {
@@ -126,6 +128,7 @@ Deno.serve(async (request) => {
           telefono: usuario.telefono,
           cliente_id: usuario.cliente_id,
           activo: usuario.activo,
+          costo_hora: usuario.costo_hora ?? 0,
         })
         .eq('id', usuario.id)
       if (profileError) throw profileError
@@ -145,7 +148,7 @@ Deno.serve(async (request) => {
 
     if (payload.accion === 'cambiar_clave') {
       if (!usuario.password || usuario.password.length < 8)
-        return respuesta({ error: 'La contraseña debe tener al menos 8 caracteres.' }, 400)
+        return respuesta({ error: 'La contraseÃ±a debe tener al menos 8 caracteres.' }, 400)
       const { error } = await admin.auth.admin.updateUserById(usuario.id, {
         password: usuario.password,
       })
@@ -159,7 +162,7 @@ Deno.serve(async (request) => {
       return respuesta({ id: usuario.id })
     }
 
-    return respuesta({ error: 'Acción desconocida.' }, 400)
+    return respuesta({ error: 'AcciÃ³n desconocida.' }, 400)
   } catch (error) {
     const mensaje = error instanceof Error ? error.message : 'Error inesperado.'
     logError(mensaje, { funcion: 'admin-users', correlacion_id: correlacionId })

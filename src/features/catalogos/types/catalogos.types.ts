@@ -1,4 +1,4 @@
-export interface EntidadBase {
+﻿export interface EntidadBase {
   id: string | number
 }
 
@@ -37,6 +37,11 @@ export interface Material extends EntidadBase {
   descripcion: string | null
   unidad_medida: string
   costo_referencial: number | null
+  categoria: 'material' | 'herramienta' | 'producto_proveedor'
+  naturaleza_provision: 'material' | 'servicio'
+  proveedor_id: string | null
+  tipo_costo: 'fijo' | 'hora'
+  numero_activo: string | null
   activo: boolean
 }
 
@@ -104,4 +109,8 @@ export interface CampoCatalogo {
   required?: boolean
   options?: OpcionCampo[]
   step?: string
+  visibleWhen?: {
+    field: string
+    equals: ValorFormulario
+  }
 }

@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+﻿import type { SupabaseClient } from '@supabase/supabase-js'
 import type {
   ActualizarMarcaInput,
   ConfiguracionRepository,
@@ -8,16 +8,41 @@ import { marcaPredeterminada } from '@/features/configuracion/types/configuracio
 
 /**
  * Adaptador concreto de `ConfiguracionRepository` sobre supabase-js. Cada
- * método verifica que el cliente esté configurado (`client` puede ser
- * `null` cuando las variables de entorno de Supabase no están presentes)
- * para no romper el arranque de la app — el chequeo se hace por método, no
- * al construir la instancia, replicando el patrón `if (!supabase) ...` que
+ * mÃ©todo verifica que el cliente estÃ© configurado (`client` puede ser
+ * `null` cuando las variables de entorno de Supabase no estÃ¡n presentes)
+ * para no romper el arranque de la app â€” el chequeo se hace por mÃ©todo, no
+ * al construir la instancia, replicando el patrÃ³n `if (!supabase) ...` que
  * ya usaba el hook.
  */
 export function createSupabaseConfiguracionRepository(
   client: SupabaseClient | null,
 ): ConfiguracionRepository {
   return {
+    async obtenerOperativa() {
+      if (!client) return { garantia_dias: 30 }
+      const { data, error } = await client
+        .from('configuracion_operativa')
+        .select('garantia_dias')
+        .eq('id', true)
+        .single()
+      if (error) throw error
+      return data
+    },
+
+    async actualizarGarantia(dias: number) {
+      if (!client) throw new Error('Supabase no está configurado.')
+      const { data } = await client.auth.getUser()
+      if (!data.user) throw new Error('Sesión no válida.')
+      const { error } = await client
+        .from('configuracion_operativa')
+        .update({
+          garantia_dias: dias,
+          actualizado_por: data.user.id,
+          actualizado_en: new Date().toISOString(),
+        })
+        .eq('id', true)
+      if (error) throw error
+    },
     async obtenerMarca(): Promise<ConfiguracionMarca> {
       if (!client) return marcaPredeterminada
       const { data, error } = await client
@@ -34,11 +59,11 @@ export function createSupabaseConfiguracionRepository(
       logo,
       icono,
     }: ActualizarMarcaInput): Promise<ConfiguracionMarca> {
-      if (!client) throw new Error('Supabase no está configurado.')
+      if (!client) throw new Error('Supabase no estÃ¡ configurado.')
       const supabaseClient = client
       const { data: sesion } = await supabaseClient.auth.getSession()
       const usuarioId = sesion.session?.user.id
-      if (!usuarioId) throw new Error('La sesión no es válida.')
+      if (!usuarioId) throw new Error('La sesiÃ³n no es vÃ¡lida.')
 
       const version = Date.now()
       const siguiente = { ...actual }

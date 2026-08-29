@@ -1,4 +1,7 @@
-import type { ConfiguracionMarca } from '@/features/configuracion/types/configuracion.types'
+﻿import type {
+  ConfiguracionMarca,
+  ConfiguracionOperativa,
+} from '@/features/configuracion/types/configuracion.types'
 
 export interface ActualizarMarcaInput {
   actual: ConfiguracionMarca
@@ -16,4 +19,6 @@ export interface ActualizarMarcaInput {
 export interface ConfiguracionRepository {
   obtenerMarca(): Promise<ConfiguracionMarca>
   actualizarMarca(input: ActualizarMarcaInput): Promise<ConfiguracionMarca>
+  obtenerOperativa(): Promise<ConfiguracionOperativa>
+  actualizarGarantia(dias: number): Promise<void>
 }

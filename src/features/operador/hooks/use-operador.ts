@@ -1,6 +1,43 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { operadorRepository } from '@/features/operador/lib/repository'
-import type { RegistrarAvanceInput } from '@/features/operador/types/operador.types'
+import type {
+  ActualizarPerfilTecnicoInput,
+  RegistrarAvanceInput,
+} from '@/features/operador/types/operador.types'
+
+export function usePerfilTecnico(usuarioId?: string) {
+  return useQuery({
+    queryKey: ['perfil-tecnico', usuarioId],
+    enabled: Boolean(usuarioId),
+    queryFn: () => operadorRepository.perfilTecnico(usuarioId!),
+  })
+}
+
+export function useActualizarPerfilTecnico() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: ActualizarPerfilTecnicoInput) =>
+      operadorRepository.actualizarPerfilTecnico(input),
+    onSuccess: (_data, variables) =>
+      queryClient.invalidateQueries({ queryKey: ['perfil-tecnico', variables.usuario_id] }),
+  })
+}
+
+export function useHerramientasTecnico(usuarioId?: string) {
+  return useQuery({
+    queryKey: ['herramientas-tecnico', usuarioId],
+    enabled: Boolean(usuarioId),
+    queryFn: () => operadorRepository.herramientasTecnico(usuarioId!),
+  })
+}
+
+export function useContextoSolicitudTecnico(solicitudId?: string) {
+  return useQuery({
+    queryKey: ['contexto-solicitud-tecnico', solicitudId],
+    enabled: Boolean(solicitudId),
+    queryFn: () => operadorRepository.contextoSolicitudTecnico(solicitudId!),
+  })
+}
 
 export function useSolicitudesOperador(usuarioId?: string) {
   return useQuery({

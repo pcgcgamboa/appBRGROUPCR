@@ -20,6 +20,53 @@ export interface SolicitudOperador {
   } | null
 }
 
+export interface PerfilTecnico {
+  id: string
+  nombre_completo: string
+  telefono: string | null
+  foto_url: string | null
+}
+
+export interface ActualizarPerfilTecnicoInput {
+  usuario_id: string
+  nombre_completo: string
+  telefono: string
+}
+
+export interface HerramientaTecnico {
+  id: string
+  asignada_en: string
+  observaciones_entrega: string | null
+  herramienta: { nombre: string; numero_activo: string } | null
+}
+
+export interface EventoTecnico {
+  id: number
+  tipo: string
+  titulo: string
+  descripcion: string | null
+  creado_en: string
+}
+
+export interface ContextoSolicitudTecnico {
+  cliente: string
+  ubicacion: {
+    nombre: string
+    provincia: string
+    canton: string
+    distrito: string
+    otras_senas: string | null
+  }
+  ruta: {
+    codigo: string
+    nombre: string
+    fecha_programada: string
+    estado: string
+    encargado: string
+  } | null
+  eventos: EventoTecnico[]
+}
+
 export interface PeticionResolucion {
   id: string
   tipo: 'cierre' | 'cancelacion'

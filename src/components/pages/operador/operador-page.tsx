@@ -1,4 +1,4 @@
-import { ClipboardCheck, Eye, History, ListChecks, MapPin, Send } from 'lucide-react'
+﻿import { ClipboardCheck, Eye, History, ListChecks, MapPin, Send } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { Badge } from '@/components/atoms/badge'
 import { Button } from '@/components/atoms/button'
@@ -10,6 +10,11 @@ import { OperatorResolutionRequest } from '@/components/organisms/operator-resol
 import { ProgressHistory } from '@/components/organisms/progress-history'
 import { RequestTechnicians } from '@/components/organisms/request-technicians'
 import { RequestTimeline } from '@/components/organisms/request-timeline'
+import { RequestServiceFollowUp } from '@/components/organisms/request-service-follow-up'
+import {
+  TechnicianRequestContext,
+  TechnicianSelfService,
+} from '@/components/organisms/technician-workspace'
 import { marcarSolicitudAbierta } from '@/features/operador/hooks/use-avance-draft'
 import { useSolicitudesOperador } from '@/features/operador/hooks/use-operador'
 import type { SolicitudOperador } from '@/features/operador/types/operador.types'
@@ -45,9 +50,10 @@ export function OperadorPage({ usuarioId }: { usuarioId: string }) {
     <section className="space-y-6">
       <ConnectivityBanner />
       <PageHeader
-        title="Atención de servicios"
-        description="Consulte la solicitud o registre el trabajo realizado desde el sitio de atención."
+        title="AtenciÃ³n de servicios"
+        description="Consulte la solicitud o registre el trabajo realizado desde el sitio de atenciÃ³n."
       />
+      <TechnicianSelfService usuarioId={usuarioId} />
       {solicitudes.error && (
         <p
           role="alert"
@@ -66,14 +72,14 @@ export function OperadorPage({ usuarioId }: { usuarioId: string }) {
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-primary/20 pb-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-primary">
-                Solicitud en gestión · {modo === 'detalle' ? 'Detalle' : 'Registro de avance'}
+                Solicitud en gestiÃ³n Â· {modo === 'detalle' ? 'Detalle' : 'Registro de avance'}
               </p>
               <h2 id="panel-solicitud-titulo" className="text-lg font-semibold">
                 Solicitud #{seleccionada.numero}: {seleccionada.nombre}
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 {modo === 'detalle'
-                  ? 'Consulte la información, el personal y el historial de esta solicitud.'
+                  ? 'Consulte la informaciÃ³n, el personal y el historial de esta solicitud.'
                   : 'Registre el trabajo realizado y los recursos utilizados.'}
               </p>
             </div>
@@ -101,7 +107,7 @@ export function OperadorPage({ usuarioId }: { usuarioId: string }) {
                   </div>
                 </div>
                 <div>
-                  <h4 className="text-sm font-semibold">Descripción</h4>
+                  <h4 className="text-sm font-semibold">DescripciÃ³n</h4>
                   <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">
                     {seleccionada.detalle}
                   </p>
@@ -138,6 +144,12 @@ export function OperadorPage({ usuarioId }: { usuarioId: string }) {
               <ProgressHistory solicitudId={seleccionada.id} />
             </div>
           </div>
+          {modo === 'detalle' && (
+            <div className="space-y-6">
+              <TechnicianRequestContext solicitudId={seleccionada.id} />
+              <RequestServiceFollowUp solicitudId={seleccionada.id} modo="gestor" />
+            </div>
+          )}
           {modo === 'detalle' && trackingVisible && (
             <RequestTimeline solicitudId={seleccionada.id} />
           )}
@@ -213,9 +225,9 @@ export function OperadorPage({ usuarioId }: { usuarioId: string }) {
               </div>
               {solicitud.peticiones.some((peticion) => peticion.estado === 'pendiente') ? (
                 <p className="mt-4 rounded-lg bg-warning-soft p-3 text-sm font-medium text-warning-soft-foreground">
-                  Petición de{' '}
+                  PeticiÃ³n de{' '}
                   {solicitud.peticiones.find((item) => item.estado === 'pendiente')?.tipo} pendiente
-                  de aprobación.
+                  de aprobaciÃ³n.
                 </p>
               ) : (
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -232,7 +244,7 @@ export function OperadorPage({ usuarioId }: { usuarioId: string }) {
                   <Button variant="outline" onClick={() => setPeticionSeleccionada(solicitud)}>
                     <Send className="mr-2 size-4" />
                     Solicitar{' '}
-                    {solicitud.estado === 'atendida' ? 'cierre o cancelación' : 'cancelación'}
+                    {solicitud.estado === 'atendida' ? 'cierre o cancelaciÃ³n' : 'cancelaciÃ³n'}
                   </Button>
                 </div>
               )}
@@ -241,7 +253,7 @@ export function OperadorPage({ usuarioId }: { usuarioId: string }) {
         </div>
         {!solicitudes.isLoading && !solicitudes.data?.length && (
           <p className="rounded-lg border bg-card p-6 text-center text-sm text-muted-foreground">
-            No tiene solicitudes pendientes de atención.
+            No tiene solicitudes pendientes de atenciÃ³n.
           </p>
         )}
       </section>

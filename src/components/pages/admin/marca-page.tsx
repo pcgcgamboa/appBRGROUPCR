@@ -1,8 +1,14 @@
-import { ImageIcon, Upload } from 'lucide-react'
+﻿import { ImageIcon, Upload } from 'lucide-react'
 import { type ChangeEvent, type FormEvent, useEffect, useState } from 'react'
 import { Button } from '@/components/atoms/button'
+import { Input } from '@/components/atoms/input'
 import { PageHeader } from '@/components/molecules/page-header'
-import { useActualizarMarca, useMarca } from '@/features/configuracion/hooks/use-marca'
+import {
+  useActualizarGarantia,
+  useActualizarMarca,
+  useConfiguracionOperativa,
+  useMarca,
+} from '@/features/configuracion/hooks/use-marca'
 import { normalizarError } from '@/lib/errores'
 
 const tiposPermitidos = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml']
@@ -46,7 +52,7 @@ export function MarcaPage() {
     <section className="mx-auto max-w-4xl space-y-6">
       <PageHeader
         title="Marca e identidad visual"
-        description="Personalice el logotipo del acceso y el ícono utilizado en la interfaz."
+        description="Personalice el logotipo del acceso y el Ã­cono utilizado en la interfaz."
       />
       <form
         onSubmit={guardar}
@@ -56,15 +62,15 @@ export function MarcaPage() {
           <SelectorImagen
             id="logo-marca"
             title="Logotipo del login"
-            help="Formato horizontal recomendado. PNG, JPG, WebP o SVG; máximo 5 MB."
+            help="Formato horizontal recomendado. PNG, JPG, WebP o SVG; mÃ¡ximo 5 MB."
             src={logoVista ?? marca.data?.logo_url}
             className="h-36 w-full"
             onChange={(event) => seleccionar(event, setLogo, setLogoVista)}
           />
           <SelectorImagen
             id="icono-marca"
-            title="Ícono de la interfaz"
-            help="Formato cuadrado recomendado. PNG, JPG, WebP o SVG; máximo 5 MB."
+            title="Ãcono de la interfaz"
+            help="Formato cuadrado recomendado. PNG, JPG, WebP o SVG; mÃ¡ximo 5 MB."
             src={iconoVista ?? marca.data?.icono_url}
             className="mx-auto size-36"
             onChange={(event) => seleccionar(event, setIcono, setIconoVista)}
@@ -83,14 +89,15 @@ export function MarcaPage() {
             role="status"
             className="rounded-lg bg-success-soft p-3 text-sm text-success-soft-foreground"
           >
-            La identidad visual se actualizó correctamente.
+            La identidad visual se actualizÃ³ correctamente.
           </p>
         )}
         <Button type="submit" disabled={actualizar.isPending || (!logo && !icono)}>
           <Upload className="mr-2 size-4" />
-          {actualizar.isPending ? 'Guardando…' : 'Guardar cambios'}
+          {actualizar.isPending ? 'Guardandoâ€¦' : 'Guardar cambios'}
         </Button>
       </form>
+      <WarrantySettings />
     </section>
   )
 }
@@ -137,5 +144,51 @@ function SelectorImagen({
         onChange={onChange}
       />
     </div>
+  )
+}
+
+function WarrantySettings() {
+  const configuracion = useConfiguracionOperativa()
+  const actualizar = useActualizarGarantia()
+  const [dias, setDias] = useState('')
+  const valor = dias || String(configuracion.data?.garantia_dias ?? 30)
+  async function guardar(event: FormEvent) {
+    event.preventDefault()
+    await actualizar.mutateAsync(Number(valor))
+    setDias('')
+  }
+  return (
+    <form onSubmit={guardar} className="space-y-4 rounded-2xl border bg-card p-5 shadow-sm sm:p-7">
+      <div>
+        <h2 className="font-semibold">Período de garantía</h2>
+        <p className="text-sm text-muted-foreground">
+          Días de garantía aplicados cuando una solicitud aceptada se cierra.
+        </p>
+      </div>
+      <label className="grid max-w-xs gap-2 text-sm font-medium">
+        Días de garantía
+        <Input
+          required
+          type="number"
+          min="0"
+          max="3650"
+          value={valor}
+          onChange={(e) => setDias(e.target.value)}
+        />
+      </label>
+      <Button disabled={actualizar.isPending || Number(valor) < 0}>
+        {actualizar.isPending ? 'Guardando…' : 'Guardar garantía'}
+      </Button>
+      {actualizar.isSuccess && (
+        <p role="status" className="text-sm text-success-soft-foreground">
+          Configuración actualizada.
+        </p>
+      )}
+      {actualizar.error && (
+        <p role="alert" className="text-sm text-destructive">
+          {normalizarError(actualizar.error).mensaje}
+        </p>
+      )}
+    </form>
   )
 }

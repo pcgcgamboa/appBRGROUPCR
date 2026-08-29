@@ -51,10 +51,11 @@ export function RequestMaterials({ solicitudId }: { solicitudId: string }) {
       <div>
         <h3 className="flex items-center gap-2 font-semibold">
           <PackagePlus className="size-4 text-primary" />
-          Materiales asociados
+          Inventario asociado
         </h3>
         <p className="mt-1 text-xs text-muted-foreground">
-          Registre materiales previstos o entregados sin necesidad de crear un avance operativo.
+          Registre elementos de inventario previstos o entregados sin necesidad de crear un avance
+          operativo.
         </p>
       </div>
 

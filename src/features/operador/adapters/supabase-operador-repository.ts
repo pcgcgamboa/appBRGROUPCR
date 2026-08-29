@@ -1,7 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { OperadorRepository } from '@/features/operador/ports/operador-repository'
 import type {
+  ActualizarPerfilTecnicoInput,
   AvanceResumen,
+  ContextoSolicitudTecnico,
+  HerramientaTecnico,
+  PerfilTecnico,
   RegistrarAvanceInput,
   SolicitudOperador,
 } from '@/features/operador/types/operador.types'
@@ -25,6 +29,49 @@ export function createSupabaseOperadorRepository(
   }
 
   return {
+    async perfilTecnico(usuarioId: string): Promise<PerfilTecnico> {
+      const supabase = requerirCliente()
+      const { data, error } = await supabase
+        .from('usuarios')
+        .select('id,nombre_completo,telefono,foto_url')
+        .eq('id', usuarioId)
+        .single()
+      if (error) throw error
+      const perfil = data as PerfilTecnico
+      if (!perfil.foto_url) return perfil
+      const { data: firma } = await supabase.storage
+        .from('perfiles')
+        .createSignedUrl(perfil.foto_url, 3600)
+      return { ...perfil, foto_url: firma?.signedUrl ?? null }
+    },
+
+    async actualizarPerfilTecnico(input: ActualizarPerfilTecnicoInput): Promise<void> {
+      const { error } = await requerirCliente().rpc('actualizar_perfil_propio', {
+        p_nombre_completo: input.nombre_completo,
+        p_telefono: input.telefono,
+      })
+      if (error) throw error
+    },
+
+    async herramientasTecnico(usuarioId: string): Promise<HerramientaTecnico[]> {
+      const { data, error } = await requerirCliente()
+        .from('herramienta_asignaciones')
+        .select('id,asignada_en,observaciones_entrega,herramienta:materiales(nombre,numero_activo)')
+        .eq('usuario_id', usuarioId)
+        .is('devuelta_en', null)
+        .order('asignada_en', { ascending: false })
+      if (error) throw error
+      return data as unknown as HerramientaTecnico[]
+    },
+
+    async contextoSolicitudTecnico(solicitudId: string): Promise<ContextoSolicitudTecnico> {
+      const { data, error } = await requerirCliente().rpc('obtener_contexto_solicitud_tecnico', {
+        p_solicitud_id: solicitudId,
+      })
+      if (error) throw error
+      return data as ContextoSolicitudTecnico
+    },
+
     async solicitudesOperador(usuarioId: string): Promise<SolicitudOperador[]> {
       const { data, error } = await requerirCliente()
         .from('solicitudes')

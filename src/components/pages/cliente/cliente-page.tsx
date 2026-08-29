@@ -1,4 +1,4 @@
-import { ClipboardCheck, FilePlus2, FolderOpen, MessageSquare } from 'lucide-react'
+﻿import { ClipboardCheck, FilePlus2, FolderOpen, MessageSquare, ShieldCheck } from 'lucide-react'
 import { Suspense, useState } from 'react'
 import { Outlet, useLocation, useNavigate, useOutletContext } from 'react-router-dom'
 import { Badge } from '@/components/atoms/badge'
@@ -6,9 +6,11 @@ import { Button } from '@/components/atoms/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/atoms/tabs'
 import { CargandoRuta } from '@/components/molecules/cargando-ruta'
 import { PageHeader } from '@/components/molecules/page-header'
+import { DisclosurePanel } from '@/components/molecules/disclosure-panel'
 import { ClientValidationForm } from '@/components/organisms/client-validation-form'
 import { ClientTracking } from '@/components/organisms/client-tracking'
 import { ClientDocumentsManager } from '@/components/organisms/client-documents-manager'
+import { RequestServiceFollowUp } from '@/components/organisms/request-service-follow-up'
 import { SolicitantePage } from '@/components/pages/solicitante/solicitante-page'
 import { useSolicitudesCliente } from '@/features/cliente/hooks/use-cliente'
 import type { SolicitudCliente } from '@/features/cliente/types/cliente.types'
@@ -81,7 +83,7 @@ export function ClienteSolicitudesRoute() {
 
 export function ClienteDocumentosRoute() {
   const { clienteId } = useOutletContext<ClienteRouteContext>()
-  return <ClientDocumentsManager clienteId={clienteId} clienteNombre="Mi organización" canUpload />
+  return <ClientDocumentsManager clienteId={clienteId} clienteNombre="Mi organizaciÃ³n" canUpload />
 }
 
 export function ClienteTrackingRoute() {
@@ -115,8 +117,8 @@ function ValidacionesCliente({
     <section className="space-y-6">
       <div>
         <PageHeader
-          title="Validación de servicios"
-          description="Indique su satisfacción o comentarios para completar el cierre."
+          title="ValidaciÃ³n de servicios"
+          description="Indique su satisfacciÃ³n o comentarios para completar el cierre."
         />
       </div>
       {solicitudes.error && (
@@ -142,12 +144,21 @@ function ValidacionesCliente({
               <Badge>{solicitud.estado}</Badge>
             </div>
             <p className="mt-3 text-sm text-muted-foreground">
-              Operador: {solicitud.operador?.nombre_completo ?? '—'}
+              Operador: {solicitud.operador?.nombre_completo ?? 'â€”'}
             </p>
+            <div className="mt-4">
+              <DisclosurePanel
+                icon={ShieldCheck}
+                title="Garantía, llegada y equipo"
+                description="Consulte la llegada, las personas asignadas o solicite atención por garantía."
+              >
+                <RequestServiceFollowUp solicitudId={solicitud.id} modo="cliente" />
+              </DisclosurePanel>
+            </div>{' '}
             {solicitud.validacion ? (
               <div className="mt-4 rounded-md bg-success-soft p-3 text-sm text-success-soft-foreground">
                 <p className="font-medium">
-                  Validación enviada:{' '}
+                  ValidaciÃ³n enviada:{' '}
                   {solicitud.validacion.satisfecho ? 'Satisfecho' : 'No satisfecho'}
                 </p>
                 {solicitud.validacion.comentario && (
@@ -157,7 +168,7 @@ function ValidacionesCliente({
             ) : solicitud.estado === 'atendida' ? (
               <Button className="mt-4" onClick={() => setSeleccionada(solicitud)}>
                 <MessageSquare className="mr-2 size-4" />
-                Validar atención
+                Validar atenciÃ³n
               </Button>
             ) : (
               <p className="mt-4 text-sm text-muted-foreground">Solicitud cerrada.</p>
@@ -167,7 +178,7 @@ function ValidacionesCliente({
       </div>
       {!solicitudes.isLoading && !solicitudes.data?.length && (
         <p className="rounded-lg border bg-card p-6 text-center text-sm text-muted-foreground">
-          No hay servicios pendientes de validación.
+          No hay servicios pendientes de validaciÃ³n.
         </p>
       )}
     </section>

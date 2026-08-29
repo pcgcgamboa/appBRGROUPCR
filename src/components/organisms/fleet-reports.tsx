@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react'
+﻿import { useMemo, useState } from 'react'
 import { Select } from '@/components/atoms/select'
 import { useReporteFlota } from '@/features/flota/hooks/use-flota'
 import { normalizarError } from '@/lib/errores'
 
-const dinero = (n: number) => `₡${Number(n).toLocaleString('es-CR', { maximumFractionDigits: 2 })}`
+const dinero = (n: number) =>
+  `â‚¡${Number(n).toLocaleString('es-CR', { maximumFractionDigits: 2 })}`
 export function FleetReports() {
   const reporte = useReporteFlota()
   const [vehiculo, setVehiculo] = useState('')
@@ -21,21 +22,22 @@ export function FleetReports() {
       </p>
     )
   if (!reporte.data)
-    return <p className="text-sm text-muted-foreground">Preparando reportes de flota…</p>
+    return <p className="text-sm text-muted-foreground">Preparando reportes de flotaâ€¦</p>
   return (
     <section className="space-y-5">
       <div>
         <h2 className="text-xl font-semibold">Control de rutas y flota</h2>
         <p className="text-sm text-muted-foreground">
-          Kilometraje, costos operativos, gastos independientes y depreciación lineal acumulada.
+          Kilometraje, costos operativos, gastos independientes y depreciaciÃ³n lineal acumulada.
         </p>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {[
           ['Rutas', reporte.data.totales.rutas],
-          ['Kilómetros', Number(reporte.data.totales.kilometros).toLocaleString('es-CR')],
+          ['KilÃ³metros', Number(reporte.data.totales.kilometros).toLocaleString('es-CR')],
           ['Gasto en rutas', dinero(reporte.data.totales.gasto_operativo)],
           ['Gasto de flota', dinero(reporte.data.totales.gasto_flota)],
+          ['Viáticos', dinero(reporte.data.totales.viaticos)],
         ].map(([l, v]) => (
           <div key={l} className="rounded-lg border bg-card p-4 shadow-sm">
             <p className="text-sm text-muted-foreground">{l}</p>
@@ -53,16 +55,17 @@ export function FleetReports() {
               <th>Estado</th>
               <th>Responsable</th>
               <th>Solicitudes</th>
-              <th>Vehículos</th>
+              <th>VehÃ­culos</th>
               <th>Km</th>
-              <th>Gastos</th>
+              <th>Viáticos</th>
+              <th>Gastos totales</th>
             </tr>
           </thead>
           <tbody>
             {reporte.data.rutas.map((r) => (
               <tr key={r.id} className="border-t">
                 <td className="py-2">
-                  {r.codigo} · {r.nombre}
+                  {r.codigo} Â· {r.nombre}
                 </td>
                 <td>{r.fecha}</td>
                 <td>{r.estado}</td>
@@ -70,6 +73,7 @@ export function FleetReports() {
                 <td>{r.solicitudes}</td>
                 <td>{r.vehiculos}</td>
                 <td>{r.kilometros}</td>
+                <td>{dinero(r.viaticos)}</td>
                 <td>{dinero(r.gastos)}</td>
               </tr>
             ))}
@@ -78,16 +82,16 @@ export function FleetReports() {
       </div>
       <div className="overflow-x-auto rounded-lg border bg-card p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-          <h3 className="font-semibold">Informe por vehículo</h3>
+          <h3 className="font-semibold">Informe por vehÃ­culo</h3>
           <Select
             className="max-w-xs"
             value={vehiculo}
             onChange={(e) => setVehiculo(e.target.value)}
           >
-            <option value="">Todos los vehículos</option>
+            <option value="">Todos los vehÃ­culos</option>
             {reporte.data.vehiculos.map((v) => (
               <option key={v.id} value={v.id}>
-                {v.placa} · {v.tipo}
+                {v.placa} Â· {v.tipo}
               </option>
             ))}
           </Select>
@@ -95,12 +99,12 @@ export function FleetReports() {
         <table className="w-full min-w-[760px] text-left text-sm">
           <thead>
             <tr>
-              <th className="py-2">Vehículo</th>
+              <th className="py-2">VehÃ­culo</th>
               <th>Estado</th>
               <th>Km</th>
               <th>Gasto rutas</th>
               <th>Gasto flota</th>
-              <th>Depreciación acumulada</th>
+              <th>DepreciaciÃ³n acumulada</th>
               <th>Costo total controlado</th>
             </tr>
           </thead>
@@ -108,7 +112,7 @@ export function FleetReports() {
             {filas.map((v) => (
               <tr key={v.id} className="border-t">
                 <td className="py-2">
-                  {v.placa} · {v.tipo}
+                  {v.placa} Â· {v.tipo}
                 </td>
                 <td>{v.estado}</td>
                 <td>{v.kilometros}</td>

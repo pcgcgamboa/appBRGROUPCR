@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+﻿import type { SupabaseClient } from '@supabase/supabase-js'
 import type { FlotaRepository } from '@/features/flota/ports/flota-repository'
 import type {
   ActividadRuta,
@@ -11,20 +11,23 @@ import type {
   ResponsableRuta,
   RutaProceso,
   RutaProcesoInput,
+  RutaGasto,
+  RutaGastoInput,
   SubirFotosVehiculoInput,
 } from '@/features/flota/types/flota.types'
 
 /**
- * Adaptador concreto de `FlotaRepository` sobre supabase-js. Cada método
- * verifica que el cliente esté configurado (`client` puede ser `null` cuando
- * las variables de entorno de Supabase no están presentes) para no romper el
- * arranque de la app — el chequeo se hace por método, no al construir la
- * instancia, replicando el patrón `if (!supabase) throw ...` que ya usaban
+ * Adaptador concreto de `FlotaRepository` sobre supabase-js. Cada mÃ©todo
+ * verifica que el cliente estÃ© configurado (`client` puede ser
+ull` cuando
+ * las variables de entorno de Supabase no estÃ¡n presentes) para no romper el
+ * arranque de la app â€” el chequeo se hace por mÃ©todo, no al construir la
+ * instancia, replicando el patrÃ³n `if (!supabase) throw ...` que ya usaban
  * los hooks.
  */
 export function createSupabaseFlotaRepository(client: SupabaseClient | null): FlotaRepository {
   function requerirCliente(): SupabaseClient {
-    if (!client) throw new Error('Supabase no está configurado.')
+    if (!client) throw new Error('Supabase no estÃ¡ configurado.')
     return client
   }
 
@@ -33,7 +36,7 @@ export function createSupabaseFlotaRepository(client: SupabaseClient | null): Fl
       const { data, error } = await requerirCliente()
         .from('rutas_proceso')
         .select(
-          'id,codigo,nombre,descripcion,fecha_programada,estado,responsable_id,responsable:usuarios!rutas_proceso_responsable_id_fkey(nombre_completo),ruta_solicitudes(solicitud_id,orden,solicitud:solicitudes(numero,nombre)),ruta_vehiculos(vehiculo_id,es_principal,vehiculo:vehiculos(placa,tipo,kilometraje_actual))',
+          'id,codigo,nombre,descripcion,fecha_programada,estado,responsable_id,responsable:usuarios!rutas_proceso_responsable_id_fkey(nombre_completo),ruta_solicitudes(solicitud_id,orden,solicitud:solicitudes(numero,nombre)),ruta_vehiculos(vehiculo_id,es_principal,vehiculo:vehiculos(placa,tipo,kilometraje_actual)),ruta_participantes(usuario_id,viatico,detalle_viatico,usuario:usuarios(nombre_completo))',
         )
         .order('fecha_programada', { ascending: false })
       if (error) throw error
@@ -62,15 +65,39 @@ export function createSupabaseFlotaRepository(client: SupabaseClient | null): Fl
         p_responsable_id: input.responsable_id,
         p_solicitudes: input.solicitudes,
         p_vehiculos: input.vehiculos,
+        p_participantes: input.participantes,
       })
       if (error) throw error
       return data as string
     },
 
-    async registrarMovimientoVehiculo(input: MovimientoVehiculoInput): Promise<void> {
+    async gastosRuta(rutaId: string): Promise<RutaGasto[]> {
+      const { data, error } = await requerirCliente()
+        .from('ruta_gastos')
+        .select(
+          'id,ruta_id,participante_id,concepto,monto,fecha,detalle,participante:usuarios(nombre_completo)',
+        )
+        .eq('ruta_id', rutaId)
+        .order('fecha', { ascending: false })
+        .order('creado_en', { ascending: false })
+      if (error) throw error
+      return data as unknown as RutaGasto[]
+    },
+
+    async registrarGastoRuta(input: RutaGastoInput): Promise<void> {
       const supabase = requerirCliente()
       const { data: auth } = await supabase.auth.getUser()
       if (!auth.user) throw new Error('Sesión no válida.')
+      const { error } = await supabase.from('ruta_gastos').insert({
+        ...input,
+        registrado_por: auth.user.id,
+      })
+      if (error) throw error
+    },
+    async registrarMovimientoVehiculo(input: MovimientoVehiculoInput): Promise<void> {
+      const supabase = requerirCliente()
+      const { data: auth } = await supabase.auth.getUser()
+      if (!auth.user) throw new Error('SesiÃ³n no vÃ¡lida.')
       const { error } = await supabase
         .from('ruta_movimientos_vehiculo')
         .insert({ ...input, registrado_por: auth.user.id })
@@ -102,7 +129,7 @@ export function createSupabaseFlotaRepository(client: SupabaseClient | null): Fl
     }: SubirFotosVehiculoInput): Promise<void> {
       const supabase = requerirCliente()
       const { data: auth } = await supabase.auth.getUser()
-      if (!auth.user) throw new Error('Sesión no válida.')
+      if (!auth.user) throw new Error('SesiÃ³n no vÃ¡lida.')
       for (const archivo of archivos) {
         const extension = archivo.name.split('.').pop()?.toLowerCase() || 'jpg'
         const ruta = `${vehiculoId}/${crypto.randomUUID()}.${extension}`
@@ -178,7 +205,7 @@ export function createSupabaseFlotaRepository(client: SupabaseClient | null): Fl
     async registrarGestionVehiculo(input: GestionVehiculoInput): Promise<void> {
       const supabase = requerirCliente()
       const { data: auth } = await supabase.auth.getUser()
-      if (!auth.user) throw new Error('Sesión no válida.')
+      if (!auth.user) throw new Error('SesiÃ³n no vÃ¡lida.')
       if (input.clase === 'indisponibilidad') {
         const { error } = await supabase.from('vehiculo_indisponibilidades').insert({
           vehiculo_id: input.vehiculo_id,

@@ -1,4 +1,4 @@
-import {
+﻿import {
   History,
   List,
   ListChecks,
@@ -7,6 +7,7 @@ import {
   Package,
   Plus,
   Settings2,
+  ShieldCheck,
   Users,
   X,
 } from 'lucide-react'
@@ -37,6 +38,7 @@ import { RequestGeneralDataForm } from '@/components/organisms/request-general-d
 import { RequestMaterials } from '@/components/organisms/request-materials'
 import { RequestTimeline } from '@/components/organisms/request-timeline'
 import { RequestCommunications } from '@/components/organisms/request-communications'
+import { RequestServiceFollowUp } from '@/components/organisms/request-service-follow-up'
 
 function normalizarBusqueda(value: string) {
   return value
@@ -137,7 +139,7 @@ export function BandejaEncargadoPage() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <PageHeader
           title="Bandeja de solicitudes"
-          description="Revise, priorice, asigne y controle el flujo de atención."
+          description="Revise, priorice, asigne y controle el flujo de atenciÃ³n."
         />
         <div className="flex flex-wrap gap-2">
           <div
@@ -199,13 +201,13 @@ export function BandejaEncargadoPage() {
             variant="management"
             icon={Settings2}
             title={`Gestionar #${seleccionada.numero}: ${seleccionada.nombre}`}
-            description="Actualice la solicitud, su asignación, estado y recursos asociados."
+            description="Actualice la solicitud, su asignaciÃ³n, estado y recursos asociados."
             actions={
               <Button
                 variant="outline"
                 size="icon"
                 onClick={() => setSeleccionada(null)}
-                aria-label="Cerrar panel de modificación"
+                aria-label="Cerrar panel de modificaciÃ³n"
                 title="Cerrar panel"
               >
                 <X className="size-4" />
@@ -213,6 +215,25 @@ export function BandejaEncargadoPage() {
             }
           >
             {' '}
+            <div className="mb-4 rounded-lg border bg-muted/30 p-4 text-sm">
+              <p className="font-semibold">Ubicación de atención</p>
+              <p>
+                {seleccionada.ubicacion
+                  ? `${seleccionada.ubicacion.nombre} · ${seleccionada.ubicacion.distrito}, ${seleccionada.ubicacion.canton}, ${seleccionada.ubicacion.provincia}`
+                  : 'Ubicación no disponible'}
+              </p>
+              {seleccionada.ubicacion?.latitud != null &&
+                seleccionada.ubicacion.longitud != null && (
+                  <a
+                    className="mt-2 inline-block font-medium text-primary hover:underline"
+                    href={`https://www.google.com/maps?q=${seleccionada.ubicacion.latitud},${seleccionada.ubicacion.longitud}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Consultar en el mapa
+                  </a>
+                )}
+            </div>{' '}
             <RequestGeneralDataForm
               solicitud={seleccionada}
               operadorNombre={seleccionada.operador?.nombre_completo}
@@ -222,7 +243,7 @@ export function BandejaEncargadoPage() {
               <div className="mt-4 space-y-3 rounded-xl border border-warning/30 bg-warning-soft p-4">
                 <div>
                   <p className="font-semibold text-warning-soft-foreground">
-                    Solicitud de {peticionPendiente.tipo === 'cierre' ? 'cierre' : 'cancelación'}{' '}
+                    Solicitud de {peticionPendiente.tipo === 'cierre' ? 'cierre' : 'cancelaciÃ³n'}{' '}
                     del Operador
                   </p>
                   <p className="mt-1 text-sm text-warning-soft-foreground">
@@ -231,7 +252,7 @@ export function BandejaEncargadoPage() {
                 </div>
                 <Textarea
                   value={comentarioPeticion}
-                  placeholder="Comentario de la decisión (obligatorio al rechazar)"
+                  placeholder="Comentario de la decisiÃ³n (obligatorio al rechazar)"
                   onChange={(event) => setComentarioPeticion(event.target.value)}
                 />
                 <div className="flex flex-wrap gap-2">
@@ -247,7 +268,7 @@ export function BandejaEncargadoPage() {
                       })
                     }
                   >
-                    Aprobar petición
+                    Aprobar peticiÃ³n
                   </Button>
                   <Button
                     variant="outline"
@@ -263,12 +284,12 @@ export function BandejaEncargadoPage() {
                       })
                     }
                   >
-                    Rechazar petición
+                    Rechazar peticiÃ³n
                   </Button>
                 </div>
                 {peticionPendiente.tipo === 'cierre' && !seleccionada.validacion && (
                   <p className="text-xs text-warning-soft-foreground">
-                    El cierre solo podrá aprobarse después de la validación del Cliente.
+                    El cierre solo podrÃ¡ aprobarse despuÃ©s de la validaciÃ³n del Cliente.
                   </p>
                 )}
               </div>
@@ -281,7 +302,7 @@ export function BandejaEncargadoPage() {
                     value={operadorId}
                     onChange={(event) => setOperadorId(event.target.value)}
                   >
-                    <option value="">Seleccione…</option>
+                    <option value="">Seleccioneâ€¦</option>
                     {operadores.data?.map((operador) => (
                       <option key={operador.id} value={operador.id}>
                         {operador.nombre_completo}
@@ -326,7 +347,7 @@ export function BandejaEncargadoPage() {
                     value={operadorId}
                     onChange={(event) => setOperadorId(event.target.value)}
                   >
-                    <option value="">Seleccione…</option>
+                    <option value="">Seleccioneâ€¦</option>
                     {operadores.data?.map((operador) => (
                       <option key={operador.id} value={operador.id}>
                         {operador.nombre_completo}
@@ -348,7 +369,7 @@ export function BandejaEncargadoPage() {
                   >
                     {seleccionada.estado === 'creada'
                       ? 'Asignar solicitud'
-                      : 'Guardar reasignación'}
+                      : 'Guardar reasignaciÃ³n'}
                   </Button>
                   {seleccionada.estado === 'creada' && (
                     <Button
@@ -394,7 +415,7 @@ export function BandejaEncargadoPage() {
               <div className="mt-4 grid gap-4">
                 {seleccionada.estado === 'atendida' && !seleccionada.validacion && (
                   <p className="rounded-md bg-warning-soft p-3 text-sm text-warning-soft-foreground">
-                    El Cliente debe validar la atención antes de habilitar el cierre.
+                    El Cliente debe validar la atenciÃ³n antes de habilitar el cierre.
                   </p>
                 )}
                 <label className="grid gap-2 text-sm font-medium">
@@ -412,7 +433,7 @@ export function BandejaEncargadoPage() {
                 </label>
                 {estado === 'cancelada' && (
                   <Textarea
-                    placeholder="Motivo de cancelación"
+                    placeholder="Motivo de cancelaciÃ³n"
                     value={motivo}
                     onChange={(event) => setMotivo(event.target.value)}
                   />
@@ -434,7 +455,7 @@ export function BandejaEncargadoPage() {
               </div>
             ) : seleccionada.estado === 'atendida' && !seleccionada.validacion ? (
               <p className="mt-4 rounded-md bg-warning-soft p-3 text-sm text-warning-soft-foreground">
-                El Cliente debe validar la atención antes del cierre.
+                El Cliente debe validar la atenciÃ³n antes del cierre.
               </p>
             ) : (
               <p className="mt-4 text-sm text-muted-foreground">
@@ -442,31 +463,38 @@ export function BandejaEncargadoPage() {
               </p>
             )}
             <div className="mt-6 space-y-3">
-              <h3 className="text-sm font-semibold">Información complementaria</h3>
+              <h3 className="text-sm font-semibold">InformaciÃ³n complementaria</h3>
               <p className="text-xs text-muted-foreground">
-                Abra únicamente la sección que necesite consultar o actualizar.
+                Abra Ãºnicamente la secciÃ³n que necesite consultar o actualizar.
               </p>
               <DisclosurePanel
                 icon={Package}
-                title="Materiales asociados"
+                title="Inventario asociado"
                 description="Consulte o registre materiales utilizados en la solicitud."
               >
                 <RequestMaterials solicitudId={seleccionada.id} />
               </DisclosurePanel>
               <DisclosurePanel
                 icon={Users}
-                title="Técnicos de la solicitud"
-                description="Consulte y administre el personal técnico relacionado."
+                title="TÃ©cnicos de la solicitud"
+                description="Consulte y administre el personal tÃ©cnico relacionado."
               >
                 <RequestTechnicians solicitudId={seleccionada.id} />
               </DisclosurePanel>
               <DisclosurePanel
                 icon={MessageSquare}
-                title="Comunicación con el cliente"
-                description="Envíe mensajes, adjuntos o proformas relacionados con la solicitud."
+                title="ComunicaciÃ³n con el cliente"
+                description="EnvÃ­e mensajes, adjuntos o proformas relacionados con la solicitud."
               >
                 <RequestCommunications solicitudId={seleccionada.id} />
               </DisclosurePanel>
+              <DisclosurePanel
+                icon={ShieldCheck}
+                title="Garantía, llegada y equipo"
+                description="Gestione la garantía e informe al cliente la llegada y las personas asignadas."
+              >
+                <RequestServiceFollowUp solicitudId={seleccionada.id} modo="gestor" />
+              </DisclosurePanel>{' '}
               <DisclosurePanel
                 icon={History}
                 title="Tracking de la solicitud"
@@ -493,13 +521,13 @@ export function BandejaEncargadoPage() {
         variant="list"
         icon={ListChecks}
         title="Listado de solicitudes"
-        description="Busque y seleccione una solicitud para abrir su panel de gestión."
+        description="Busque y seleccione una solicitud para abrir su panel de gestiÃ³n."
         actions={<Badge variant="default">{ordenadas.length} solicitudes</Badge>}
       >
         <div className="grid gap-3 rounded-lg border bg-card p-4 md:grid-cols-[minmax(220px,1fr)_180px_180px]">
           <Input
             type="search"
-            placeholder="Buscar solicitud, Cliente, solicitante u operador…"
+            placeholder="Buscar solicitud, Cliente, solicitante u operadorâ€¦"
             value={search}
             onChange={(e) => {
               setSearch(e.target.value)
@@ -517,7 +545,7 @@ export function BandejaEncargadoPage() {
             <option value="todas">Todos los estados</option>
             <option value="creada">Creadas</option>
             <option value="asignada">Asignadas</option>
-            <option value="en_atencion">En atención</option>
+            <option value="en_atencion">En atenciÃ³n</option>
             <option value="atendida">Atendidas</option>
             <option value="cerrada">Cerradas</option>
             <option value="cancelada">Canceladas</option>
@@ -529,7 +557,7 @@ export function BandejaEncargadoPage() {
               setPage(1)
             }}
           >
-            <option value="recientes">Más recientes</option>
+            <option value="recientes">MÃ¡s recientes</option>
             <option value="prioridad">Mayor prioridad</option>
           </Select>
         </div>
@@ -540,7 +568,7 @@ export function BandejaEncargadoPage() {
             <table className="w-full min-w-[900px] text-left text-sm">
               <thead className="bg-muted text-muted-foreground">
                 <tr>
-                  <th className="px-4 py-3">Número</th>
+                  <th className="px-4 py-3">NÃºmero</th>
                   <th className="px-4 py-3">Solicitud</th>
                   <th className="px-4 py-3">Cliente</th>
                   <th className="px-4 py-3">Prioridad</th>
@@ -584,7 +612,7 @@ export function BandejaEncargadoPage() {
                         <div>{item.estado.replace(/_/g, ' ')}</div>
                         {item.peticiones.some((peticion) => peticion.estado === 'pendiente') && (
                           <Badge variant="warning" className="mt-1">
-                            Petición pendiente
+                            PeticiÃ³n pendiente
                           </Badge>
                         )}
                       </td>

@@ -1,10 +1,11 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+﻿import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { flotaRepository } from '@/features/flota/lib/repository'
 import type {
   FotoVehiculo,
   GestionVehiculoInput,
   MovimientoVehiculoInput,
   RutaProcesoInput,
+  RutaGastoInput,
   SubirFotosVehiculoInput,
 } from '@/features/flota/types/flota.types'
 
@@ -95,6 +96,26 @@ export function useRegistrarGestionVehiculo() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['historial-vehiculos'] })
       void queryClient.invalidateQueries({ queryKey: ['catalogo', 'vehiculos'] })
+      void queryClient.invalidateQueries({ queryKey: ['reporte-flota'] })
+    },
+  })
+}
+
+export function useGastosRuta(rutaId: string | null) {
+  return useQuery({
+    queryKey: ['gastos-ruta', rutaId],
+    enabled: Boolean(rutaId),
+    queryFn: () => flotaRepository.gastosRuta(rutaId!),
+  })
+}
+
+export function useRegistrarGastoRuta() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: RutaGastoInput) => flotaRepository.registrarGastoRuta(input),
+    onSuccess: (_, input) => {
+      void queryClient.invalidateQueries({ queryKey: ['gastos-ruta', input.ruta_id] })
+      void queryClient.invalidateQueries({ queryKey: ['tracking-ruta', input.ruta_id] })
       void queryClient.invalidateQueries({ queryKey: ['reporte-flota'] })
     },
   })

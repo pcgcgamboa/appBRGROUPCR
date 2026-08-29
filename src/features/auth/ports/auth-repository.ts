@@ -1,4 +1,4 @@
-import type { Session } from '@supabase/supabase-js'
+﻿import type { Session } from '@supabase/supabase-js'
 import type { PerfilActual } from '@/features/auth/types/auth.types'
 
 /**
@@ -14,4 +14,5 @@ export interface AuthRepository {
   iniciarSesion(email: string, password: string): Promise<void>
   cerrarSesion(): Promise<void>
   obtenerPerfil(usuarioId: string): Promise<PerfilActual>
+  actualizarFoto(usuarioId: string, archivo: File): Promise<string>
 }
