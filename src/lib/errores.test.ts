@@ -12,7 +12,7 @@ describe('normalizarError', () => {
     expect(
       normalizarError(new Error('A user with this email address has already been registered'), 'es')
         .mensaje,
-    ).toBe('Ya existe un usuario registrado con esta dirección de correo electrónico.')
+    ).toBe('Ya existe un usuario registrado con esta cuenta.')
   })
 
   it('extrae message y code de un objeto con forma de PostgrestError', () => {

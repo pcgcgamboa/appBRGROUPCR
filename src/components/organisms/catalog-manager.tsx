@@ -181,7 +181,12 @@ export function CatalogManager<T extends EntidadBase>({
         fields.map((field) => {
           const visible =
             !field.visibleWhen || values[field.visibleWhen.field] === field.visibleWhen.equals
-          if (!visible) return [field.name, null]
+          // Un campo oculto por `visibleWhen` no necesariamente corresponde a una columna nullable
+          // en la base de datos (p. ej. `tipo_costo` de materiales es `not null default 'fijo'` y
+          // solo se muestra para categoría "producto_proveedor") — enviar `null` a ciegas viola esa
+          // restricción en vez de dejar que el default de la columna aplique. Si `defaultValues` ya
+          // trae un valor para este campo, se respeta; si no, se mantiene el `null` de siempre.
+          if (!visible) return [field.name, defaultValues?.[field.name] ?? null]
           const value = values[field.name]
           if (field.type === 'number') return [field.name, value === '' ? null : Number(value)]
           if (!field.required && value === '') return [field.name, null]

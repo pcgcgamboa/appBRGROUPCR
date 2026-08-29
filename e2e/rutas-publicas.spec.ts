@@ -24,6 +24,10 @@ test.describe('rutas públicas', () => {
       page.getByRole('heading', { name: 'Únase a nuestra red de técnicos' }),
     ).toBeVisible()
     await expect(page.getByText('Nombre completo')).toBeVisible()
-    await expect(page.getByLabel('Identificación')).toBeVisible()
+    // getByLabel('Identificación') es ambiguo: además del campo de texto, el adjunto de
+    // documento "Cédula" describe su propósito como "...ambos lados de la identificación",
+    // y por defecto el matcher de Playwright hace substring case-insensitive — se acota al
+    // campo de texto explícitamente para no depender del texto descriptivo del adjunto.
+    await expect(page.getByRole('textbox', { name: 'Identificación' })).toBeVisible()
   })
 })
