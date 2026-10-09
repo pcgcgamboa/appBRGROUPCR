@@ -52,7 +52,7 @@ export function MarcaPage() {
     <section className="mx-auto max-w-4xl space-y-6">
       <PageHeader
         title="Marca e identidad visual"
-        description="Personalice el logotipo del acceso y el Ã­cono utilizado en la interfaz."
+        description="Personalice el logotipo del acceso y el ícono utilizado en la interfaz."
       />
       <form
         onSubmit={guardar}
@@ -62,15 +62,15 @@ export function MarcaPage() {
           <SelectorImagen
             id="logo-marca"
             title="Logotipo del login"
-            help="Formato horizontal recomendado. PNG, JPG, WebP o SVG; mÃ¡ximo 5 MB."
+            help="Formato horizontal recomendado. PNG, JPG, WebP o SVG; máximo 5 MB."
             src={logoVista ?? marca.data?.logo_url}
             className="h-36 w-full"
             onChange={(event) => seleccionar(event, setLogo, setLogoVista)}
           />
           <SelectorImagen
             id="icono-marca"
-            title="Ãcono de la interfaz"
-            help="Formato cuadrado recomendado. PNG, JPG, WebP o SVG; mÃ¡ximo 5 MB."
+            title="Ícono de la interfaz"
+            help="Formato cuadrado recomendado. PNG, JPG, WebP o SVG; máximo 5 MB."
             src={iconoVista ?? marca.data?.icono_url}
             className="mx-auto size-36"
             onChange={(event) => seleccionar(event, setIcono, setIconoVista)}
@@ -89,12 +89,12 @@ export function MarcaPage() {
             role="status"
             className="rounded-lg bg-success-soft p-3 text-sm text-success-soft-foreground"
           >
-            La identidad visual se actualizÃ³ correctamente.
+            La identidad visual se actualizó correctamente.
           </p>
         )}
         <Button type="submit" disabled={actualizar.isPending || (!logo && !icono)}>
           <Upload className="mr-2 size-4" />
-          {actualizar.isPending ? 'Guardandoâ€¦' : 'Guardar cambios'}
+          {actualizar.isPending ? 'Guardando…' : 'Guardar cambios'}
         </Button>
       </form>
       <WarrantySettings />

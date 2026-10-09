@@ -11,7 +11,7 @@ import type { PerfilActual } from '@/features/auth/types/auth.types'
 export interface AuthRepository {
   obtenerSesion(): Promise<Session | null>
   suscribirCambiosSesion(callback: (session: Session | null) => void): () => void
-  iniciarSesion(email: string, password: string): Promise<void>
+  iniciarSesion(cuenta: string, password: string): Promise<void>
   cerrarSesion(): Promise<void>
   obtenerPerfil(usuarioId: string): Promise<PerfilActual>
   actualizarFoto(usuarioId: string, archivo: File): Promise<string>

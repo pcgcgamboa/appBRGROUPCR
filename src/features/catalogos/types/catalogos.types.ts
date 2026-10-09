@@ -28,6 +28,17 @@ export interface TipoSolicitud extends EntidadBase {
   id: string
   nombre: string
   descripcion: string | null
+  es_garantia: boolean
+  activo: boolean
+}
+
+export interface EquipoCliente extends EntidadBase {
+  id: string
+  cliente_id: string
+  nombre: string
+  marca: string | null
+  modelo: string | null
+  serie: string | null
   activo: boolean
 }
 
@@ -92,6 +103,15 @@ export interface Proveedor extends EntidadBase {
   distrito: string
   direccion: string | null
   activo: boolean
+}
+
+export interface PlantillaReporte {
+  cliente_id: string
+  incluir_motivo_visita: boolean
+  incluir_checklist_condiciones: boolean
+  incluir_fotos_categorizadas: boolean
+  incluir_recomendaciones: boolean
+  categorias_fotos_habilitadas: string[]
 }
 
 export type ValorFormulario = string | number | boolean | null

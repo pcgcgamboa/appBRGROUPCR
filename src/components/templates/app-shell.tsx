@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
 import { LanguageSwitcher } from '@/components/molecules/language-switcher'
 import { AccountMenu } from '@/components/molecules/account-menu'
+import { InternalMessagesButton } from '@/components/molecules/internal-messages-button'
 import { useMarca } from '@/features/configuracion/hooks/use-marca'
 import { useI18n } from '@/lib/i18n'
 
@@ -30,6 +31,7 @@ export function AppShell() {
             <span className="truncate">{t('appName')}</span>
           </div>
           <div className="flex items-center gap-2">
+            <InternalMessagesButton />
             <LanguageSwitcher />
             <AccountMenu />
           </div>

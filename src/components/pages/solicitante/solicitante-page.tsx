@@ -6,8 +6,21 @@ import { Skeleton } from '@/components/atoms/skeleton'
 import { PageHeader } from '@/components/molecules/page-header'
 import { RequestCommunications } from '@/components/organisms/request-communications'
 import { SolicitudForm } from '@/components/organisms/solicitud-form'
+import { ThOrdenable } from '@/components/atoms/th-ordenable'
 import { useMisSolicitudes } from '@/features/solicitudes/hooks/use-mis-solicitudes'
+import type { MiSolicitud } from '@/features/solicitudes/types/solicitudes.types'
+import { useOrdenamiento } from '@/hooks/use-ordenamiento'
 import { normalizarError } from '@/lib/errores'
+
+// Fuera del componente: referencia estable entre renders — evita que useOrdenamiento reconstruya
+// su lógica interna en cada tecla/clic (ver el mismo arreglo en bandeja-encargado-page.tsx).
+const accesoresOrdenamiento = {
+  numero: (item: MiSolicitud) => item.numero,
+  solicitud: (item: MiSolicitud) => item.nombre,
+  tipo: (item: MiSolicitud) => item.tipo?.nombre ?? null,
+  estado: (item: MiSolicitud) => item.estado,
+  prioridad: (item: MiSolicitud) => item.prioridad,
+}
 
 export function SolicitantePage({
   usuarioId,
@@ -19,6 +32,12 @@ export function SolicitantePage({
   const solicitudes = useMisSolicitudes(usuarioId)
   const [creando, setCreando] = useState(false)
   const [comunicacionId, setComunicacionId] = useState<string | null>(null)
+  const {
+    datosOrdenados: solicitudesOrdenadas,
+    columnaActiva,
+    direccion,
+    ordenarPor,
+  } = useOrdenamiento(solicitudes.data ?? [], accesoresOrdenamiento)
   if (!clienteId)
     return (
       <p
@@ -68,11 +87,26 @@ export function SolicitantePage({
         <table className="w-full min-w-[760px] text-left text-sm">
           <thead className="bg-muted text-muted-foreground">
             <tr>
-              <th className="px-4 py-3">Número</th>
-              <th className="px-4 py-3">Solicitud</th>
-              <th className="px-4 py-3">Tipo</th>
-              <th className="px-4 py-3">Estado</th>
-              <th className="px-4 py-3">Prioridad</th>
+              {(
+                [
+                  ['numero', 'Número'],
+                  ['solicitud', 'Solicitud'],
+                  ['tipo', 'Tipo'],
+                  ['estado', 'Estado'],
+                  ['prioridad', 'Prioridad'],
+                ] as const
+              ).map(([columna, etiqueta]) => (
+                <ThOrdenable
+                  key={columna}
+                  columna={columna}
+                  ordenActual={columnaActiva}
+                  direccion={direccion}
+                  onOrdenar={ordenarPor}
+                  className="px-4 py-3"
+                >
+                  {etiqueta}
+                </ThOrdenable>
+              ))}
               <th className="px-4 py-3">Acciones</th>
             </tr>
           </thead>
@@ -87,8 +121,8 @@ export function SolicitantePage({
                   ))}
                 </tr>
               ))
-            ) : solicitudes.data?.length ? (
-              solicitudes.data.map((solicitud) => (
+            ) : solicitudesOrdenadas.length ? (
+              solicitudesOrdenadas.map((solicitud) => (
                 <tr key={solicitud.id} className="border-t transition-colors hover:bg-accent/50">
                   <td className="px-4 py-3">#{solicitud.numero}</td>
                   <td className="px-4 py-3 font-medium">{solicitud.nombre}</td>

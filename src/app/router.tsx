@@ -27,6 +27,9 @@ const ClientesPage = lazy(() =>
 const MarcaPage = lazy(() =>
   import('@/components/pages/admin/marca-page').then((m) => ({ default: m.MarcaPage })),
 )
+const CorreoPage = lazy(() =>
+  import('@/components/pages/admin/correo-page').then((m) => ({ default: m.CorreoPage })),
+)
 const MaterialesPage = lazy(() =>
   import('@/components/pages/admin/materiales-page').then((m) => ({
     default: m.MaterialesPage,
@@ -54,9 +57,9 @@ const BandejaEncargadoPage = lazy(() =>
     default: m.BandejaEncargadoPage,
   })),
 )
-const ControlRutasPage = lazy(() =>
-  import('@/components/pages/encargado/control-rutas-page').then((m) => ({
-    default: m.ControlRutasPage,
+const ProgramacionPage = lazy(() =>
+  import('@/components/pages/encargado/programacion-page').then((m) => ({
+    default: m.ProgramacionPage,
   })),
 )
 const EncargadoDashboardPage = lazy(() =>
@@ -232,7 +235,8 @@ export function AppRouter() {
                   element={<InicioOperacionesRoute rutaSolicitudes="/administrador/solicitudes" />}
                 />
                 <Route path="solicitudes" element={<BandejaEncargadoPage />} />
-                <Route path="rutas" element={<ControlRutasPage />} />
+                <Route path="programacion" element={<ProgramacionPage />} />
+                <Route path="rutas" element={<Navigate to="../programacion" replace />} />
                 <Route path="notificaciones" element={<NotificacionesPage />} />
                 <Route path="reportes" element={<ReportesPage />} />
                 <Route path="clientes" element={<ClientesPage />} />
@@ -243,6 +247,7 @@ export function AppRouter() {
                 <Route path="proveedores" element={<ProveedoresPage />} />
                 <Route path="roles" element={<RolesPage />} />
                 <Route path="marca" element={<MarcaPage />} />
+                <Route path="correo" element={<CorreoPage />} />
               </Route>
             </Route>
 
@@ -261,7 +266,8 @@ export function AppRouter() {
                   element={<InicioOperacionesRoute rutaSolicitudes="/encargado/solicitudes" />}
                 />
                 <Route path="solicitudes" element={<BandejaEncargadoPage />} />
-                <Route path="rutas" element={<ControlRutasPage />} />
+                <Route path="programacion" element={<ProgramacionPage />} />
+                <Route path="rutas" element={<Navigate to="../programacion" replace />} />
                 <Route path="notificaciones" element={<NotificacionesPage />} />
                 <Route path="reportes" element={<ReportesPage />} />
               </Route>

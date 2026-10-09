@@ -11,7 +11,7 @@ import { normalizarError } from '@/lib/errores'
 const nombresDocumento: Record<TipoDocumentoPostulacion, string> = {
   hoja_vida: 'Hoja de vida',
   hoja_delincuencia: 'Hoja de delincuencia',
-  cedula: 'CÃ©dula',
+  cedula: 'Cédula',
   fotografia: 'Fotografía',
 }
 
@@ -21,7 +21,7 @@ export function TechnicianApplications() {
 
   async function resolverPostulacion(id: string, aprobar: boolean) {
     const comentario =
-      window.prompt(aprobar ? 'Comentario de aprobaciÃ³n (opcional)' : 'Motivo del rechazo') ?? ''
+      window.prompt(aprobar ? 'Comentario de aprobación (opcional)' : 'Motivo del rechazo') ?? ''
     if (!aprobar && !comentario.trim()) throw new Error('Indique el motivo del rechazo.')
     await resolver.mutateAsync({ id, aprobar, comentario })
   }
@@ -33,7 +33,7 @@ export function TechnicianApplications() {
       <div>
         <h2 className="text-lg font-semibold">Postulaciones pendientes</h2>
         <p className="text-sm text-muted-foreground">
-          Revise la pretensiÃ³n salarial y los documentos antes de incorporar al candidato.
+          Revise la pretensión salarial y los documentos antes de incorporar al candidato.
         </p>
       </div>
       {error && (
@@ -51,7 +51,7 @@ export function TechnicianApplications() {
               <div>
                 <h3 className="font-semibold">{postulacion.nombre_completo}</h3>
                 <p className="text-sm">
-                  {postulacion.especialidad} Â· {postulacion.celular} Â·{' '}
+                  {postulacion.especialidad} · {postulacion.celular} ·{' '}
                   {postulacion.correo || 'Sin correo'}
                 </p>
                 <p className="text-sm text-muted-foreground">
@@ -59,7 +59,7 @@ export function TechnicianApplications() {
                 </p>
                 <p className="mt-2 text-sm">{postulacion.experiencia}</p>
                 <p className="mt-2 text-sm font-semibold text-primary">
-                  PretensiÃ³n salarial:{' '}
+                  Pretensión salarial:{' '}
                   {new Intl.NumberFormat('es-CR', {
                     style: 'currency',
                     currency: 'CRC',

@@ -1,11 +1,11 @@
-import { Bell, ChartPie, ClipboardList, MapPinned } from 'lucide-react'
+import { Bell, CalendarDays, ChartPie, ClipboardList } from 'lucide-react'
 import { Suspense } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { Tabs, TabsList, TabsTrigger } from '@/components/atoms/tabs'
 import { CargandoRuta } from '@/components/molecules/cargando-ruta'
 import { useCantidadNotificacionesPendientes } from '@/features/notificaciones/hooks/use-notificaciones-internas'
 
-type Seccion = 'home' | 'solicitudes' | 'rutas' | 'notificaciones' | 'reportes'
+type Seccion = 'home' | 'solicitudes' | 'programacion' | 'notificaciones' | 'reportes'
 
 export function EncargadoDashboardPage() {
   const location = useLocation()
@@ -30,9 +30,9 @@ export function EncargadoDashboardPage() {
           <ClipboardList className="mr-2 size-4" />
           Solicitudes
         </TabsTrigger>
-        <TabsTrigger value="rutas">
-          <MapPinned className="mr-2 size-4" />
-          Control de ruta
+        <TabsTrigger value="programacion">
+          <CalendarDays className="mr-2 size-4" />
+          Programación
         </TabsTrigger>
         <TabsTrigger value="notificaciones">
           <Bell className="mr-2 size-4" />

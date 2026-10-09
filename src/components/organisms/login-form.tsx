@@ -1,4 +1,4 @@
-import { zodResolver } from '@hookform/resolvers/zod'
+﻿import { zodResolver } from '@hookform/resolvers/zod'
 import { Eye, EyeOff, LoaderCircle, LockKeyhole } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -40,12 +40,12 @@ export function LoginForm() {
         <p className="mt-2 text-sm leading-6 text-muted-foreground">{t('loginPrompt')}</p>
       </div>
       <FormField
-        id="email"
-        label={t('email')}
-        type="email"
-        autoComplete="email"
-        error={errors.email?.message}
-        {...register('email')}
+        id="cuenta"
+        label={t('account')}
+        type="text"
+        autoComplete="username"
+        error={errors.cuenta?.message}
+        {...register('cuenta')}
       />
       <FormField
         id="password"

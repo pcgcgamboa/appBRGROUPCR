@@ -1,4 +1,11 @@
-﻿import { ClipboardCheck, FilePlus2, FolderOpen, MessageSquare, ShieldCheck } from 'lucide-react'
+﻿import {
+  ClipboardCheck,
+  FilePlus2,
+  FileText,
+  FolderOpen,
+  MessageSquare,
+  ShieldCheck,
+} from 'lucide-react'
 import { Suspense, useState } from 'react'
 import { Outlet, useLocation, useNavigate, useOutletContext } from 'react-router-dom'
 import { Badge } from '@/components/atoms/badge'
@@ -12,7 +19,10 @@ import { ClientTracking } from '@/components/organisms/client-tracking'
 import { ClientDocumentsManager } from '@/components/organisms/client-documents-manager'
 import { RequestServiceFollowUp } from '@/components/organisms/request-service-follow-up'
 import { SolicitantePage } from '@/components/pages/solicitante/solicitante-page'
-import { useSolicitudesCliente } from '@/features/cliente/hooks/use-cliente'
+import {
+  useSolicitudesCliente,
+  useUrlFirmadaReporteCliente,
+} from '@/features/cliente/hooks/use-cliente'
 import type { SolicitudCliente } from '@/features/cliente/types/cliente.types'
 import { normalizarError } from '@/lib/errores'
 import { useI18n } from '@/lib/i18n'
@@ -83,7 +93,7 @@ export function ClienteSolicitudesRoute() {
 
 export function ClienteDocumentosRoute() {
   const { clienteId } = useOutletContext<ClienteRouteContext>()
-  return <ClientDocumentsManager clienteId={clienteId} clienteNombre="Mi organizaciÃ³n" canUpload />
+  return <ClientDocumentsManager clienteId={clienteId} clienteNombre="Mi organización" canUpload />
 }
 
 export function ClienteTrackingRoute() {
@@ -113,12 +123,22 @@ function ValidacionesCliente({
   seleccionada: SolicitudCliente | null
   setSeleccionada: (solicitud: SolicitudCliente | null) => void
 }) {
+  const urlReporte = useUrlFirmadaReporteCliente()
+
+  async function verReporte(rutaStorage: string) {
+    // Abre la pestaña dentro del gesto del clic y la redirige después de resolver la URL firmada
+    // — esperar el async primero perdería el gesto de usuario y el navegador bloquearía el popup.
+    const ventana = window.open('', '_blank')
+    const url = await urlReporte.mutateAsync(rutaStorage)
+    if (ventana) ventana.location.href = url
+  }
+
   return (
     <section className="space-y-6">
       <div>
         <PageHeader
-          title="ValidaciÃ³n de servicios"
-          description="Indique su satisfacciÃ³n o comentarios para completar el cierre."
+          title="Validación de servicios"
+          description="Indique su satisfacción o comentarios para completar el cierre."
         />
       </div>
       {solicitudes.error && (
@@ -144,8 +164,28 @@ function ValidacionesCliente({
               <Badge>{solicitud.estado}</Badge>
             </div>
             <p className="mt-3 text-sm text-muted-foreground">
-              Operador: {solicitud.operador?.nombre_completo ?? 'â€”'}
+              Operador: {solicitud.operador?.nombre_completo ?? '—'}
             </p>
+            {(() => {
+              const rutaPdf = solicitud.avances.find(
+                (avance) => avance.reportes_atencion?.ruta_storage_pdf,
+              )?.reportes_atencion?.ruta_storage_pdf
+              return (
+                rutaPdf && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-3"
+                    disabled={urlReporte.isPending}
+                    onClick={() => verReporte(rutaPdf)}
+                  >
+                    <FileText className="mr-2 size-4" />
+                    Ver reporte de atención
+                  </Button>
+                )
+              )
+            })()}
             <div className="mt-4">
               <DisclosurePanel
                 icon={ShieldCheck}
@@ -158,7 +198,7 @@ function ValidacionesCliente({
             {solicitud.validacion ? (
               <div className="mt-4 rounded-md bg-success-soft p-3 text-sm text-success-soft-foreground">
                 <p className="font-medium">
-                  ValidaciÃ³n enviada:{' '}
+                  Validación enviada:{' '}
                   {solicitud.validacion.satisfecho ? 'Satisfecho' : 'No satisfecho'}
                 </p>
                 {solicitud.validacion.comentario && (
@@ -168,7 +208,7 @@ function ValidacionesCliente({
             ) : solicitud.estado === 'atendida' ? (
               <Button className="mt-4" onClick={() => setSeleccionada(solicitud)}>
                 <MessageSquare className="mr-2 size-4" />
-                Validar atenciÃ³n
+                Validar atención
               </Button>
             ) : (
               <p className="mt-4 text-sm text-muted-foreground">Solicitud cerrada.</p>
@@ -178,7 +218,7 @@ function ValidacionesCliente({
       </div>
       {!solicitudes.isLoading && !solicitudes.data?.length && (
         <p className="rounded-lg border bg-card p-6 text-center text-sm text-muted-foreground">
-          No hay servicios pendientes de validaciÃ³n.
+          No hay servicios pendientes de validación.
         </p>
       )}
     </section>

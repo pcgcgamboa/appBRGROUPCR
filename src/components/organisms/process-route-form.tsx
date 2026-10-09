@@ -1,4 +1,4 @@
-﻿import { type FormEvent, useState } from 'react'
+import { type FormEvent, useState } from 'react'
 import { Button } from '@/components/atoms/button'
 import { Checkbox } from '@/components/atoms/checkbox'
 import { Input } from '@/components/atoms/input'
@@ -17,7 +17,15 @@ interface ParticipanteFormulario {
   detalle_viatico: string
 }
 
-export function ProcessRouteForm({ ruta, onClose }: { ruta?: RutaProceso; onClose: () => void }) {
+export function ProcessRouteForm({
+  ruta,
+  fechaInicial,
+  onClose,
+}: {
+  ruta?: RutaProceso
+  fechaInicial?: string
+  onClose: () => void
+}) {
   const solicitudes = useSolicitudesParaRuta()
   const { listado: vehiculos } = useCatalogo<Vehiculo>('vehiculos')
   const responsables = useResponsablesRuta()
@@ -37,7 +45,7 @@ export function ProcessRouteForm({ ruta, onClose }: { ruta?: RutaProceso; onClos
     codigo: ruta?.codigo ?? `RUTA-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}`,
     nombre: ruta?.nombre ?? '',
     descripcion: ruta?.descripcion ?? '',
-    fecha: ruta?.fecha_programada ?? new Date().toISOString().slice(0, 10),
+    fecha: ruta?.fecha_programada ?? fechaInicial ?? new Date().toISOString().slice(0, 10),
     estado: ruta?.estado ?? ('planificada' as EstadoRutaProceso),
     responsable_id: ruta?.responsable_id ?? '',
     solicitudes: ruta?.ruta_solicitudes.map((item) => item.solicitud_id) ?? [],
@@ -102,7 +110,7 @@ export function ProcessRouteForm({ ruta, onClose }: { ruta?: RutaProceso; onClos
   return (
     <form onSubmit={submit} className="space-y-5 rounded-lg border bg-card p-5 shadow-sm">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">{ruta ? 'Editar ruta' : 'Nueva ruta de proceso'}</h2>
+        <h2 className="text-lg font-semibold">{ruta ? 'Editar ruta' : 'Nueva Ruta'}</h2>
         <Button type="button" variant="outline" onClick={onClose}>
           Cerrar
         </Button>
@@ -117,9 +125,9 @@ export function ProcessRouteForm({ ruta, onClose }: { ruta?: RutaProceso; onClos
           />
         </label>
         <label className="grid gap-2 text-sm font-medium">
-          Nombre
+          Nombre <span className="font-normal text-muted-foreground">(opcional)</span>
           <Input
-            required
+            placeholder="Se usa el código si se deja en blanco"
             value={values.nombre}
             onChange={(event) => setValues({ ...values, nombre: event.target.value })}
           />
@@ -148,13 +156,13 @@ export function ProcessRouteForm({ ruta, onClose }: { ruta?: RutaProceso; onClos
           </Select>
         </label>
         <label className="grid gap-2 text-sm font-medium sm:col-span-2">
-          Responsable por defecto
+          Operario responsable
           <Select
             required
             value={values.responsable_id}
             onChange={(event) => cambiarResponsable(event.target.value)}
           >
-            <option value="">Seleccione operario o encargado…</option>
+            <option value="">Seleccione un operario disponible…</option>
             {ruta && !responsableActualDisponible && (
               <option value={ruta.responsable_id}>
                 {ruta.responsable?.nombre_completo ?? 'Responsable actual'} (no disponible)
@@ -247,13 +255,24 @@ export function ProcessRouteForm({ ruta, onClose }: { ruta?: RutaProceso; onClos
                 checked={values.solicitudes.includes(solicitud.id)}
                 onCheckedChange={(checked) => toggle('solicitudes', solicitud.id, checked === true)}
               />
-              #{solicitud.numero} · {solicitud.nombre}
+              <span>
+                #{solicitud.numero} · {solicitud.nombre}
+                {values.solicitudes.includes(solicitud.id) && values.responsable_id && (
+                  <span className="block text-muted-foreground">
+                    Responsable preliminar:{' '}
+                    {responsables.data?.find((usuario) => usuario.id === values.responsable_id)
+                      ?.nombre_completo ?? 'Operario seleccionado'}
+                  </span>
+                )}
+              </span>
             </label>
           ))}
         </div>
       </fieldset>
       <fieldset>
-        <legend className="mb-2 font-semibold">Vehículos asociados</legend>
+        <legend className="mb-2 font-semibold">
+          Vehículos asociados <span className="font-normal text-muted-foreground">(opcional)</span>
+        </legend>
         <div className="grid gap-2 rounded-md border p-3 sm:grid-cols-2">
           {vehiculos.data
             ?.filter((vehiculo) => vehiculo.activo && vehiculo.estado !== 'mantenimiento')
@@ -282,7 +301,6 @@ export function ProcessRouteForm({ ruta, onClose }: { ruta?: RutaProceso; onClos
           guardar.isPending ||
           !values.responsable_id ||
           !values.solicitudes.length ||
-          !values.vehiculos.length ||
           !values.participantes.length
         }
       >

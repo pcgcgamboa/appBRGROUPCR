@@ -1,5 +1,5 @@
 import { MapPin, Pencil, Plus, Trash2, X } from 'lucide-react'
-import { type FormEvent, useRef, useState } from 'react'
+import { type FormEvent, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/atoms/button'
 import { Input } from '@/components/atoms/input'
@@ -25,12 +25,14 @@ import {
   AlertDialogTitle,
 } from '@/components/atoms/alert-dialog'
 import { LocationMap } from '@/components/organisms/location-map'
+import { ThOrdenable } from '@/components/atoms/th-ordenable'
 import { useCatalogo } from '@/features/catalogos/hooks/use-catalogo'
 import type {
   Cliente,
   DatosFormulario,
   Ubicacion,
 } from '@/features/catalogos/types/catalogos.types'
+import { useOrdenamiento } from '@/hooks/use-ordenamiento'
 
 interface FormularioUbicacion {
   nombre: string
@@ -54,6 +56,15 @@ const inicial: FormularioUbicacion = {
   activa: true,
 }
 
+// Fuera del componente: referencia estable entre renders — evita que useOrdenamiento reconstruya
+// su lógica interna en cada tecla/clic (ver el mismo arreglo en bandeja-encargado-page.tsx).
+const accesoresOrdenamiento = {
+  nombre: (item: Ubicacion) => item.nombre,
+  direccion: (item: Ubicacion) => `${item.distrito} ${item.canton} ${item.provincia}`,
+  coordenadas: (item: Ubicacion) => item.latitud,
+  activa: (item: Ubicacion) => (item.activa ? 1 : 0),
+}
+
 export function ClientLocationsManager({
   cliente,
   onClose,
@@ -67,7 +78,16 @@ export function ClientLocationsManager({
   const [values, setValues] = useState<FormularioUbicacion>(inicial)
   const [ubicacionAEliminar, setUbicacionAEliminar] = useState<Ubicacion | null>(null)
   const ultimoDisparadorRef = useRef<HTMLElement | null>(null)
-  const ubicaciones = listado.data?.filter((item) => item.cliente_id === cliente.id) ?? []
+  const ubicacionesCliente = useMemo(
+    () => listado.data?.filter((item) => item.cliente_id === cliente.id) ?? [],
+    [listado.data, cliente.id],
+  )
+  const {
+    datosOrdenados: ubicaciones,
+    columnaActiva,
+    direccion,
+    ordenarPor,
+  } = useOrdenamiento(ubicacionesCliente, accesoresOrdenamiento)
   const latitud = values.latitud === '' ? null : Number(values.latitud)
   const longitud = values.longitud === '' ? null : Number(values.longitud)
 
@@ -313,10 +333,25 @@ export function ClientLocationsManager({
         <table className="w-full min-w-[680px] text-left text-sm">
           <thead className="bg-muted text-muted-foreground">
             <tr>
-              <th className="px-4 py-3">Nombre</th>
-              <th className="px-4 py-3">Dirección</th>
-              <th className="px-4 py-3">Coordenadas</th>
-              <th className="px-4 py-3">Activa</th>
+              {(
+                [
+                  ['nombre', 'Nombre'],
+                  ['direccion', 'Dirección'],
+                  ['coordenadas', 'Coordenadas'],
+                  ['activa', 'Activa'],
+                ] as const
+              ).map(([columna, etiqueta]) => (
+                <ThOrdenable
+                  key={columna}
+                  columna={columna}
+                  ordenActual={columnaActiva}
+                  direccion={direccion}
+                  onOrdenar={ordenarPor}
+                  className="px-4 py-3"
+                >
+                  {etiqueta}
+                </ThOrdenable>
+              ))}
               <th className="px-4 py-3 text-right">Acciones</th>
             </tr>
           </thead>

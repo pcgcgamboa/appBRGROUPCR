@@ -1,4 +1,4 @@
-﻿import { ListChecks, Pencil, Plus, Trash2 } from 'lucide-react'
+﻿import { Pencil, Plus, Trash2 } from 'lucide-react'
 import {
   type Dispatch,
   type FormEvent,
@@ -37,13 +37,14 @@ import {
 import { FormField } from '@/components/molecules/form-field'
 import { PageHeader } from '@/components/molecules/page-header'
 import { GridPagination } from '@/components/molecules/grid-pagination'
-import { WorkspacePanel } from '@/components/molecules/workspace-panel'
+import { ThOrdenable } from '@/components/atoms/th-ordenable'
 import { useCatalogo } from '@/features/catalogos/hooks/use-catalogo'
 import type {
   CampoCatalogo,
   DatosFormulario,
   EntidadBase,
 } from '@/features/catalogos/types/catalogos.types'
+import { useOrdenamiento, type ValorOrdenable } from '@/hooks/use-ordenamiento'
 
 interface CatalogManagerProps<T> {
   tabla: string
@@ -63,6 +64,11 @@ interface CatalogManagerProps<T> {
   defaultValues?: DatosFormulario
   filterItem?: (item: T) => boolean
   renderCell?: (item: T, column: string) => ReactNode
+  // Override por columna para el valor usado al ordenar, cuando el campo crudo no es
+  // significativo para el usuario (p. ej. `proveedor_id` es un uuid — Materiales ordena esa
+  // columna por el nombre del proveedor en vez de por el id). Si una columna no aparece acá, se
+  // ordena por su valor crudo (mismo fallback que ya usa el render por defecto sin `renderCell`).
+  sortAccessors?: Record<string, (item: T) => ValorOrdenable>
 }
 
 function valoresIniciales(fields: CampoCatalogo[]) {
@@ -87,6 +93,7 @@ export function CatalogManager<T extends EntidadBase>({
   defaultValues,
   filterItem,
   renderCell,
+  sortAccessors,
 }: CatalogManagerProps<T>) {
   const { listado, guardar, eliminar } = useCatalogo<T>(tabla)
   const initialValues = useMemo(
@@ -138,8 +145,26 @@ export function CatalogManager<T extends EntidadBase>({
         return String(left[columns[0]] ?? '').localeCompare(String(right[columns[0]] ?? ''), 'es')
       })
   }, [columns, filterItem, listado.data, search, status, tabla])
+  const accesoresOrdenamiento = useMemo(
+    () =>
+      Object.fromEntries(
+        columns.map((column) => [
+          column,
+          sortAccessors?.[column] ??
+            ((item: T) => {
+              const value = (item as unknown as Record<string, unknown>)[column]
+              return typeof value === 'boolean' ? (value ? 1 : 0) : (value as ValorOrdenable)
+            }),
+        ]),
+      ),
+    [columns, sortAccessors],
+  )
+  const { datosOrdenados, columnaActiva, direccion, ordenarPor } = useOrdenamiento(
+    processed,
+    accesoresOrdenamiento,
+  )
   const currentPage = Math.min(page, Math.max(1, Math.ceil(processed.length / pageSize)))
-  const paginated = processed.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  const paginated = datosOrdenados.slice((currentPage - 1) * pageSize, currentPage * pageSize)
   const supportsStatus = (listado.data ?? []).some((item) => {
     const record = item as unknown as Record<string, unknown>
     return 'activo' in record || 'estado' in record
@@ -199,7 +224,7 @@ export function CatalogManager<T extends EntidadBase>({
       await onSaved?.(idGuardado)
     } catch (error) {
       setExtraError(
-        error instanceof Error ? error : new Error('No fue posible completar la operaciÃ³n.'),
+        error instanceof Error ? error : new Error('No fue posible completar la operación.'),
       )
       return
     }
@@ -291,7 +316,7 @@ export function CatalogManager<T extends EntidadBase>({
                           setValues((current) => ({ ...current, [field.name]: event.target.value }))
                         }
                       >
-                        <option value="">Seleccioneâ€¦</option>
+                        <option value="">Seleccione…</option>
                         {field.options?.map((option) => (
                           <option key={option.value} value={option.value}>
                             {option.label}
@@ -345,7 +370,7 @@ export function CatalogManager<T extends EntidadBase>({
                 Cancelar
               </Button>
               <Button type="submit" disabled={guardar.isPending}>
-                {guardar.isPending ? 'Guardandoâ€¦' : 'Guardar'}
+                {guardar.isPending ? 'Guardando…' : 'Guardar'}
               </Button>
             </DialogFooter>
           </form>
@@ -363,9 +388,9 @@ export function CatalogManager<T extends EntidadBase>({
           }}
         >
           <AlertDialogHeader>
-            <AlertDialogTitle>Â¿Eliminar este registro?</AlertDialogTitle>
+            <AlertDialogTitle>¿Eliminar este registro?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acciÃ³n puede estar restringida si el registro tiene informaciÃ³n asociada. No se
+              Esta acción puede estar restringida si el registro tiene información asociada. No se
               puede deshacer.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -386,7 +411,7 @@ export function CatalogManager<T extends EntidadBase>({
                 void confirmarEliminar()
               }}
             >
-              {eliminar.isPending ? 'Eliminandoâ€¦' : 'Eliminar'}
+              {eliminar.isPending ? 'Eliminando…' : 'Eliminar'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -401,16 +426,11 @@ export function CatalogManager<T extends EntidadBase>({
         </p>
       )}
 
-      <WorkspacePanel
-        variant="list"
-        icon={ListChecks}
-        title="Listado de registros"
-        description="Consulte, filtre y seleccione los registros que desea administrar."
-      >
+      <div className="space-y-5 rounded-2xl border bg-muted/20 p-4 sm:p-6">
         <div className="grid gap-3 sm:grid-cols-[minmax(220px,1fr)_220px]">
           <Input
             type="search"
-            placeholder="Buscar en el listadoâ€¦"
+            placeholder="Buscar en el listado…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -428,9 +448,16 @@ export function CatalogManager<T extends EntidadBase>({
             <thead className="bg-muted text-muted-foreground">
               <tr>
                 {columns.map((column) => (
-                  <th key={column} className="px-4 py-3 font-semibold">
+                  <ThOrdenable
+                    key={column}
+                    columna={column}
+                    ordenActual={columnaActiva}
+                    direccion={direccion}
+                    onOrdenar={ordenarPor}
+                    className="px-4 py-3 font-semibold"
+                  >
                     {columnLabels[column]}
-                  </th>
+                  </ThOrdenable>
                 ))}
                 <th className="px-4 py-3 text-right">Acciones</th>
               </tr>
@@ -463,9 +490,9 @@ export function CatalogManager<T extends EntidadBase>({
                             ? renderCell(item, column)
                             : typeof record[column] === 'boolean'
                               ? record[column]
-                                ? 'SÃ­'
+                                ? 'Sí'
                                 : 'No'
-                              : String(record[column] ?? 'â€”')}
+                              : String(record[column] ?? '—')}
                         </td>
                       ))}
                       <td className="px-4 py-3">
@@ -516,7 +543,7 @@ export function CatalogManager<T extends EntidadBase>({
             onPageSizeChange={setPageSize}
           />
         </div>
-      </WorkspacePanel>
+      </div>
     </section>
   )
 }

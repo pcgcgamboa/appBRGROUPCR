@@ -16,9 +16,21 @@ export function ClientValidationForm({
   const validar = useValidarAtencion()
   const [satisfecho, setSatisfecho] = useState(solicitud.validacion?.satisfecho ?? true)
   const [comentario, setComentario] = useState(solicitud.validacion?.comentario ?? '')
+  const [calificacion, setCalificacion] = useState(solicitud.validacion?.calificacion ?? 5)
+  const [llegoATiempo, setLlegoATiempo] = useState(solicitud.validacion?.llego_a_tiempo ?? true)
+  const [recomendariaTecnico, setRecomendariaTecnico] = useState(
+    solicitud.validacion?.recomendaria_tecnico ?? true,
+  )
   async function enviar(event: FormEvent) {
     event.preventDefault()
-    await validar.mutateAsync({ solicitud_id: solicitud.id, satisfecho, comentario })
+    await validar.mutateAsync({
+      solicitud_id: solicitud.id,
+      satisfecho,
+      comentario,
+      calificacion,
+      llego_a_tiempo: llegoATiempo,
+      recomendaria_tecnico: recomendariaTecnico,
+    })
     onSaved()
   }
   return (
@@ -33,6 +45,57 @@ export function ClientValidationForm({
           className="flex gap-6"
           value={satisfecho ? 'si' : 'no'}
           onValueChange={(value) => setSatisfecho(value === 'si')}
+        >
+          <label className="flex items-center gap-2 text-sm">
+            <RadioGroupItem value="si" />
+            Sí
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <RadioGroupItem value="no" />
+            No
+          </label>
+        </RadioGroup>
+      </fieldset>
+      <fieldset>
+        <legend className="mb-3 text-sm font-semibold">
+          ¿Cómo califica la atención recibida? (1 a 5)
+        </legend>
+        <RadioGroup
+          className="flex gap-4"
+          value={String(calificacion)}
+          onValueChange={(value) => setCalificacion(Number(value))}
+        >
+          {[1, 2, 3, 4, 5].map((valor) => (
+            <label key={valor} className="flex items-center gap-2 text-sm">
+              <RadioGroupItem value={String(valor)} />
+              {valor}
+            </label>
+          ))}
+        </RadioGroup>
+      </fieldset>
+      <fieldset>
+        <legend className="mb-3 text-sm font-semibold">¿El técnico llegó a tiempo?</legend>
+        <RadioGroup
+          className="flex gap-6"
+          value={llegoATiempo ? 'si' : 'no'}
+          onValueChange={(value) => setLlegoATiempo(value === 'si')}
+        >
+          <label className="flex items-center gap-2 text-sm">
+            <RadioGroupItem value="si" />
+            Sí
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <RadioGroupItem value="no" />
+            No
+          </label>
+        </RadioGroup>
+      </fieldset>
+      <fieldset>
+        <legend className="mb-3 text-sm font-semibold">¿Recomendaría a este técnico?</legend>
+        <RadioGroup
+          className="flex gap-6"
+          value={recomendariaTecnico ? 'si' : 'no'}
+          onValueChange={(value) => setRecomendariaTecnico(value === 'si')}
         >
           <label className="flex items-center gap-2 text-sm">
             <RadioGroupItem value="si" />

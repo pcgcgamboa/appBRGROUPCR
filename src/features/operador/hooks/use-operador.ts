@@ -84,3 +84,38 @@ export function useRegistrarAvance() {
     },
   })
 }
+
+export function useUrlFirmadaAdjunto() {
+  return useMutation({
+    mutationFn: (rutaStorage: string) => operadorRepository.urlFirmadaAdjunto(rutaStorage),
+  })
+}
+
+export function useUrlFirmadaReporte() {
+  return useMutation({
+    mutationFn: (rutaStorage: string) => operadorRepository.urlFirmadaReporte(rutaStorage),
+  })
+}
+
+export function useGenerarReportePdf() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      solicitudId,
+      avanceId,
+      archivo,
+    }: {
+      solicitudId: string
+      avanceId: string
+      archivo: Blob
+    }) => {
+      const nombreArchivo = `reporte-atencion-${avanceId}.pdf`
+      const rutaStorage = `${solicitudId}/${avanceId}.pdf`
+      await operadorRepository.subirReportePdf(rutaStorage, archivo)
+      await operadorRepository.completarReportePdf(avanceId, rutaStorage, nombreArchivo)
+      return { rutaStorage, nombreArchivo }
+    },
+    onSuccess: (_data, variables) =>
+      queryClient.invalidateQueries({ queryKey: ['avances-operador', variables.solicitudId] }),
+  })
+}

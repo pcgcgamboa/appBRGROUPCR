@@ -15,7 +15,7 @@ type Estado =
   | 'rechazada'
 
 interface Peticion {
-  accion: 'asignar' | 'cambiar_estado' | 'rechazar' | 'reabrir'
+  accion: 'asignar' | 'cambiar_estado' | 'rechazar' | 'reabrir' | 'notificar_cliente'
   solicitud_id: string
   prioridad?: Prioridad
   operador_id?: string
@@ -121,10 +121,6 @@ Deno.serve(async (request) => {
             estado: 'disponible',
           })
       }
-      // El registro `pendiente` se inserta antes de responder; el envío SMTP se despacha en
-      // segundo plano y no bloquea la respuesta HTTP.
-      if (solicitud.estado !== 'asignada')
-        await notificarEnSegundoPlano(payload.solicitud_id, 'asignada', correlacionId)
       return respuesta({
         solicitud_id: payload.solicitud_id,
         sla_horas: horas,
@@ -147,8 +143,6 @@ Deno.serve(async (request) => {
         })
         .eq('id', payload.solicitud_id)
       if (error) throw error
-      // El registro `pendiente` se inserta antes de responder; el envío SMTP es en segundo plano.
-      await notificarEnSegundoPlano(payload.solicitud_id, 'rechazada', correlacionId)
       return respuesta({ solicitud_id: payload.solicitud_id })
     }
 
@@ -163,8 +157,6 @@ Deno.serve(async (request) => {
         .update({ estado: 'asignada', correlacion_id_operacion: correlacionId })
         .eq('id', payload.solicitud_id)
       if (error) throw error
-      // El registro `pendiente` se inserta antes de responder; el envío SMTP es en segundo plano.
-      await notificarEnSegundoPlano(payload.solicitud_id, 'asignada', correlacionId)
       return respuesta({ solicitud_id: payload.solicitud_id })
     }
 
@@ -184,9 +176,15 @@ Deno.serve(async (request) => {
         })
         .eq('id', payload.solicitud_id)
       if (error) throw error
-      // El registro `pendiente` se inserta antes de responder; el envío SMTP es en segundo plano.
-      if (payload.estado !== solicitud.estado)
-        await notificarEnSegundoPlano(payload.solicitud_id, payload.estado, correlacionId)
+      return respuesta({ solicitud_id: payload.solicitud_id })
+    }
+
+    if (payload.accion === 'notificar_cliente') {
+      // Envío a demanda: el encargado/administrador decide cuándo avisar al cliente sobre el
+      // estado actual de la solicitud, en vez de disparar un correo automático en cada cambio de
+      // estado. Reutiliza notificarEnSegundoPlano tal cual (respeta el interruptor global y el
+      // modo_envio de configuracion_correo) — ver _shared/notificaciones.ts.
+      await notificarEnSegundoPlano(payload.solicitud_id, solicitud.estado, correlacionId)
       return respuesta({ solicitud_id: payload.solicitud_id })
     }
 

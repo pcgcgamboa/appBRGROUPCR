@@ -1,7 +1,9 @@
 ﻿import {
+  CalendarClock,
   History,
   List,
-  ListChecks,
+  Lock,
+  Mail,
   Map,
   MessageSquare,
   Package,
@@ -11,7 +13,8 @@
   Users,
   X,
 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { Badge } from '@/components/atoms/badge'
 import { Button } from '@/components/atoms/button'
 import { Select } from '@/components/atoms/select'
@@ -38,7 +41,12 @@ import { RequestGeneralDataForm } from '@/components/organisms/request-general-d
 import { RequestMaterials } from '@/components/organisms/request-materials'
 import { RequestTimeline } from '@/components/organisms/request-timeline'
 import { RequestCommunications } from '@/components/organisms/request-communications'
+import { InternalRequestNotes } from '@/components/organisms/internal-request-notes'
 import { RequestServiceFollowUp } from '@/components/organisms/request-service-follow-up'
+import { QuickScheduleDialog } from '@/components/organisms/quick-schedule-dialog'
+import { ThOrdenable } from '@/components/atoms/th-ordenable'
+import { useOrdenamiento } from '@/hooks/use-ordenamiento'
+import { normalizarError } from '@/lib/errores'
 
 function normalizarBusqueda(value: string) {
   return value
@@ -61,6 +69,21 @@ function transicionesDisponibles(solicitud: SolicitudAdmin) {
     : disponibles
 }
 
+const rango = { urgente: 0, alta: 1, media: 2, baja: 3 }
+
+// Fuera del componente: referencia estable entre renders. Pasarle a useOrdenamiento un objeto de
+// accesores nuevo en cada render (o datos recalculados sin memoizar) obliga a @tanstack/react-table
+// a reconstruir toda su lógica interna en cada tecla del buscador o clic de encabezado — con listas
+// grandes eso se sentía como el navegador colgado al ordenar.
+const accesoresOrdenamiento = {
+  numero: (item: SolicitudAdmin) => item.numero,
+  solicitud: (item: SolicitudAdmin) => item.nombre,
+  cliente: (item: SolicitudAdmin) => item.cliente?.nombre ?? null,
+  prioridad: (item: SolicitudAdmin) => (item.prioridad ? rango[item.prioridad] : 4),
+  estado: (item: SolicitudAdmin) => item.estado,
+  sla: (item: SolicitudAdmin) => item.sla_vence_en,
+}
+
 export function BandejaEncargadoPage() {
   const { session } = useSession()
   const { solicitudes } = useSolicitudesAdmin()
@@ -77,7 +100,9 @@ export function BandejaEncargadoPage() {
   const [vista, setVista] = useState<'lista' | 'mapa'>('lista')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('activas')
+  const [operadorFilter, setOperadorFilter] = useState('')
   const [sortBy, setSortBy] = useState<'recientes' | 'prioridad'>('recientes')
+  const [programando, setProgramando] = useState<SolicitudAdmin | null>(null)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const panelRef = useRef<HTMLDivElement>(null)
@@ -105,28 +130,49 @@ export function BandejaEncargadoPage() {
     setSeleccionada(null)
   }
 
-  const rango = { urgente: 0, alta: 1, media: 2, baja: 3 }
-  const ordenadas = [...(solicitudes.data ?? [])]
-    .filter((item) => {
-      const term = normalizarBusqueda(search)
-      const matchesSearch = normalizarBusqueda(
-        `${item.numero} ${item.nombre} ${item.cliente?.nombre ?? ''} ${item.tipo?.nombre ?? ''} ${item.operador?.nombre_completo ?? ''} ${item.solicitante?.nombre_completo ?? ''}`,
-      ).includes(term)
-      const matchesStatus =
-        statusFilter === 'todas' ||
-        (statusFilter === 'activas'
-          ? !['cerrada', 'cancelada', 'rechazada'].includes(item.estado)
-          : item.estado === statusFilter)
-      return matchesSearch && matchesStatus
-    })
-    .sort((a, b) =>
-      sortBy === 'prioridad'
-        ? (a.prioridad ? rango[a.prioridad] : 4) - (b.prioridad ? rango[b.prioridad] : 4) ||
-          b.creado_en.localeCompare(a.creado_en)
-        : b.creado_en.localeCompare(a.creado_en),
-    )
+  // A demanda, sin cerrar el panel: a diferencia de las demás acciones, no cambia el estado de la
+  // solicitud, así que no tiene sentido descartar la vista tras enviarlo.
+  async function notificarCliente(solicitudId: string) {
+    try {
+      await gestionar.mutateAsync({ accion: 'notificar_cliente', solicitud_id: solicitudId })
+      toast.success('El correo al cliente quedó en proceso de envío.')
+    } catch (error) {
+      toast.error(normalizarError(error).mensaje)
+    }
+  }
+
+  const ordenadas = useMemo(
+    () =>
+      [...(solicitudes.data ?? [])]
+        .filter((item) => {
+          const term = normalizarBusqueda(search)
+          const matchesSearch = normalizarBusqueda(
+            `${item.numero} ${item.nombre} ${item.cliente?.nombre ?? ''} ${item.tipo?.nombre ?? ''} ${item.operador?.nombre_completo ?? ''} ${item.solicitante?.nombre_completo ?? ''}`,
+          ).includes(term)
+          const matchesStatus =
+            statusFilter === 'todas' ||
+            (statusFilter === 'activas'
+              ? !['cerrada', 'cancelada', 'rechazada'].includes(item.estado)
+              : item.estado === statusFilter)
+          const matchesOperador = !operadorFilter || item.operador_id === operadorFilter
+          return matchesSearch && matchesStatus && matchesOperador
+        })
+        .sort((a, b) =>
+          sortBy === 'prioridad'
+            ? (a.prioridad ? rango[a.prioridad] : 4) - (b.prioridad ? rango[b.prioridad] : 4) ||
+              b.creado_en.localeCompare(a.creado_en)
+            : b.creado_en.localeCompare(a.creado_en),
+        ),
+    [solicitudes.data, search, statusFilter, operadorFilter, sortBy],
+  )
+  const {
+    datosOrdenados: ordenadasPorColumna,
+    columnaActiva,
+    direccion,
+    ordenarPor,
+  } = useOrdenamiento(ordenadas, accesoresOrdenamiento)
   const currentPage = Math.min(page, Math.max(1, Math.ceil(ordenadas.length / pageSize)))
-  const paginadas = ordenadas.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  const paginadas = ordenadasPorColumna.slice((currentPage - 1) * pageSize, currentPage * pageSize)
   const peticionPendiente = seleccionada?.peticiones.find(
     (peticion) => peticion.estado === 'pendiente',
   )
@@ -139,9 +185,10 @@ export function BandejaEncargadoPage() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <PageHeader
           title="Bandeja de solicitudes"
-          description="Revise, priorice, asigne y controle el flujo de atenciÃ³n."
+          description="Revise, priorice, asigne y controle el flujo de atención."
         />
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="default">{ordenadas.length} solicitudes</Badge>
           <div
             className="flex rounded-lg border bg-card p-1 shadow-sm"
             aria-label="Vista de solicitudes"
@@ -201,17 +248,28 @@ export function BandejaEncargadoPage() {
             variant="management"
             icon={Settings2}
             title={`Gestionar #${seleccionada.numero}: ${seleccionada.nombre}`}
-            description="Actualice la solicitud, su asignaciÃ³n, estado y recursos asociados."
+            description="Actualice la solicitud, su asignación, estado y recursos asociados."
             actions={
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setSeleccionada(null)}
-                aria-label="Cerrar panel de modificaciÃ³n"
-                title="Cerrar panel"
-              >
-                <X className="size-4" />
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={gestionar.isPending}
+                  onClick={() => void notificarCliente(seleccionada.id)}
+                >
+                  <Mail className="mr-2 size-4" />
+                  Enviar correo al cliente
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setSeleccionada(null)}
+                  aria-label="Cerrar panel de modificación"
+                  title="Cerrar panel"
+                >
+                  <X className="size-4" />
+                </Button>
+              </>
             }
           >
             {' '}
@@ -243,7 +301,7 @@ export function BandejaEncargadoPage() {
               <div className="mt-4 space-y-3 rounded-xl border border-warning/30 bg-warning-soft p-4">
                 <div>
                   <p className="font-semibold text-warning-soft-foreground">
-                    Solicitud de {peticionPendiente.tipo === 'cierre' ? 'cierre' : 'cancelaciÃ³n'}{' '}
+                    Solicitud de {peticionPendiente.tipo === 'cierre' ? 'cierre' : 'cancelación'}{' '}
                     del Operador
                   </p>
                   <p className="mt-1 text-sm text-warning-soft-foreground">
@@ -252,7 +310,7 @@ export function BandejaEncargadoPage() {
                 </div>
                 <Textarea
                   value={comentarioPeticion}
-                  placeholder="Comentario de la decisiÃ³n (obligatorio al rechazar)"
+                  placeholder="Comentario de la decisión (obligatorio al rechazar)"
                   onChange={(event) => setComentarioPeticion(event.target.value)}
                 />
                 <div className="flex flex-wrap gap-2">
@@ -268,7 +326,7 @@ export function BandejaEncargadoPage() {
                       })
                     }
                   >
-                    Aprobar peticiÃ³n
+                    Aprobar petición
                   </Button>
                   <Button
                     variant="outline"
@@ -284,12 +342,12 @@ export function BandejaEncargadoPage() {
                       })
                     }
                   >
-                    Rechazar peticiÃ³n
+                    Rechazar petición
                   </Button>
                 </div>
                 {peticionPendiente.tipo === 'cierre' && !seleccionada.validacion && (
                   <p className="text-xs text-warning-soft-foreground">
-                    El cierre solo podrÃ¡ aprobarse despuÃ©s de la validaciÃ³n del Cliente.
+                    El cierre solo podrá aprobarse después de la validación del Cliente.
                   </p>
                 )}
               </div>
@@ -302,7 +360,7 @@ export function BandejaEncargadoPage() {
                     value={operadorId}
                     onChange={(event) => setOperadorId(event.target.value)}
                   >
-                    <option value="">Seleccioneâ€¦</option>
+                    <option value="">Seleccione…</option>
                     {operadores.data?.map((operador) => (
                       <option key={operador.id} value={operador.id}>
                         {operador.nombre_completo}
@@ -347,7 +405,7 @@ export function BandejaEncargadoPage() {
                     value={operadorId}
                     onChange={(event) => setOperadorId(event.target.value)}
                   >
-                    <option value="">Seleccioneâ€¦</option>
+                    <option value="">Seleccione…</option>
                     {operadores.data?.map((operador) => (
                       <option key={operador.id} value={operador.id}>
                         {operador.nombre_completo}
@@ -369,7 +427,7 @@ export function BandejaEncargadoPage() {
                   >
                     {seleccionada.estado === 'creada'
                       ? 'Asignar solicitud'
-                      : 'Guardar reasignaciÃ³n'}
+                      : 'Guardar reasignación'}
                   </Button>
                   {seleccionada.estado === 'creada' && (
                     <Button
@@ -415,7 +473,7 @@ export function BandejaEncargadoPage() {
               <div className="mt-4 grid gap-4">
                 {seleccionada.estado === 'atendida' && !seleccionada.validacion && (
                   <p className="rounded-md bg-warning-soft p-3 text-sm text-warning-soft-foreground">
-                    El Cliente debe validar la atenciÃ³n antes de habilitar el cierre.
+                    El Cliente debe validar la atención antes de habilitar el cierre.
                   </p>
                 )}
                 <label className="grid gap-2 text-sm font-medium">
@@ -433,7 +491,7 @@ export function BandejaEncargadoPage() {
                 </label>
                 {estado === 'cancelada' && (
                   <Textarea
-                    placeholder="Motivo de cancelaciÃ³n"
+                    placeholder="Motivo de cancelación"
                     value={motivo}
                     onChange={(event) => setMotivo(event.target.value)}
                   />
@@ -455,7 +513,7 @@ export function BandejaEncargadoPage() {
               </div>
             ) : seleccionada.estado === 'atendida' && !seleccionada.validacion ? (
               <p className="mt-4 rounded-md bg-warning-soft p-3 text-sm text-warning-soft-foreground">
-                El Cliente debe validar la atenciÃ³n antes del cierre.
+                El Cliente debe validar la atención antes del cierre.
               </p>
             ) : (
               <p className="mt-4 text-sm text-muted-foreground">
@@ -463,9 +521,9 @@ export function BandejaEncargadoPage() {
               </p>
             )}
             <div className="mt-6 space-y-3">
-              <h3 className="text-sm font-semibold">InformaciÃ³n complementaria</h3>
+              <h3 className="text-sm font-semibold">Información complementaria</h3>
               <p className="text-xs text-muted-foreground">
-                Abra Ãºnicamente la secciÃ³n que necesite consultar o actualizar.
+                Abra únicamente la sección que necesite consultar o actualizar.
               </p>
               <DisclosurePanel
                 icon={Package}
@@ -476,17 +534,24 @@ export function BandejaEncargadoPage() {
               </DisclosurePanel>
               <DisclosurePanel
                 icon={Users}
-                title="TÃ©cnicos de la solicitud"
-                description="Consulte y administre el personal tÃ©cnico relacionado."
+                title="Técnicos de la solicitud"
+                description="Consulte y administre el personal técnico relacionado."
               >
                 <RequestTechnicians solicitudId={seleccionada.id} />
               </DisclosurePanel>
               <DisclosurePanel
                 icon={MessageSquare}
-                title="ComunicaciÃ³n con el cliente"
-                description="EnvÃ­e mensajes, adjuntos o proformas relacionados con la solicitud."
+                title="Comunicación con el cliente"
+                description="Envíe mensajes, adjuntos o proformas relacionados con la solicitud."
               >
                 <RequestCommunications solicitudId={seleccionada.id} />
+              </DisclosurePanel>
+              <DisclosurePanel
+                icon={Lock}
+                title="Notas internas"
+                description="Coordine con el resto del staff sin que el cliente lo vea."
+              >
+                <InternalRequestNotes solicitudId={seleccionada.id} />
               </DisclosurePanel>
               <DisclosurePanel
                 icon={ShieldCheck}
@@ -517,153 +582,182 @@ export function BandejaEncargadoPage() {
           {(solicitudes.error ?? operadores.error ?? gestionar.error)?.message}
         </p>
       )}
-      <WorkspacePanel
-        variant="list"
-        icon={ListChecks}
-        title="Listado de solicitudes"
-        description="Busque y seleccione una solicitud para abrir su panel de gestiÃ³n."
-        actions={<Badge variant="default">{ordenadas.length} solicitudes</Badge>}
-      >
-        <div className="grid gap-3 rounded-lg border bg-card p-4 md:grid-cols-[minmax(220px,1fr)_180px_180px]">
-          <Input
-            type="search"
-            placeholder="Buscar solicitud, Cliente, solicitante u operadorâ€¦"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value)
+      <div className="grid gap-3 rounded-lg border bg-card p-4 md:grid-cols-[minmax(220px,1fr)_180px_180px_200px]">
+        <Input
+          type="search"
+          placeholder="Buscar solicitud, Cliente, solicitante u operador…"
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value)
+            setPage(1)
+          }}
+        />
+        <Select
+          value={statusFilter}
+          onChange={(e) => {
+            setStatusFilter(e.target.value)
+            setPage(1)
+          }}
+        >
+          <option value="activas">Solicitudes activas</option>
+          <option value="todas">Todos los estados</option>
+          <option value="creada">Creadas</option>
+          <option value="asignada">Asignadas</option>
+          <option value="en_atencion">En atención</option>
+          <option value="atendida">Atendidas</option>
+          <option value="cerrada">Cerradas</option>
+          <option value="cancelada">Canceladas</option>
+        </Select>
+        <Select
+          value={sortBy}
+          onChange={(e) => {
+            setSortBy(e.target.value as typeof sortBy)
+            setPage(1)
+          }}
+        >
+          <option value="recientes">Más recientes</option>
+          <option value="prioridad">Mayor prioridad</option>
+        </Select>
+        <Select
+          aria-label="Filtrar por operador"
+          value={operadorFilter}
+          onChange={(e) => {
+            setOperadorFilter(e.target.value)
+            setPage(1)
+          }}
+        >
+          <option value="">Todos los operadores</option>
+          {operadores.data?.map((operador) => (
+            <option key={operador.id} value={operador.id}>
+              {operador.nombre_completo}
+            </option>
+          ))}
+        </Select>
+      </div>
+      {vista === 'mapa' ? (
+        <SolicitudesMap solicitudes={ordenadas} onSelect={abrir} />
+      ) : (
+        <div className="overflow-x-auto rounded-lg border bg-card shadow-sm">
+          <table className="w-full min-w-[900px] text-left text-sm">
+            <thead className="bg-muted text-muted-foreground">
+              <tr>
+                {(
+                  [
+                    ['numero', 'Número'],
+                    ['solicitud', 'Solicitud'],
+                    ['cliente', 'Cliente'],
+                    ['prioridad', 'Prioridad'],
+                    ['estado', 'Estado'],
+                    ['sla', 'SLA'],
+                  ] as const
+                ).map(([columna, etiqueta]) => (
+                  <ThOrdenable
+                    key={columna}
+                    columna={columna}
+                    ordenActual={columnaActiva}
+                    direccion={direccion}
+                    onOrdenar={ordenarPor}
+                    className="px-4 py-3"
+                  >
+                    {etiqueta}
+                  </ThOrdenable>
+                ))}
+                <th className="px-4 py-3"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {solicitudes.isLoading ? (
+                Array.from({ length: 6 }).map((_, index) => (
+                  <tr key={index} className="border-t">
+                    {Array.from({ length: 6 }).map((__, cell) => (
+                      <td key={cell} className="px-4 py-3">
+                        <Skeleton className="h-4 w-full max-w-24" />
+                      </td>
+                    ))}
+                    <td className="px-4 py-3" />
+                  </tr>
+                ))
+              ) : paginadas.length ? (
+                paginadas.map((item) => (
+                  <tr
+                    key={item.id}
+                    className={
+                      item.prioridad === 'alta' || item.prioridad === 'urgente'
+                        ? 'border-t bg-warning-soft/50 hover:bg-warning-soft/70'
+                        : 'border-t hover:bg-accent/50'
+                    }
+                  >
+                    <td className="px-4 py-3">#{item.numero}</td>
+                    <td className="px-4 py-3">
+                      <div className="font-medium">{item.nombre}</div>
+                      <div className="text-xs text-muted-foreground">{item.tipo?.nombre}</div>
+                    </td>
+                    <td className="px-4 py-3">{item.cliente?.nombre}</td>
+                    <td className="px-4 py-3">
+                      <Badge>{item.prioridad ?? 'Por definir'}</Badge>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div>{item.estado.replace(/_/g, ' ')}</div>
+                      {item.peticiones.some((peticion) => peticion.estado === 'pendiente') && (
+                        <Badge variant="warning" className="mt-1">
+                          Petición pendiente
+                        </Badge>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <SlaBadge
+                        venceEn={item.sla_vence_en}
+                        estado={item.estado}
+                        prioridad={item.prioridad}
+                      />
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setSeleccionada(null)
+                            setTrackingSeleccionada(item)
+                          }}
+                        >
+                          <History className="mr-2 size-4" />
+                          Ver tracking
+                        </Button>
+                        <Button variant="outline" onClick={() => abrir(item)}>
+                          Gestionar
+                        </Button>
+                        <Button variant="outline" onClick={() => setProgramando(item)}>
+                          <CalendarClock className="mr-2 size-4" />
+                          Programar
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
+                    No hay solicitudes.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+          <GridPagination
+            page={currentPage}
+            total={ordenadas.length}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size)
               setPage(1)
             }}
           />
-          <Select
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value)
-              setPage(1)
-            }}
-          >
-            <option value="activas">Solicitudes activas</option>
-            <option value="todas">Todos los estados</option>
-            <option value="creada">Creadas</option>
-            <option value="asignada">Asignadas</option>
-            <option value="en_atencion">En atenciÃ³n</option>
-            <option value="atendida">Atendidas</option>
-            <option value="cerrada">Cerradas</option>
-            <option value="cancelada">Canceladas</option>
-          </Select>
-          <Select
-            value={sortBy}
-            onChange={(e) => {
-              setSortBy(e.target.value as typeof sortBy)
-              setPage(1)
-            }}
-          >
-            <option value="recientes">MÃ¡s recientes</option>
-            <option value="prioridad">Mayor prioridad</option>
-          </Select>
         </div>
-        {vista === 'mapa' ? (
-          <SolicitudesMap solicitudes={ordenadas} onSelect={abrir} />
-        ) : (
-          <div className="overflow-x-auto rounded-lg border bg-card shadow-sm">
-            <table className="w-full min-w-[900px] text-left text-sm">
-              <thead className="bg-muted text-muted-foreground">
-                <tr>
-                  <th className="px-4 py-3">NÃºmero</th>
-                  <th className="px-4 py-3">Solicitud</th>
-                  <th className="px-4 py-3">Cliente</th>
-                  <th className="px-4 py-3">Prioridad</th>
-                  <th className="px-4 py-3">Estado</th>
-                  <th className="px-4 py-3">SLA</th>
-                  <th className="px-4 py-3"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {solicitudes.isLoading ? (
-                  Array.from({ length: 6 }).map((_, index) => (
-                    <tr key={index} className="border-t">
-                      {Array.from({ length: 6 }).map((__, cell) => (
-                        <td key={cell} className="px-4 py-3">
-                          <Skeleton className="h-4 w-full max-w-24" />
-                        </td>
-                      ))}
-                      <td className="px-4 py-3" />
-                    </tr>
-                  ))
-                ) : paginadas.length ? (
-                  paginadas.map((item) => (
-                    <tr
-                      key={item.id}
-                      className={
-                        item.prioridad === 'alta' || item.prioridad === 'urgente'
-                          ? 'border-t bg-warning-soft/50 hover:bg-warning-soft/70'
-                          : 'border-t hover:bg-accent/50'
-                      }
-                    >
-                      <td className="px-4 py-3">#{item.numero}</td>
-                      <td className="px-4 py-3">
-                        <div className="font-medium">{item.nombre}</div>
-                        <div className="text-xs text-muted-foreground">{item.tipo?.nombre}</div>
-                      </td>
-                      <td className="px-4 py-3">{item.cliente?.nombre}</td>
-                      <td className="px-4 py-3">
-                        <Badge>{item.prioridad ?? 'Por definir'}</Badge>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div>{item.estado.replace(/_/g, ' ')}</div>
-                        {item.peticiones.some((peticion) => peticion.estado === 'pendiente') && (
-                          <Badge variant="warning" className="mt-1">
-                            PeticiÃ³n pendiente
-                          </Badge>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <SlaBadge
-                          venceEn={item.sla_vence_en}
-                          estado={item.estado}
-                          prioridad={item.prioridad}
-                        />
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            onClick={() => {
-                              setSeleccionada(null)
-                              setTrackingSeleccionada(item)
-                            }}
-                          >
-                            <History className="mr-2 size-4" />
-                            Ver tracking
-                          </Button>
-                          <Button variant="outline" onClick={() => abrir(item)}>
-                            Gestionar
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
-                      No hay solicitudes.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-            <GridPagination
-              page={currentPage}
-              total={ordenadas.length}
-              pageSize={pageSize}
-              onPageChange={setPage}
-              onPageSizeChange={(size) => {
-                setPageSize(size)
-                setPage(1)
-              }}
-            />
-          </div>
-        )}
-      </WorkspacePanel>
+      )}
+      {programando && (
+        <QuickScheduleDialog solicitud={programando} onClose={() => setProgramando(null)} />
+      )}
     </section>
   )
 }

@@ -4,9 +4,10 @@ import {
   ChartPie,
   Building2,
   Car,
+  CalendarDays,
   ChevronDown,
   ClipboardList,
-  MapPin,
+  Mail,
   Menu,
   Palette,
   Package,
@@ -36,7 +37,7 @@ import { useCantidadNotificacionesPendientes } from '@/features/notificaciones/h
 export type AdminSection =
   | 'home'
   | 'solicitudes'
-  | 'rutas'
+  | 'programacion'
   | 'notificaciones'
   | 'reportes'
   | 'clientes'
@@ -47,16 +48,15 @@ export type AdminSection =
   | 'proveedores'
   | 'roles'
   | 'marca'
+  | 'correo'
 
 const navigation: { id: AdminSection; label: ClaveTraduccion; icon: typeof Boxes }[] = [
   { id: 'solicitudes', label: 'requests', icon: ClipboardList },
-  { id: 'rutas', label: 'routeControl', icon: MapPin },
+  { id: 'programacion', label: 'scheduling', icon: CalendarDays },
   { id: 'notificaciones', label: 'notifications', icon: Bell },
   { id: 'reportes', label: 'reports', icon: ChartPie },
   { id: 'clientes', label: 'clients', icon: Building2 },
   { id: 'materiales', label: 'materials', icon: Package },
-  { id: 'vehiculos', label: 'vehicles', icon: Car },
-  { id: 'usuarios', label: 'users', icon: Users },
   { id: 'proveedores', label: 'suppliers', icon: Truck },
 ]
 
@@ -67,7 +67,10 @@ const configurationNavigation: {
 }[] = [
   { id: 'tipos', label: 'types', icon: Tags },
   { id: 'roles', label: 'roles', icon: Shield },
+  { id: 'usuarios', label: 'users', icon: Users },
   { id: 'marca', label: 'branding', icon: Palette },
+  { id: 'correo', label: 'mail', icon: Mail },
+  { id: 'vehiculos', label: 'vehicles', icon: Car },
 ]
 
 export function AdminShell({ children }: { children: ReactNode }) {
@@ -99,12 +102,20 @@ export function AdminShell({ children }: { children: ReactNode }) {
               )
             }
           >
-            <Icon className={cn('size-4 shrink-0', !collapsed && 'mr-2')} />
+            <Icon className={cn('size-4 shrink-0', !collapsed && 'mr-2')} aria-hidden="true" />
             <span className={cn(collapsed && 'lg:sr-only')}>{t(label)}</span>
             {id === 'notificaciones' && notificacionesPendientes > 0 && (
-              <span className="ml-auto grid min-w-6 place-items-center rounded-full bg-destructive px-1.5 text-xs text-destructive-foreground">
-                {notificacionesPendientes > 99 ? '99+' : notificacionesPendientes}
-              </span>
+              <>
+                <span
+                  aria-hidden="true"
+                  className="ml-auto grid min-w-6 place-items-center rounded-full bg-destructive px-1.5 text-xs text-destructive-foreground"
+                >
+                  {notificacionesPendientes > 99 ? '99+' : notificacionesPendientes}
+                </span>
+                <span className="sr-only">
+                  , {notificacionesPendientes > 99 ? '99+' : notificacionesPendientes} {t('unread')}
+                </span>
+              </>
             )}
           </NavLink>
         ))}
@@ -147,13 +158,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
                   )
                 }
               >
-                <Icon className={cn('size-4 shrink-0', !collapsed && 'mr-2')} />
+                <Icon className={cn('size-4 shrink-0', !collapsed && 'mr-2')} aria-hidden="true" />
                 <span className={cn(collapsed && 'lg:sr-only')}>{t(label)}</span>
-                {id === 'notificaciones' && notificacionesPendientes > 0 && (
-                  <span className="ml-auto grid min-w-6 place-items-center rounded-full bg-destructive px-1.5 text-xs text-destructive-foreground">
-                    {notificacionesPendientes > 99 ? '99+' : notificacionesPendientes}
-                  </span>
-                )}
               </NavLink>
             ))}
         </div>

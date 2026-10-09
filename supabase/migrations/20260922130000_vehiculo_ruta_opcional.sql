@@ -1,0 +1,158 @@
+-- Una ruta de proceso puede no tener vehículo asignado (p.ej. trabajo a pie o con vehículo
+-- particular del operario). Redefine la versión vigente de la función (con nombre por defecto,
+-- `20260922120000_nombre_ruta_opcional.sql`), quitando únicamente la validación que exigía al
+-- menos un vehículo. La validación de que los vehículos incluidos (si los hay) estén activos y
+-- disponibles ya funciona correctamente con un arreglo vacío, sin cambios.
+create or replace function public.guardar_ruta_proceso(
+  p_id uuid,
+  p_codigo text,
+  p_nombre text,
+  p_descripcion text,
+  p_fecha date,
+  p_estado public.estado_ruta_proceso,
+  p_responsable_id uuid,
+  p_solicitudes uuid[],
+  p_vehiculos uuid[],
+  p_participantes jsonb
+) returns uuid
+language plpgsql
+set search_path = ''
+as $$
+declare
+  v_id uuid;
+  v_item uuid;
+  v_orden integer := 0;
+  v_codigo text;
+  v_nombre text;
+begin
+  if not public.es_gestor() then
+    raise exception 'Solo un administrador o encargado puede definir rutas';
+  end if;
+  if coalesce(array_length(p_solicitudes, 1), 0) = 0 then
+    raise exception 'Incluya al menos una solicitud';
+  end if;
+  if p_participantes is null or jsonb_typeof(p_participantes) <> 'array'
+    or jsonb_array_length(p_participantes) = 0 then
+    raise exception 'Incluya al menos un participante';
+  end if;
+  if not exists (
+    select 1
+    from public.usuarios u
+    join public.usuario_roles ur on ur.usuario_id = u.id
+    join public.roles r on r.id = ur.rol_id
+    where u.id = p_responsable_id
+      and u.activo
+      and r.codigo in ('operador', 'encargado')
+  ) then
+    raise exception 'El responsable debe ser un operario o encargado activo';
+  end if;
+  if not exists (
+    select 1
+    from jsonb_array_elements(p_participantes) participante
+    where participante ->> 'usuario_id' = p_responsable_id::text
+  ) then
+    raise exception 'El responsable debe estar incluido entre los participantes';
+  end if;
+  if exists (
+    select 1
+    from jsonb_array_elements(p_participantes) participante
+    where nullif(participante ->> 'usuario_id', '') is null
+      or coalesce((participante ->> 'viatico')::numeric, 0) < 0
+      or not exists (
+        select 1
+        from public.usuarios u
+        join public.usuario_roles ur on ur.usuario_id = u.id
+        join public.roles r on r.id = ur.rol_id
+        where u.id = (participante ->> 'usuario_id')::uuid
+          and u.activo
+          and r.codigo in ('operador', 'encargado')
+      )
+  ) then
+    raise exception 'Todos los participantes deben ser operarios o encargados activos y tener un viático válido';
+  end if;
+  if (
+    select count(*)
+    from jsonb_array_elements(p_participantes)
+  ) <> (
+    select count(distinct participante ->> 'usuario_id')
+    from jsonb_array_elements(p_participantes) participante
+  ) then
+    raise exception 'No se puede repetir un participante';
+  end if;
+  if exists (
+    select 1
+    from unnest(p_vehiculos) identificador
+    join public.vehiculos v on v.id = identificador
+    where not v.activo or v.estado = 'mantenimiento'
+  ) or (
+    select count(*) from unnest(p_vehiculos)
+  ) <> (
+    select count(*) from public.vehiculos where id = any(p_vehiculos)
+  ) then
+    raise exception 'Todos los vehículos deben estar activos y disponibles para operación';
+  end if;
+
+  v_codigo := upper(trim(p_codigo));
+  v_nombre := coalesce(nullif(trim(p_nombre), ''), v_codigo);
+
+  if p_id is null then
+    insert into public.rutas_proceso(
+      codigo, nombre, descripcion, fecha_programada, estado, responsable_id, creado_por
+    ) values (
+      v_codigo, v_nombre, nullif(trim(p_descripcion), ''), p_fecha,
+      p_estado, p_responsable_id, auth.uid()
+    ) returning id into v_id;
+  else
+    update public.rutas_proceso
+    set codigo = v_codigo,
+      nombre = v_nombre,
+      descripcion = nullif(trim(p_descripcion), ''),
+      fecha_programada = p_fecha,
+      estado = p_estado,
+      responsable_id = p_responsable_id
+    where id = p_id
+    returning id into v_id;
+    if v_id is null then
+      raise exception 'Ruta no encontrada';
+    end if;
+    delete from public.ruta_solicitudes where ruta_id = v_id;
+    delete from public.ruta_vehiculos where ruta_id = v_id;
+  end if;
+
+  foreach v_item in array p_solicitudes loop
+    v_orden := v_orden + 1;
+    insert into public.ruta_solicitudes(ruta_id, solicitud_id, orden)
+    values(v_id, v_item, v_orden);
+  end loop;
+
+  v_orden := 0;
+  foreach v_item in array p_vehiculos loop
+    v_orden := v_orden + 1;
+    insert into public.ruta_vehiculos(ruta_id, vehiculo_id, es_principal)
+    values(v_id, v_item, v_orden = 1);
+  end loop;
+
+  delete from public.ruta_participantes participante_actual
+  where participante_actual.ruta_id = v_id
+    and not exists (
+      select 1
+      from jsonb_array_elements(p_participantes) participante_nuevo
+      where participante_nuevo ->> 'usuario_id' = participante_actual.usuario_id::text
+    );
+
+  insert into public.ruta_participantes(
+    ruta_id, usuario_id, viatico, detalle_viatico
+  )
+  select
+    v_id,
+    (participante ->> 'usuario_id')::uuid,
+    coalesce((participante ->> 'viatico')::numeric, 0),
+    nullif(trim(participante ->> 'detalle_viatico'), '')
+  from jsonb_array_elements(p_participantes) participante
+  on conflict (ruta_id, usuario_id) do update
+  set viatico = excluded.viatico,
+    detalle_viatico = excluded.detalle_viatico;
+
+  return v_id;
+end
+$$;

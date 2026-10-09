@@ -11,6 +11,7 @@
   RutaProcesoInput,
   RutaGasto,
   RutaGastoInput,
+  SolicitudProgramada,
   SubirFotosVehiculoInput,
 } from '@/features/flota/types/flota.types'
 
@@ -23,6 +24,8 @@
  */
 export interface FlotaRepository {
   rutasProceso(): Promise<RutaProceso[]>
+  solicitudesProgramadas(): Promise<SolicitudProgramada[]>
+  programarSolicitud(solicitudId: string, fecha: string): Promise<void>
   responsablesRuta(): Promise<ResponsableRuta[]>
   guardarRutaProceso(input: RutaProcesoInput): Promise<string>
   registrarMovimientoVehiculo(input: MovimientoVehiculoInput): Promise<void>

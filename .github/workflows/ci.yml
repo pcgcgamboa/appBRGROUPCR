@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 jobs:
   validate:
@@ -21,3 +22,56 @@ jobs:
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
+
+  # No bloqueante a propósito: corre flujos autenticados y la comparación visual contra el
+  # proyecto Supabase vinculado real. Un fallo aquí (red, datos de prueba compartidos, un diseño
+  # que cambió a propósito sin actualizar el baseline) no debe impedir mergear un PR sin relación
+  # con lo que falló. Requiere una cuenta de prueba real — ver e2e/auth.setup.ts — registrada como
+  # secretos del repositorio; sin ellos el job se salta limpiamente.
+  e2e-autenticado:
+    if: ${{ github.event_name != 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    env:
+      TEST_USER_ACCOUNT: ${{ secrets.TEST_USER_ACCOUNT }}
+      TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - name: Suite autenticada + visual
+        if: ${{ env.TEST_USER_ACCOUNT != '' }}
+        run: npm run test:e2e:auth
+
+  # Disparo manual únicamente (Actions → CI → Run workflow). Genera/actualiza las imágenes base de
+  # regresión visual desde el mismo runner (ubuntu + chromium) que usa `e2e-autenticado`, para que
+  # coincidan con lo que ese job compara — un baseline generado en Windows/macOS local no sirve
+  # (el subpixel-rendering de fuentes difiere entre sistemas operativos). Descargar el artifact
+  # "capturas-base" y copiar su contenido a e2e/**/*-snapshots/ en el repo para actualizarlas.
+  e2e-visual-baseline:
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test --project=autenticado --project=visual --update-snapshots
+        env:
+          TEST_USER_ACCOUNT: ${{ secrets.TEST_USER_ACCOUNT }}
+          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: capturas-base
+          path: |
+            e2e/**/*-snapshots/**
+          if-no-files-found: error

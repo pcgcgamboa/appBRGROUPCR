@@ -8,9 +8,13 @@ export interface SolicitudCliente {
   cerrada_en: string | null
   tipo: { nombre: string } | null
   operador: { nombre_completo: string } | null
+  avances: { reportes_atencion: { ruta_storage_pdf: string; nombre_archivo_pdf: string } | null }[]
   validacion: {
     satisfecho: boolean
     comentario: string | null
+    calificacion: number | null
+    llego_a_tiempo: boolean | null
+    recomendaria_tecnico: boolean | null
     validado_en: string
   } | null
 }

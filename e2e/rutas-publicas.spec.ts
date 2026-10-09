@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { expectNoAccessibilityViolations } from './fixtures/a11y'
 
 // Estos specs no dependen de credenciales reales de Supabase: deben pasar tanto
 // en CI (sin .env.local, por lo tanto supabaseConfigurado === false) como en un
@@ -15,6 +16,7 @@ test.describe('rutas públicas', () => {
     const avisoConfiguracion = page.getByText('.env.local', { exact: false })
 
     await expect(tituloLogin.or(avisoConfiguracion)).toBeVisible()
+    await expectNoAccessibilityViolations(page)
   })
 
   test('/bolsa-empleo muestra el formulario de postulación de técnicos', async ({ page }) => {
@@ -29,5 +31,6 @@ test.describe('rutas públicas', () => {
     // y por defecto el matcher de Playwright hace substring case-insensitive — se acota al
     // campo de texto explícitamente para no depender del texto descriptivo del adjunto.
     await expect(page.getByRole('textbox', { name: 'Identificación' })).toBeVisible()
+    await expectNoAccessibilityViolations(page)
   })
 })

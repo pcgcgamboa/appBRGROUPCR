@@ -12,4 +12,12 @@ supabase/.temp/
 test-results/
 playwright-report/
 blob-report/
+e2e/.auth/
+# Las imágenes base de regresión visual deben venir del runner de CI (ubuntu/linux, ver el job
+# `e2e-visual-baseline`) — un *-win32.png/*-darwin.png generado en local nunca lo usa esa suite
+# (Playwright los nombra por SO) y solo sería ruido en el repo.
+**/*-snapshots/*-win32.png
+**/*-snapshots/*-darwin.png
 .vault/
+whatsapp-bridge/.wwebjs_auth/
+whatsapp-bridge/.wwebjs_cache/

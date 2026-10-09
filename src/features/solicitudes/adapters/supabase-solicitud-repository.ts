@@ -7,6 +7,7 @@ import type {
   GestionInput,
   Intervencion,
   ResolverPeticionInput,
+  SolicitudOriginalDisponible,
   SolicitudRepository,
 } from '@/features/solicitudes/ports/solicitud-repository'
 import type {
@@ -78,6 +79,9 @@ export function createSupabaseSolicitudRepository(
         p_ubicacion_id: values.ubicacion_id,
         p_detalle: values.detalle,
         p_idempotencia_clave: values.idempotencia_clave,
+        p_equipo_id: values.equipo_id ?? null,
+        p_equipo_nuevo: values.equipo_nuevo ?? null,
+        p_solicitud_original_id: values.solicitud_original_id ?? null,
       }
       const { data, error } = como_gestor
         ? await client.rpc('crear_solicitud_gestor', {
@@ -344,6 +348,22 @@ export function createSupabaseSolicitudRepository(
         .order('nombre_completo')
       if (error) throw error
       return data as unknown as OperadorResumen[]
+    },
+
+    async solicitudesOriginalesDisponibles(
+      clienteId: string,
+      equipoId: string,
+    ): Promise<SolicitudOriginalDisponible[]> {
+      if (!client) throw new Error('Supabase no está configurado.')
+      const { data, error } = await client
+        .from('solicitudes')
+        .select('id, numero, nombre')
+        .eq('cliente_id', clienteId)
+        .eq('equipo_id', equipoId)
+        .in('estado', ['atendida', 'cerrada'])
+        .order('creado_en', { ascending: false })
+      if (error) throw error
+      return data as SolicitudOriginalDisponible[]
     },
   }
 }

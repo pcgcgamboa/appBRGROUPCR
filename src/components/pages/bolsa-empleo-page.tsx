@@ -23,17 +23,17 @@ const tiposDocumento: Array<{
   {
     tipo: 'hoja_vida',
     titulo: 'Hoja de vida',
-    descripcion: 'CurrÃ­culum actualizado con experiencia y formaciÃ³n.',
+    descripcion: 'Currículum actualizado con experiencia y formación.',
   },
   {
     tipo: 'hoja_delincuencia',
     titulo: 'Hoja de delincuencia',
-    descripcion: 'CertificaciÃ³n vigente de antecedentes penales.',
+    descripcion: 'Certificación vigente de antecedentes penales.',
   },
   {
     tipo: 'cedula',
-    titulo: 'CÃ©dula',
-    descripcion: 'Copia legible de ambos lados de la identificaciÃ³n.',
+    titulo: 'Cédula',
+    descripcion: 'Copia legible de ambos lados de la identificación.',
   },
 ]
 
@@ -87,10 +87,10 @@ export function BolsaEmpleoPage() {
     return (
       <section className="mx-auto max-w-xl py-16 text-center">
         <CheckCircle2 className="mx-auto size-14 text-success" />
-        <h1 className="mt-4 text-2xl font-bold">PostulaciÃ³n recibida</h1>
+        <h1 className="mt-4 text-2xl font-bold">Postulación recibida</h1>
         <p className="mt-2 text-muted-foreground">
-          El Administrador de Proceso revisarÃ¡ sus datos y documentos antes de incorporarlo a la
-          bolsa de tÃ©cnicos.
+          El Administrador de Proceso revisará sus datos y documentos antes de incorporarlo a la
+          bolsa de técnicos.
         </p>
         <Button
           className="mt-6"
@@ -100,7 +100,7 @@ export function BolsaEmpleoPage() {
             setEnviado(false)
           }}
         >
-          Enviar otra postulaciÃ³n
+          Enviar otra postulación
         </Button>
       </section>
     )
@@ -116,10 +116,10 @@ export function BolsaEmpleoPage() {
           <BriefcaseBusiness className="size-4" />
           Bolsa de empleo
         </p>
-        <h1 className="mt-2 text-3xl font-bold">Ãšnase a nuestra red de tÃ©cnicos</h1>
+        <h1 className="mt-2 text-3xl font-bold">Únase a nuestra red de técnicos</h1>
         <p className="mt-2 text-muted-foreground">
-          Complete su informaciÃ³n y adjunte los documentos solicitados. Toda postulaciÃ³n requiere
-          confirmaciÃ³n del Administrador de Proceso.
+          Complete su información y adjunte los documentos solicitados. Toda postulación requiere
+          confirmación del Administrador de Proceso.
         </p>
       </div>
       <form
@@ -136,7 +136,7 @@ export function BolsaEmpleoPage() {
           />
         </label>
         <label className="grid gap-2 text-sm font-medium">
-          IdentificaciÃ³n
+          Identificación
           <Input
             required
             minLength={5}
@@ -152,7 +152,7 @@ export function BolsaEmpleoPage() {
               setV({ ...v, especialidad: event.target.value as typeof v.especialidad })
             }
           >
-            <option value="albanil">AlbaÃ±il</option>
+            <option value="albanil">Albañil</option>
             <option value="soldador">Soldador</option>
             <option value="chofer">Chofer</option>
           </Select>
@@ -175,7 +175,7 @@ export function BolsaEmpleoPage() {
           />
         </label>
         <label className="grid gap-2 text-sm font-medium">
-          PretensiÃ³n salarial mensual (â‚¡)
+          Pretensión salarial mensual (₡)
           <Input
             required
             type="number"
@@ -194,7 +194,7 @@ export function BolsaEmpleoPage() {
           />
         </label>
         <label className="grid gap-2 text-sm font-medium">
-          CantÃ³n
+          Cantón
           <Input
             required
             value={v.canton}
@@ -210,7 +210,7 @@ export function BolsaEmpleoPage() {
           />
         </label>
         <label className="grid gap-2 text-sm font-medium sm:col-span-2">
-          DirecciÃ³n
+          Dirección
           <Textarea
             value={v.direccion}
             onChange={(event) => setV({ ...v, direccion: event.target.value })}
@@ -229,7 +229,7 @@ export function BolsaEmpleoPage() {
         <fieldset className="space-y-3 rounded-xl border bg-muted/30 p-4 sm:col-span-2">
           <legend className="px-2 text-sm font-semibold">Documentos obligatorios</legend>
           <p className="text-xs text-muted-foreground">
-            Formatos PDF, JPG, PNG o WebP. MÃ¡ximo 10 MB por archivo.
+            Formatos PDF, JPG, PNG o WebP. Máximo 10 MB por archivo.
           </p>
           <div className="grid gap-3 md:grid-cols-4">
             {tiposDocumento.map(({ tipo, titulo, descripcion }) => (
@@ -267,12 +267,12 @@ export function BolsaEmpleoPage() {
           </p>
         )}
         <Button disabled={crearPostulacion.isPending} className="sm:col-span-2">
-          {crearPostulacion.isPending ? 'Cargando documentos y enviandoâ€¦' : 'Enviar postulaciÃ³n'}
+          {crearPostulacion.isPending ? 'Cargando documentos y enviando…' : 'Enviar postulación'}
         </Button>
       </form>
       <p className="mt-4 text-center text-sm">
         <Link className="text-primary underline" to="/login">
-          Volver al inicio de sesiÃ³n
+          Volver al inicio de sesión
         </Link>
       </p>
     </section>

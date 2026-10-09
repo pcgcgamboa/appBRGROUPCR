@@ -1,14 +1,37 @@
-import { type FormEvent, useState } from 'react'
+import { type FormEvent, useMemo, useState } from 'react'
 import { Button } from '@/components/atoms/button'
 import { Input } from '@/components/atoms/input'
 import { Select } from '@/components/atoms/select'
 import { Textarea } from '@/components/atoms/textarea'
+import { ThOrdenable } from '@/components/atoms/th-ordenable'
 import {
   useMovimientosVehiculo,
   useRegistrarMovimientoVehiculo,
 } from '@/features/flota/hooks/use-flota'
 import type { RutaProceso, TipoMovimientoVehiculo } from '@/features/flota/types/flota.types'
+import { useOrdenamiento } from '@/hooks/use-ordenamiento'
 import { normalizarError } from '@/lib/errores'
+
+interface MovimientoVehiculoHistorial {
+  id: string
+  fecha: string
+  tipo: string
+  cantidad: number | null
+  unidad: string | null
+  monto: number
+  ruta: { codigo: string } | null
+  vehiculo: { placa: string } | null
+}
+
+// Fuera del componente: referencia estable entre renders — evita que useOrdenamiento reconstruya
+// su lógica interna en cada tecla/clic (ver el mismo arreglo en bandeja-encargado-page.tsx).
+const accesoresOrdenamiento = {
+  fecha: (item: MovimientoVehiculoHistorial) => item.fecha,
+  vehiculo: (item: MovimientoVehiculoHistorial) => item.vehiculo?.placa ?? null,
+  tipo: (item: MovimientoVehiculoHistorial) => item.tipo,
+  cantidad: (item: MovimientoVehiculoHistorial) => item.cantidad,
+  monto: (item: MovimientoVehiculoHistorial) => item.monto,
+}
 
 export function VehicleMovementForm({ ruta, onClose }: { ruta: RutaProceso; onClose: () => void }) {
   const movimientos = useMovimientosVehiculo()
@@ -37,22 +60,22 @@ export function VehicleMovementForm({ ruta, onClose }: { ruta: RutaProceso; onCl
     })
     setValues((actual) => ({ ...actual, cantidad: '', monto: '', detalle: '' }))
   }
-  const historial = (
-    movimientos.data as unknown as
-      | Array<{
-          id: string
-          fecha: string
-          tipo: string
-          cantidad: number | null
-          unidad: string | null
-          monto: number
-          ruta: { codigo: string } | null
-          vehiculo: { placa: string } | null
-        }>
-      | undefined
+  const historialCompleto = useMemo(
+    () =>
+      (movimientos.data as unknown as MovimientoVehiculoHistorial[] | undefined)?.filter(
+        (item) => item.ruta?.codigo === ruta.codigo,
+      ) ?? [],
+    [movimientos.data, ruta.codigo],
   )
-    ?.filter((item) => item.ruta?.codigo === ruta.codigo)
-    .slice(0, 8)
+  const {
+    datosOrdenados: historialOrdenado,
+    columnaActiva,
+    direccion,
+    ordenarPor,
+  } = useOrdenamiento(historialCompleto, accesoresOrdenamiento)
+  // El ordenamiento debe aplicarse antes de recortar a 8 filas — si se limitara primero, ordenar
+  // solo reacomodaría esa ventana ya truncada en vez del historial completo de la ruta.
+  const historial = historialOrdenado.slice(0, 8)
   return (
     <section className="space-y-4 rounded-lg border-2 border-primary/30 bg-card p-5 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -185,11 +208,33 @@ export function VehicleMovementForm({ ruta, onClose }: { ruta: RutaProceso; onCl
           <table className="w-full text-left text-sm">
             <thead>
               <tr>
-                <th className="py-2">Fecha</th>
-                <th>Vehículo</th>
-                <th>Tipo</th>
-                <th>Cantidad</th>
-                <th>Monto</th>
+                <ThOrdenable
+                  columna="fecha"
+                  ordenActual={columnaActiva}
+                  direccion={direccion}
+                  onOrdenar={ordenarPor}
+                  className="py-2"
+                >
+                  Fecha
+                </ThOrdenable>
+                {(
+                  [
+                    ['vehiculo', 'Vehículo'],
+                    ['tipo', 'Tipo'],
+                    ['cantidad', 'Cantidad'],
+                    ['monto', 'Monto'],
+                  ] as const
+                ).map(([columna, etiqueta]) => (
+                  <ThOrdenable
+                    key={columna}
+                    columna={columna}
+                    ordenActual={columnaActiva}
+                    direccion={direccion}
+                    onOrdenar={ordenarPor}
+                  >
+                    {etiqueta}
+                  </ThOrdenable>
+                ))}
               </tr>
             </thead>
             <tbody>

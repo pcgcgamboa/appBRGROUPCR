@@ -8,6 +8,9 @@ export interface ValidarAtencionInput {
   solicitud_id: string
   satisfecho: boolean
   comentario: string
+  calificacion: number
+  llego_a_tiempo: boolean
+  recomendaria_tecnico: boolean
 }
 
 export interface SubirDocumentoInput {
@@ -33,4 +36,5 @@ export interface ClienteRepository {
   subirDocumento(input: SubirDocumentoInput): Promise<string>
   eliminarDocumento(documento: DocumentoCliente): Promise<string>
   tracking(clienteId: string | null): Promise<TrackingCliente[]>
+  urlFirmadaReporte(rutaStorage: string): Promise<string>
 }

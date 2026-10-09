@@ -7,6 +7,7 @@ import { ConnectivityBanner } from '@/components/molecules/connectivity-banner'
 import { PageHeader } from '@/components/molecules/page-header'
 import { OperatorProgressForm } from '@/components/organisms/operator-progress-form'
 import { OperatorResolutionRequest } from '@/components/organisms/operator-resolution-request'
+import { InternalRequestNotes } from '@/components/organisms/internal-request-notes'
 import { ProgressHistory } from '@/components/organisms/progress-history'
 import { RequestTechnicians } from '@/components/organisms/request-technicians'
 import { RequestTimeline } from '@/components/organisms/request-timeline'
@@ -16,7 +17,7 @@ import {
   TechnicianSelfService,
 } from '@/components/organisms/technician-workspace'
 import { marcarSolicitudAbierta } from '@/features/operador/hooks/use-avance-draft'
-import { useSolicitudesOperador } from '@/features/operador/hooks/use-operador'
+import { usePerfilTecnico, useSolicitudesOperador } from '@/features/operador/hooks/use-operador'
 import type { SolicitudOperador } from '@/features/operador/types/operador.types'
 import { normalizarError } from '@/lib/errores'
 
@@ -24,6 +25,7 @@ type ModoPanel = 'detalle' | 'avance'
 
 export function OperadorPage({ usuarioId }: { usuarioId: string }) {
   const solicitudes = useSolicitudesOperador(usuarioId)
+  const perfil = usePerfilTecnico(usuarioId)
   const [seleccionada, setSeleccionada] = useState<SolicitudOperador | null>(null)
   const [modo, setModo] = useState<ModoPanel>('detalle')
   const [trackingVisible, setTrackingVisible] = useState(false)
@@ -50,8 +52,8 @@ export function OperadorPage({ usuarioId }: { usuarioId: string }) {
     <section className="space-y-6">
       <ConnectivityBanner />
       <PageHeader
-        title="AtenciÃ³n de servicios"
-        description="Consulte la solicitud o registre el trabajo realizado desde el sitio de atenciÃ³n."
+        title="Atención de servicios"
+        description="Consulte la solicitud o registre el trabajo realizado desde el sitio de atención."
       />
       <TechnicianSelfService usuarioId={usuarioId} />
       {solicitudes.error && (
@@ -72,14 +74,14 @@ export function OperadorPage({ usuarioId }: { usuarioId: string }) {
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-primary/20 pb-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-primary">
-                Solicitud en gestiÃ³n Â· {modo === 'detalle' ? 'Detalle' : 'Registro de avance'}
+                Solicitud en gestión · {modo === 'detalle' ? 'Detalle' : 'Registro de avance'}
               </p>
               <h2 id="panel-solicitud-titulo" className="text-lg font-semibold">
                 Solicitud #{seleccionada.numero}: {seleccionada.nombre}
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 {modo === 'detalle'
-                  ? 'Consulte la informaciÃ³n, el personal y el historial de esta solicitud.'
+                  ? 'Consulte la información, el personal y el historial de esta solicitud.'
                   : 'Registre el trabajo realizado y los recursos utilizados.'}
               </p>
             </div>
@@ -91,6 +93,7 @@ export function OperadorPage({ usuarioId }: { usuarioId: string }) {
             {modo === 'avance' ? (
               <OperatorProgressForm
                 solicitud={seleccionada}
+                operadorNombre={perfil.data?.nombre_completo ?? ''}
                 onSaved={cerrarDetalle}
                 onCancel={cerrarDetalle}
               />
@@ -107,7 +110,7 @@ export function OperadorPage({ usuarioId }: { usuarioId: string }) {
                   </div>
                 </div>
                 <div>
-                  <h4 className="text-sm font-semibold">DescripciÃ³n</h4>
+                  <h4 className="text-sm font-semibold">Descripción</h4>
                   <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">
                     {seleccionada.detalle}
                   </p>
@@ -148,6 +151,10 @@ export function OperadorPage({ usuarioId }: { usuarioId: string }) {
             <div className="space-y-6">
               <TechnicianRequestContext solicitudId={seleccionada.id} />
               <RequestServiceFollowUp solicitudId={seleccionada.id} modo="gestor" />
+              <section className="space-y-3 rounded-xl border bg-card p-4">
+                <h3 className="font-semibold">Notas internas</h3>
+                <InternalRequestNotes solicitudId={seleccionada.id} />
+              </section>
             </div>
           )}
           {modo === 'detalle' && trackingVisible && (
@@ -225,9 +232,9 @@ export function OperadorPage({ usuarioId }: { usuarioId: string }) {
               </div>
               {solicitud.peticiones.some((peticion) => peticion.estado === 'pendiente') ? (
                 <p className="mt-4 rounded-lg bg-warning-soft p-3 text-sm font-medium text-warning-soft-foreground">
-                  PeticiÃ³n de{' '}
+                  Petición de{' '}
                   {solicitud.peticiones.find((item) => item.estado === 'pendiente')?.tipo} pendiente
-                  de aprobaciÃ³n.
+                  de aprobación.
                 </p>
               ) : (
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -244,7 +251,7 @@ export function OperadorPage({ usuarioId }: { usuarioId: string }) {
                   <Button variant="outline" onClick={() => setPeticionSeleccionada(solicitud)}>
                     <Send className="mr-2 size-4" />
                     Solicitar{' '}
-                    {solicitud.estado === 'atendida' ? 'cierre o cancelaciÃ³n' : 'cancelaciÃ³n'}
+                    {solicitud.estado === 'atendida' ? 'cierre o cancelación' : 'cancelación'}
                   </Button>
                 </div>
               )}
@@ -253,7 +260,7 @@ export function OperadorPage({ usuarioId }: { usuarioId: string }) {
         </div>
         {!solicitudes.isLoading && !solicitudes.data?.length && (
           <p className="rounded-lg border bg-card p-6 text-center text-sm text-muted-foreground">
-            No tiene solicitudes pendientes de atenciÃ³n.
+            No tiene solicitudes pendientes de atención.
           </p>
         )}
       </section>

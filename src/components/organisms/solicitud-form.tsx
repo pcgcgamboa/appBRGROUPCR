@@ -8,12 +8,19 @@ import { Select } from '@/components/atoms/select'
 import { Textarea } from '@/components/atoms/textarea'
 import { FormErrorSummary } from '@/components/molecules/form-error-summary'
 import { useCatalogo } from '@/features/catalogos/hooks/use-catalogo'
-import type { Cliente, TipoSolicitud, Ubicacion } from '@/features/catalogos/types/catalogos.types'
+import type {
+  Cliente,
+  EquipoCliente,
+  TipoSolicitud,
+  Ubicacion,
+} from '@/features/catalogos/types/catalogos.types'
 import { useCrearSolicitud } from '@/features/solicitudes/hooks/use-crear-solicitud'
+import { useSolicitudesOriginalesDisponibles } from '@/features/solicitudes/hooks/use-solicitudes-originales'
 import {
   solicitudSchema,
   type SolicitudFormData,
 } from '@/features/solicitudes/schemas/solicitud.schema'
+import { normalizarError } from '@/lib/errores'
 
 export function SolicitudForm({
   usuarioId,
@@ -29,10 +36,15 @@ export function SolicitudForm({
   const { listado: clientes } = useCatalogo<Cliente>('clientes')
   const { listado: tipos } = useCatalogo<TipoSolicitud>('tipos_solicitud')
   const { listado: ubicaciones } = useCatalogo<Ubicacion>('ubicaciones')
+  const { listado: equipos } = useCatalogo<EquipoCliente>('equipos_cliente')
   const crear = useCrearSolicitud()
   const [clienteSeleccionado, setClienteSeleccionado] = useState(clienteId ?? '')
   const [archivos, setArchivos] = useState<File[]>([])
   const archivoInput = useRef<HTMLInputElement>(null)
+  const [equipoId, setEquipoId] = useState('')
+  const [agregandoEquipo, setAgregandoEquipo] = useState(false)
+  const [equipoNuevo, setEquipoNuevo] = useState({ nombre: '', marca: '', modelo: '', serie: '' })
+  const [solicitudOriginalId, setSolicitudOriginalId] = useState('')
   // Estable mientras el usuario reintenta el mismo envío (p. ej. tras un error de red); se rota
   // solo después de una creación exitosa, para que una solicitud nueva no reutilice la clave de
   // la anterior y reciba por error su resultado cacheado.
@@ -43,13 +55,26 @@ export function SolicitudForm({
       [],
     [ubicaciones.data, clienteSeleccionado],
   )
+  const equiposDisponibles = useMemo(
+    () =>
+      equipos.data?.filter((item) => item.cliente_id === clienteSeleccionado && item.activo) ?? [],
+    [equipos.data, clienteSeleccionado],
+  )
   const {
     register,
     handleSubmit,
     reset,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<SolicitudFormData>({ resolver: zodResolver(solicitudSchema) })
+  const tipoSeleccionadoId = watch('tipo_solicitud_id')
+  const esGarantia =
+    tipos.data?.find((tipo) => tipo.id === tipoSeleccionadoId)?.es_garantia ?? false
+  const solicitudesOriginales = useSolicitudesOriginalesDisponibles(
+    clienteSeleccionado || null,
+    esGarantia ? equipoId || null : null,
+  )
   const resumenErroresRef = useRef<HTMLDivElement>(null)
   const erroresResumen = [
     errors.nombre && { id: 'nombre', label: 'Título de la solicitud' },
@@ -60,17 +85,32 @@ export function SolicitudForm({
 
   async function enviar(values: SolicitudFormData) {
     if (!clienteSeleccionado) return
+    if (esGarantia && (!equipoId || !solicitudOriginalId)) return
     await crear.mutateAsync({
       ...values,
       cliente_id: clienteSeleccionado,
       solicitante_id: usuarioId,
       archivos,
       como_gestor: comoGestor,
+      equipo_id: agregandoEquipo ? null : equipoId || null,
+      equipo_nuevo: agregandoEquipo
+        ? {
+            nombre: equipoNuevo.nombre,
+            marca: equipoNuevo.marca || undefined,
+            modelo: equipoNuevo.modelo || undefined,
+            serie: equipoNuevo.serie || undefined,
+          }
+        : null,
+      solicitud_original_id: esGarantia ? solicitudOriginalId : null,
       idempotencia_clave: claveIdempotencia.current,
     })
     claveIdempotencia.current = crypto.randomUUID()
     reset()
     setArchivos([])
+    setEquipoId('')
+    setAgregandoEquipo(false)
+    setEquipoNuevo({ nombre: '', marca: '', modelo: '', serie: '' })
+    setSolicitudOriginalId('')
     if (archivoInput.current) archivoInput.current.value = ''
     onCreated?.()
   }
@@ -107,6 +147,8 @@ export function SolicitudForm({
             onChange={(event) => {
               setClienteSeleccionado(event.target.value)
               setValue('ubicacion_id', '')
+              setEquipoId('')
+              setSolicitudOriginalId('')
             }}
           >
             <option value="">Seleccione un cliente…</option>
@@ -177,6 +219,125 @@ export function SolicitudForm({
           <span className="text-destructive">{errors.ubicacion_id.message}</span>
         )}
       </label>
+      {clienteSeleccionado && (
+        <fieldset className="grid gap-3 rounded-lg border p-3 sm:col-span-2">
+          <legend className="px-1 text-sm font-semibold">
+            Equipo{esGarantia ? ' (requerido para garantía)' : ' (opcional)'}
+          </legend>
+          {!agregandoEquipo ? (
+            <label className="grid gap-2 text-sm font-medium">
+              Seleccione el equipo
+              <Select
+                value={equipoId}
+                onChange={(event) => {
+                  setEquipoId(event.target.value)
+                  setSolicitudOriginalId('')
+                }}
+              >
+                <option value="">
+                  {equiposDisponibles.length ? 'Seleccione…' : 'Este cliente no tiene equipos aún'}
+                </option>
+                {equiposDisponibles.map((equipo) => (
+                  <option key={equipo.id} value={equipo.id}>
+                    {equipo.nombre}
+                    {equipo.marca ? ` — ${equipo.marca}` : ''}
+                    {equipo.modelo ? ` ${equipo.modelo}` : ''}
+                  </option>
+                ))}
+              </Select>
+              <button
+                type="button"
+                className="w-fit text-xs font-medium text-primary underline-offset-2 hover:underline"
+                onClick={() => {
+                  setAgregandoEquipo(true)
+                  setEquipoId('')
+                  setSolicitudOriginalId('')
+                }}
+              >
+                + Agregar equipo nuevo
+              </button>
+            </label>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="grid gap-2 text-sm font-medium sm:col-span-2">
+                Nombre del equipo
+                <Input
+                  required
+                  placeholder="Ej. Horno industrial"
+                  value={equipoNuevo.nombre}
+                  onChange={(event) =>
+                    setEquipoNuevo({ ...equipoNuevo, nombre: event.target.value })
+                  }
+                />
+              </label>
+              <label className="grid gap-2 text-sm font-medium">
+                Marca
+                <Input
+                  value={equipoNuevo.marca}
+                  onChange={(event) =>
+                    setEquipoNuevo({ ...equipoNuevo, marca: event.target.value })
+                  }
+                />
+              </label>
+              <label className="grid gap-2 text-sm font-medium">
+                Modelo
+                <Input
+                  value={equipoNuevo.modelo}
+                  onChange={(event) =>
+                    setEquipoNuevo({ ...equipoNuevo, modelo: event.target.value })
+                  }
+                />
+              </label>
+              <label className="grid gap-2 text-sm font-medium">
+                Serie
+                <Input
+                  value={equipoNuevo.serie}
+                  onChange={(event) =>
+                    setEquipoNuevo({ ...equipoNuevo, serie: event.target.value })
+                  }
+                />
+              </label>
+              <button
+                type="button"
+                className="w-fit text-xs font-medium text-muted-foreground underline-offset-2 hover:underline sm:col-span-2"
+                onClick={() => {
+                  setAgregandoEquipo(false)
+                  setEquipoNuevo({ nombre: '', marca: '', modelo: '', serie: '' })
+                }}
+              >
+                Elegir un equipo existente en su lugar
+              </button>
+            </div>
+          )}
+          {esGarantia && (
+            <label className="grid gap-2 text-sm font-medium">
+              Solicitud original que reclama la garantía
+              <Select
+                required
+                disabled={!equipoId}
+                value={solicitudOriginalId}
+                onChange={(event) => setSolicitudOriginalId(event.target.value)}
+              >
+                <option value="">
+                  {!equipoId
+                    ? 'Seleccione primero el equipo…'
+                    : solicitudesOriginales.data?.length
+                      ? 'Seleccione…'
+                      : 'Este equipo no tiene trabajos atendidos aún'}
+                </option>
+                {solicitudesOriginales.data?.map((solicitud) => (
+                  <option key={solicitud.id} value={solicitud.id}>
+                    #{solicitud.numero} · {solicitud.nombre}
+                  </option>
+                ))}
+              </Select>
+              <span className="text-xs font-normal text-muted-foreground">
+                Solo se listan solicitudes de este cliente y equipo ya atendidas.
+              </span>
+            </label>
+          )}
+        </fieldset>
+      )}
       <label className="grid gap-2 text-sm font-medium sm:col-span-2">
         Detalle de la necesidad
         <Textarea
@@ -235,7 +396,7 @@ export function SolicitudForm({
           role="alert"
           className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground sm:col-span-2"
         >
-          {crear.error.message}
+          {normalizarError(crear.error).mensaje}
         </p>
       )}
       {crear.isSuccess && (
@@ -249,7 +410,13 @@ export function SolicitudForm({
       <div className="flex justify-end border-t pt-5 sm:col-span-2">
         <Button
           type="submit"
-          disabled={crear.isPending || !clienteSeleccionado || !disponibles.length}
+          disabled={
+            crear.isPending ||
+            !clienteSeleccionado ||
+            !disponibles.length ||
+            (agregandoEquipo && !equipoNuevo.nombre.trim()) ||
+            (esGarantia && (!equipoId || !solicitudOriginalId))
+          }
         >
           {crear.isPending && <LoaderCircle className="mr-2 size-4 animate-spin" />}
           {crear.isPending ? 'Creando…' : 'Crear solicitud'}

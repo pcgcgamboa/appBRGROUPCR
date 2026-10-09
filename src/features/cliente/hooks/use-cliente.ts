@@ -10,6 +10,12 @@ export function useSolicitudesCliente(clienteId?: string | null) {
   })
 }
 
+export function useUrlFirmadaReporteCliente() {
+  return useMutation({
+    mutationFn: (rutaStorage: string) => clienteRepository.urlFirmadaReporte(rutaStorage),
+  })
+}
+
 export function useValidarAtencion() {
   const queryClient = useQueryClient()
   return useMutation({

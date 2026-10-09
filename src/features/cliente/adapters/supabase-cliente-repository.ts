@@ -25,7 +25,7 @@ export function createSupabaseClienteRepository(client: SupabaseClient | null): 
       const { data, error } = await client
         .from('solicitudes')
         .select(
-          'id, numero, nombre, detalle, estado, atendida_en, cerrada_en, tipo:tipos_solicitud(nombre), operador:usuarios!solicitudes_operador_id_fkey(nombre_completo), validacion:validaciones_cierre(satisfecho, comentario, validado_en)',
+          'id, numero, nombre, detalle, estado, atendida_en, cerrada_en, tipo:tipos_solicitud(nombre), operador:usuarios!solicitudes_operador_id_fkey(nombre_completo), avances(reportes_atencion(ruta_storage_pdf, nombre_archivo_pdf)), validacion:validaciones_cierre(satisfecho, comentario, calificacion, llego_a_tiempo, recomendaria_tecnico, validado_en)',
         )
         .eq('cliente_id', clienteId)
         .in('estado', ['atendida', 'cerrada'])
@@ -38,6 +38,9 @@ export function createSupabaseClienteRepository(client: SupabaseClient | null): 
       solicitud_id,
       satisfecho,
       comentario,
+      calificacion,
+      llego_a_tiempo,
+      recomendaria_tecnico,
     }: ValidarAtencionInput): Promise<void> {
       if (!client) throw new Error('Supabase no está configurado.')
       const { data: auth, error: authError } = await client.auth.getUser()
@@ -48,6 +51,9 @@ export function createSupabaseClienteRepository(client: SupabaseClient | null): 
           cliente_usuario_id: auth.user.id,
           satisfecho,
           comentario: comentario.trim() || null,
+          calificacion,
+          llego_a_tiempo,
+          recomendaria_tecnico,
           validado_en: new Date().toISOString(),
         },
         { onConflict: 'solicitud_id' },
@@ -113,6 +119,15 @@ export function createSupabaseClienteRepository(client: SupabaseClient | null): 
       const { error } = await client.from('cliente_documentos').delete().eq('id', documento.id)
       if (error) throw error
       return documento.cliente_id
+    },
+
+    async urlFirmadaReporte(rutaStorage: string): Promise<string> {
+      if (!client) throw new Error('Supabase no está configurado.')
+      const { data, error } = await client.storage
+        .from('reportes-servicio')
+        .createSignedUrl(rutaStorage, 3600)
+      if (error) throw error
+      return data.signedUrl
     },
 
     async tracking(clienteId: string | null): Promise<TrackingCliente[]> {

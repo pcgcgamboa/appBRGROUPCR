@@ -1,5 +1,5 @@
-﻿import { HardHat, KeyRound, ListChecks, Pencil, Plus, Trash2, UserRound } from 'lucide-react'
-import { type FormEvent, useRef, useState } from 'react'
+﻿import { HardHat, KeyRound, MessageCircle, Pencil, Plus, Trash2, UserRound } from 'lucide-react'
+import { type FormEvent, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/atoms/badge'
 import { Button } from '@/components/atoms/button'
@@ -26,7 +26,6 @@ import {
   AlertDialogTitle,
 } from '@/components/atoms/alert-dialog'
 import { PageHeader } from '@/components/molecules/page-header'
-import { WorkspacePanel } from '@/components/molecules/workspace-panel'
 import { useCatalogo } from '@/features/catalogos/hooks/use-catalogo'
 import type { Cliente, Rol } from '@/features/catalogos/types/catalogos.types'
 import { useUsuariosAdmin } from '@/features/usuarios/hooks/use-usuarios-admin'
@@ -35,9 +34,13 @@ import { normalizarError } from '@/lib/errores'
 import { useI18n } from '@/lib/i18n'
 import { useActualizarFotoPerfil } from '@/features/auth/hooks/use-actualizar-foto-perfil'
 import { TechniciansManager } from '@/components/organisms/technicians-manager'
+import { WhatsappSendPanel } from '@/components/organisms/whatsapp-send-panel'
+import { ThOrdenable } from '@/components/atoms/th-ordenable'
+import { useOrdenamiento } from '@/hooks/use-ordenamiento'
 
 const initialValues: DatosUsuarioAdmin = {
-  email: '',
+  cuenta: '',
+  correo: null,
   password: '',
   nombre_completo: '',
   telefono: null,
@@ -57,10 +60,35 @@ export function UsuariosPage() {
   const [submodulo, setSubmodulo] = useState<'cuentas' | 'tecnicos'>('cuentas')
   const [usuarioAEliminar, setUsuarioAEliminar] = useState<UsuarioAdmin | null>(null)
   const [usuarioClave, setUsuarioClave] = useState<UsuarioAdmin | null>(null)
+  const [usuarioWhatsapp, setUsuarioWhatsapp] = useState<UsuarioAdmin | null>(null)
   const [nuevaClave, setNuevaClave] = useState('')
   const [confirmacionClave, setConfirmacionClave] = useState('')
   const ultimoDisparadorRef = useRef<HTMLElement | null>(null)
   const actualizarFoto = useActualizarFotoPerfil(values.id)
+  const nombresRoles = useMemo(
+    () => new Map(roles.data?.map((rol) => [rol.id, rol.nombre]) ?? []),
+    [roles.data],
+  )
+  const accesoresOrdenamiento = useMemo(
+    () => ({
+      nombre: (usuario: UsuarioAdmin) => usuario.nombre_completo,
+      cuenta: (usuario: UsuarioAdmin) => usuario.cuenta,
+      correo: (usuario: UsuarioAdmin) => usuario.correo,
+      roles: (usuario: UsuarioAdmin) =>
+        usuario.usuario_roles
+          .map((item) => nombresRoles.get(item.rol_id) ?? '')
+          .sort()
+          .join(', '),
+      activo: (usuario: UsuarioAdmin) => (usuario.activo ? 1 : 0),
+    }),
+    [nombresRoles],
+  )
+  const {
+    datosOrdenados: usuariosOrdenados,
+    columnaActiva,
+    direccion,
+    ordenarPor,
+  } = useOrdenamiento(usuarios.data ?? [], accesoresOrdenamiento)
 
   if (submodulo === 'tecnicos')
     return (
@@ -72,7 +100,7 @@ export function UsuariosPage() {
           </Button>
           <Button>
             <HardHat className="mr-2 size-4" />
-            TÃ©cnicos
+            Técnicos
           </Button>
         </div>
         <TechniciansManager />
@@ -88,7 +116,8 @@ export function UsuariosPage() {
     ultimoDisparadorRef.current = document.activeElement as HTMLElement
     setValues({
       id: usuario.id,
-      email: usuario.email,
+      cuenta: usuario.cuenta,
+      correo: usuario.correo,
       nombre_completo: usuario.nombre_completo,
       telefono: usuario.telefono,
       cliente_id: usuario.cliente_id,
@@ -131,7 +160,7 @@ export function UsuariosPage() {
     event.preventDefault()
     if (!usuarioClave || nuevaClave !== confirmacionClave) return
     await cambiarClave.mutateAsync({ id: usuarioClave.id, password: nuevaClave })
-    toast.success('ContraseÃ±a actualizada correctamente.')
+    toast.success('Contraseña actualizada correctamente.')
     setUsuarioClave(null)
     setNuevaClave('')
     setConfirmacionClave('')
@@ -144,10 +173,11 @@ export function UsuariosPage() {
     <section className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <PageHeader title={t('users')} description={t('usersDescription')} />
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="default">{usuarios.data?.length ?? 0} usuarios</Badge>
           <Button variant="outline" onClick={() => setSubmodulo('tecnicos')}>
             <HardHat className="mr-2 size-4" />
-            TÃ©cnicos
+            Técnicos
           </Button>
           <Button onClick={nuevo}>
             <Plus className="mr-2 size-4" />
@@ -180,12 +210,25 @@ export function UsuariosPage() {
               />
             </label>
             <label className="grid gap-2 text-sm font-medium">
-              {t('email')}
+              {t('account')}
+              <Input
+                required
+                minLength={3}
+                maxLength={50}
+                pattern="[a-z0-9][a-z0-9._-]{2,49}"
+                autoComplete="username"
+                value={values.cuenta}
+                onChange={(event) =>
+                  setValues({ ...values, cuenta: event.target.value.toLowerCase() })
+                }
+              />
+            </label>
+            <label className="grid gap-2 text-sm font-medium">
+              {t('email')} (opcional)
               <Input
                 type="email"
-                required
-                value={values.email}
-                onChange={(event) => setValues({ ...values, email: event.target.value })}
+                value={values.correo ?? ''}
+                onChange={(event) => setValues({ ...values, correo: event.target.value || null })}
               />
             </label>
             {!values.id && (
@@ -308,15 +351,15 @@ export function UsuariosPage() {
           }}
         >
           <DialogHeader>
-            <DialogTitle>Cambiar contraseÃ±a</DialogTitle>
+            <DialogTitle>Cambiar contraseña</DialogTitle>
             <DialogDescription>
-              Establezca una contraseÃ±a nueva para {usuarioClave?.nombre_completo}. El usuario
-              deberÃ¡ utilizarla en su prÃ³ximo inicio de sesiÃ³n.
+              Establezca una contraseña nueva para {usuarioClave?.nombre_completo}. El usuario
+              deberá utilizarla en su próximo inicio de sesión.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={guardarClave} className="grid gap-4">
             <label className="grid gap-2 text-sm font-medium">
-              Nueva contraseÃ±a
+              Nueva contraseña
               <Input
                 type="password"
                 minLength={8}
@@ -330,7 +373,7 @@ export function UsuariosPage() {
               </span>
             </label>
             <label className="grid gap-2 text-sm font-medium">
-              Confirmar contraseÃ±a
+              Confirmar contraseña
               <Input
                 type="password"
                 minLength={8}
@@ -342,7 +385,7 @@ export function UsuariosPage() {
               />
               {confirmacionClave && nuevaClave !== confirmacionClave && (
                 <span role="alert" className="text-xs font-normal text-destructive">
-                  Las contraseÃ±as no coinciden.
+                  Las contraseñas no coinciden.
                 </span>
               )}
             </label>
@@ -366,7 +409,7 @@ export function UsuariosPage() {
                   nuevaClave !== confirmacionClave
                 }
               >
-                {cambiarClave.isPending ? 'Actualizandoâ€¦' : 'Cambiar contraseÃ±a'}
+                {cambiarClave.isPending ? 'Actualizando…' : 'Cambiar contraseña'}
               </Button>
             </DialogFooter>
           </form>
@@ -386,7 +429,7 @@ export function UsuariosPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>{t('deleteUserConfirm')}</AlertDialogTitle>
             <AlertDialogDescription>
-              {usuarioAEliminar?.nombre_completo} Â· {usuarioAEliminar?.email}
+              {usuarioAEliminar?.nombre_completo} · {usuarioAEliminar?.cuenta}
             </AlertDialogDescription>
           </AlertDialogHeader>
           {deleteError && (
@@ -406,7 +449,7 @@ export function UsuariosPage() {
                 void confirmarEliminar()
               }}
             >
-              {eliminar.isPending ? 'â€¦' : t('save')}
+              {eliminar.isPending ? '…' : t('save')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -420,21 +463,56 @@ export function UsuariosPage() {
           {normalizarError(pageError).mensaje}
         </p>
       )}
-      <WorkspacePanel
-        variant="list"
-        icon={ListChecks}
-        title="Cuentas de acceso"
-        description="Consulte las cuentas y seleccione las acciones de administraciÃ³n disponibles."
-        actions={<Badge variant="default">{usuarios.data?.length ?? 0} usuarios</Badge>}
-      >
+      <div className="space-y-5 rounded-2xl border bg-muted/20 p-4 sm:p-6">
         <div className="overflow-x-auto rounded-lg border bg-card shadow-sm">
           <table className="w-full min-w-[760px] text-left text-sm">
             <thead className="bg-muted text-muted-foreground">
               <tr>
-                <th className="px-4 py-3">{t('name')}</th>
-                <th className="px-4 py-3">{t('email')}</th>
-                <th className="px-4 py-3">{t('roles')}</th>
-                <th className="px-4 py-3">{t('active')}</th>
+                <ThOrdenable
+                  columna="nombre"
+                  ordenActual={columnaActiva}
+                  direccion={direccion}
+                  onOrdenar={ordenarPor}
+                  className="px-4 py-3"
+                >
+                  {t('name')}
+                </ThOrdenable>
+                <ThOrdenable
+                  columna="cuenta"
+                  ordenActual={columnaActiva}
+                  direccion={direccion}
+                  onOrdenar={ordenarPor}
+                  className="px-4 py-3"
+                >
+                  {t('account')}
+                </ThOrdenable>
+                <ThOrdenable
+                  columna="correo"
+                  ordenActual={columnaActiva}
+                  direccion={direccion}
+                  onOrdenar={ordenarPor}
+                  className="px-4 py-3"
+                >
+                  {t('email')}
+                </ThOrdenable>
+                <ThOrdenable
+                  columna="roles"
+                  ordenActual={columnaActiva}
+                  direccion={direccion}
+                  onOrdenar={ordenarPor}
+                  className="px-4 py-3"
+                >
+                  {t('roles')}
+                </ThOrdenable>
+                <ThOrdenable
+                  columna="activo"
+                  ordenActual={columnaActiva}
+                  direccion={direccion}
+                  onOrdenar={ordenarPor}
+                  className="px-4 py-3"
+                >
+                  {t('active')}
+                </ThOrdenable>
                 <th className="px-4 py-3 text-right">{t('actions')}</th>
               </tr>
             </thead>
@@ -442,7 +520,7 @@ export function UsuariosPage() {
               {usuarios.isLoading
                 ? Array.from({ length: 5 }).map((_, index) => (
                     <tr key={index} className="border-t">
-                      {Array.from({ length: 4 }).map((__, cell) => (
+                      {Array.from({ length: 5 }).map((__, cell) => (
                         <td key={cell} className="px-4 py-3">
                           <Skeleton className="h-4 w-full max-w-32" />
                         </td>
@@ -455,10 +533,11 @@ export function UsuariosPage() {
                       </td>
                     </tr>
                   ))
-                : usuarios.data?.map((usuario) => (
+                : usuariosOrdenados.map((usuario) => (
                     <tr key={usuario.id} className="border-t transition-colors hover:bg-accent/50">
                       <td className="px-4 py-3 font-medium">{usuario.nombre_completo}</td>
-                      <td className="px-4 py-3">{usuario.email}</td>
+                      <td className="px-4 py-3 font-mono text-xs">{usuario.cuenta}</td>
+                      <td className="px-4 py-3">{usuario.correo ?? '—'}</td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-1">
                           {usuario.usuario_roles.map((item) => (
@@ -476,12 +555,27 @@ export function UsuariosPage() {
                             variant="outline"
                             size="icon"
                             onClick={() => abrirCambioClave(usuario)}
-                            aria-label={`Cambiar contraseÃ±a de ${usuario.nombre_completo}`}
-                            title="Cambiar contraseÃ±a"
+                            aria-label={`Cambiar contraseña de ${usuario.nombre_completo}`}
+                            title="Cambiar contraseña"
                           >
                             <KeyRound className="size-4" />
                           </Button>
-                          <Button variant="outline" size="icon" onClick={() => editar(usuario)}>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => setUsuarioWhatsapp(usuario)}
+                            aria-label={`Enviar WhatsApp a ${usuario.nombre_completo}`}
+                            title="Enviar WhatsApp"
+                          >
+                            <MessageCircle className="size-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => editar(usuario)}
+                            aria-label={`Editar ${usuario.nombre_completo}`}
+                            title="Editar"
+                          >
                             <Pencil className="size-4" />
                           </Button>
                           <Button
@@ -492,6 +586,8 @@ export function UsuariosPage() {
                               ultimoDisparadorRef.current = event.currentTarget
                               setUsuarioAEliminar(usuario)
                             }}
+                            aria-label={`Eliminar ${usuario.nombre_completo}`}
+                            title="Eliminar"
                           >
                             <Trash2 className="size-4" />
                           </Button>
@@ -502,7 +598,15 @@ export function UsuariosPage() {
             </tbody>
           </table>
         </div>
-      </WorkspacePanel>
+      </div>
+      {usuarioWhatsapp && (
+        <WhatsappSendPanel
+          destinatarioTipo="usuario"
+          destinatarioId={usuarioWhatsapp.id}
+          nombre={usuarioWhatsapp.nombre_completo}
+          onClose={() => setUsuarioWhatsapp(null)}
+        />
+      )}
     </section>
   )
 }

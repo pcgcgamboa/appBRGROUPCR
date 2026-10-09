@@ -1,7 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4'
 import { corsHeaders } from '../_shared/cors.ts'
 import { logError } from '../_shared/logger.ts'
-import { notificarEnSegundoPlano } from '../_shared/notificaciones.ts'
 
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
@@ -26,12 +25,6 @@ Deno.serve(async (request) => {
       { global: { headers: { Authorization: authorization } } },
     )
     const payload = await request.json()
-    const { data: solicitudActual, error: solicitudError } = await supabase
-      .from('solicitudes')
-      .select('estado')
-      .eq('id', payload.solicitud_id)
-      .single()
-    if (solicitudError) throw solicitudError
     const { data, error } = await supabase.rpc('registrar_avance_operador', {
       p_solicitud_id: payload.solicitud_id,
       p_horas_trabajadas: payload.horas_trabajadas,
@@ -43,11 +36,11 @@ Deno.serve(async (request) => {
       // Un reintento del cliente con la misma clave (timeout, señal débil) devuelve el avance
       // ya registrado en vez de duplicarlo — ver 20260822130000_idempotencia_mutaciones_criticas.sql.
       p_idempotencia_clave: payload.idempotencia_clave ?? null,
+      // Reporte de atención opcional: checklist, estado final del equipo y ambas firmas — ver
+      // 20261005110000_reportes_atencion_y_plantilla.sql.
+      p_reporte: payload.reporte ?? null,
     })
     if (error) throw error
-    // El registro `pendiente` se inserta antes de responder; el envío SMTP es en segundo plano.
-    if (solicitudActual.estado !== payload.estado_nuevo)
-      await notificarEnSegundoPlano(payload.solicitud_id, payload.estado_nuevo, correlacionId)
     return respuesta({ avance_id: data }, 201)
   } catch (error) {
     const mensaje = error instanceof Error ? error.message : 'Error inesperado.'

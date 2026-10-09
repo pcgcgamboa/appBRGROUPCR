@@ -3,13 +3,31 @@ import { Button } from '@/components/atoms/button'
 import { Input } from '@/components/atoms/input'
 import { Select } from '@/components/atoms/select'
 import { Textarea } from '@/components/atoms/textarea'
+import { ThOrdenable } from '@/components/atoms/th-ordenable'
 import { useGastosRuta, useRegistrarGastoRuta } from '@/features/flota/hooks/use-flota'
-import type { RutaProceso } from '@/features/flota/types/flota.types'
+import type { RutaGasto, RutaProceso } from '@/features/flota/types/flota.types'
+import { useOrdenamiento } from '@/hooks/use-ordenamiento'
 import { normalizarError } from '@/lib/errores'
+
+// Fuera del componente: referencia estable entre renders — evita que useOrdenamiento reconstruya
+// su lógica interna en cada tecla/clic (ver el mismo arreglo en bandeja-encargado-page.tsx).
+const accesoresOrdenamiento = {
+  fecha: (gasto: RutaGasto) => gasto.fecha,
+  concepto: (gasto: RutaGasto) => gasto.concepto,
+  asignadoA: (gasto: RutaGasto) => gasto.participante?.nombre_completo ?? null,
+  detalle: (gasto: RutaGasto) => gasto.detalle,
+  monto: (gasto: RutaGasto) => Number(gasto.monto),
+}
 
 export function RouteExpenses({ ruta, onClose }: { ruta: RutaProceso; onClose: () => void }) {
   const gastos = useGastosRuta(ruta.id)
   const registrar = useRegistrarGastoRuta()
+  const {
+    datosOrdenados: gastosOrdenados,
+    columnaActiva,
+    direccion,
+    ordenarPor,
+  } = useOrdenamiento(gastos.data ?? [], accesoresOrdenamiento)
   const [participanteId, setParticipanteId] = useState('')
   const [concepto, setConcepto] = useState('')
   const [monto, setMonto] = useState('')
@@ -100,15 +118,37 @@ export function RouteExpenses({ ruta, onClose }: { ruta: RutaProceso; onClose: (
         <table className="w-full min-w-[620px] text-left text-sm">
           <thead>
             <tr>
-              <th className="p-3">Fecha</th>
-              <th>Concepto</th>
-              <th>Asignado a</th>
-              <th>Detalle</th>
-              <th>Monto</th>
+              <ThOrdenable
+                columna="fecha"
+                ordenActual={columnaActiva}
+                direccion={direccion}
+                onOrdenar={ordenarPor}
+                className="p-3"
+              >
+                Fecha
+              </ThOrdenable>
+              {(
+                [
+                  ['concepto', 'Concepto'],
+                  ['asignadoA', 'Asignado a'],
+                  ['detalle', 'Detalle'],
+                  ['monto', 'Monto'],
+                ] as const
+              ).map(([columna, etiqueta]) => (
+                <ThOrdenable
+                  key={columna}
+                  columna={columna}
+                  ordenActual={columnaActiva}
+                  direccion={direccion}
+                  onOrdenar={ordenarPor}
+                >
+                  {etiqueta}
+                </ThOrdenable>
+              ))}
             </tr>
           </thead>
           <tbody>
-            {gastos.data?.map((gasto) => (
+            {gastosOrdenados.map((gasto) => (
               <tr key={gasto.id} className="border-t">
                 <td className="p-3">{gasto.fecha}</td>
                 <td>{gasto.concepto}</td>

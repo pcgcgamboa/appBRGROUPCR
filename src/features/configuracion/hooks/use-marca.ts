@@ -1,6 +1,9 @@
 ﻿import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { configuracionRepository } from '@/features/configuracion/lib/repository'
-import type { ConfiguracionMarca } from '@/features/configuracion/types/configuracion.types'
+import type {
+  ConfiguracionCorreo,
+  ConfiguracionMarca,
+} from '@/features/configuracion/types/configuracion.types'
 import { marcaPredeterminada } from '@/features/configuracion/types/configuracion.types'
 
 export type { ConfiguracionMarca }
@@ -41,5 +44,22 @@ export function useActualizarGarantia() {
   return useMutation({
     mutationFn: (dias: number) => configuracionRepository.actualizarGarantia(dias),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['configuracion-operativa'] }),
+  })
+}
+
+const correoQueryKey = ['configuracion-correo']
+
+export function useConfiguracionCorreo() {
+  return useQuery({
+    queryKey: correoQueryKey,
+    queryFn: () => configuracionRepository.obtenerCorreo(),
+  })
+}
+
+export function useActualizarCorreo() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: ConfiguracionCorreo) => configuracionRepository.actualizarCorreo(input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: correoQueryKey }),
   })
 }

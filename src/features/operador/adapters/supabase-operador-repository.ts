@@ -11,6 +11,7 @@ import type {
 } from '@/features/operador/types/operador.types'
 
 const BUCKET_ADJUNTOS = 'solicitudes-adjuntos'
+const BUCKET_REPORTES = 'reportes-servicio'
 
 /**
  * Adaptador concreto de `OperadorRepository` sobre supabase-js. Cada método
@@ -76,7 +77,7 @@ export function createSupabaseOperadorRepository(
       const { data, error } = await requerirCliente()
         .from('solicitudes')
         .select(
-          'id, numero, nombre, detalle, estado, prioridad, cliente:clientes(nombre), tipo:tipos_solicitud(nombre), ruta:rutas(vehiculo_id, vehiculo:vehiculos(placa, tipo), provincia, canton, distrito, otras_senas), peticiones:solicitud_peticiones_resolucion(id, tipo, motivo, estado, creado_en, comentario_resolucion)',
+          'id, numero, nombre, detalle, estado, prioridad, cliente_id, cliente:clientes(nombre), tipo:tipos_solicitud(nombre), equipo:equipos_cliente(nombre, marca, modelo, serie), ruta:rutas(vehiculo_id, vehiculo:vehiculos(placa, tipo), provincia, canton, distrito, otras_senas), peticiones:solicitud_peticiones_resolucion(id, tipo, motivo, estado, creado_en, comentario_resolucion)',
         )
         .eq('operador_id', usuarioId)
         .in('estado', ['asignada', 'en_atencion', 'en_espera_materiales', 'atendida'])
@@ -89,7 +90,7 @@ export function createSupabaseOperadorRepository(
       const { data, error } = await requerirCliente()
         .from('avances')
         .select(
-          'id, horas_trabajadas, porcentaje, narrativa, creado_en, vehiculo:vehiculos(placa), solicitud_materiales(cantidad, material:materiales(nombre, unidad_medida)), adjuntos(id, nombre_archivo, tipo)',
+          'id, horas_trabajadas, porcentaje, narrativa, creado_en, vehiculo:vehiculos(placa), solicitud_materiales(cantidad, material:materiales(nombre, unidad_medida)), adjuntos(id, nombre_archivo, tipo), reporte_atencion:reportes_atencion(estado_equipo_final, ruta_storage_pdf, nombre_archivo_pdf)',
         )
         .eq('solicitud_id', solicitudId)
         .order('creado_en', { ascending: false })
@@ -130,6 +131,41 @@ export function createSupabaseOperadorRepository(
     async eliminarAdjuntos(rutasStorage: string[]): Promise<void> {
       if (!rutasStorage.length) return
       const { error } = await requerirCliente().storage.from(BUCKET_ADJUNTOS).remove(rutasStorage)
+      if (error) throw error
+    },
+
+    async urlFirmadaAdjunto(rutaStorage: string): Promise<string> {
+      const { data, error } = await requerirCliente()
+        .storage.from(BUCKET_ADJUNTOS)
+        .createSignedUrl(rutaStorage, 3600)
+      if (error) throw error
+      return data.signedUrl
+    },
+
+    async urlFirmadaReporte(rutaStorage: string): Promise<string> {
+      const { data, error } = await requerirCliente()
+        .storage.from(BUCKET_REPORTES)
+        .createSignedUrl(rutaStorage, 3600)
+      if (error) throw error
+      return data.signedUrl
+    },
+
+    async subirReportePdf(rutaStorage: string, archivo: Blob): Promise<void> {
+      const { error } = await requerirCliente()
+        .storage.from(BUCKET_REPORTES)
+        .upload(rutaStorage, archivo, { contentType: 'application/pdf', upsert: true })
+      if (error) throw error
+    },
+
+    async completarReportePdf(
+      avanceId: string,
+      rutaStoragePdf: string,
+      nombreArchivoPdf: string,
+    ): Promise<void> {
+      const { error } = await requerirCliente()
+        .from('reportes_atencion')
+        .update({ ruta_storage_pdf: rutaStoragePdf, nombre_archivo_pdf: nombreArchivoPdf })
+        .eq('avance_id', avanceId)
       if (error) throw error
     },
   }

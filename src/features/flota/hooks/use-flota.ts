@@ -16,6 +16,22 @@ export function useRutasProceso() {
   })
 }
 
+export function useSolicitudesProgramadas() {
+  return useQuery({
+    queryKey: ['solicitudes-programadas'],
+    queryFn: () => flotaRepository.solicitudesProgramadas(),
+  })
+}
+
+export function useProgramarSolicitud() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ solicitudId, fecha }: { solicitudId: string; fecha: string }) =>
+      flotaRepository.programarSolicitud(solicitudId, fecha),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['solicitudes-programadas'] }),
+  })
+}
+
 export function useResponsablesRuta() {
   return useQuery({
     queryKey: ['responsables-ruta'],

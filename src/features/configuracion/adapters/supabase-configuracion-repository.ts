@@ -3,15 +3,21 @@ import type {
   ActualizarMarcaInput,
   ConfiguracionRepository,
 } from '@/features/configuracion/ports/configuracion-repository'
-import type { ConfiguracionMarca } from '@/features/configuracion/types/configuracion.types'
-import { marcaPredeterminada } from '@/features/configuracion/types/configuracion.types'
+import type {
+  ConfiguracionCorreo,
+  ConfiguracionMarca,
+} from '@/features/configuracion/types/configuracion.types'
+import {
+  correoPredeterminada,
+  marcaPredeterminada,
+} from '@/features/configuracion/types/configuracion.types'
 
 /**
  * Adaptador concreto de `ConfiguracionRepository` sobre supabase-js. Cada
- * mÃ©todo verifica que el cliente estÃ© configurado (`client` puede ser
- * `null` cuando las variables de entorno de Supabase no estÃ¡n presentes)
- * para no romper el arranque de la app â€” el chequeo se hace por mÃ©todo, no
- * al construir la instancia, replicando el patrÃ³n `if (!supabase) ...` que
+ * método verifica que el cliente esté configurado (`client` puede ser
+ * `null` cuando las variables de entorno de Supabase no están presentes)
+ * para no romper el arranque de la app — el chequeo se hace por método, no
+ * al construir la instancia, replicando el patrón `if (!supabase) ...` que
  * ya usaba el hook.
  */
 export function createSupabaseConfiguracionRepository(
@@ -59,11 +65,11 @@ export function createSupabaseConfiguracionRepository(
       logo,
       icono,
     }: ActualizarMarcaInput): Promise<ConfiguracionMarca> {
-      if (!client) throw new Error('Supabase no estÃ¡ configurado.')
+      if (!client) throw new Error('Supabase no está configurado.')
       const supabaseClient = client
       const { data: sesion } = await supabaseClient.auth.getSession()
       const usuarioId = sesion.session?.user.id
-      if (!usuarioId) throw new Error('La sesiÃ³n no es vÃ¡lida.')
+      if (!usuarioId) throw new Error('La sesión no es válida.')
 
       const version = Date.now()
       const siguiente = { ...actual }
@@ -94,6 +100,32 @@ export function createSupabaseConfiguracionRepository(
         .eq('id', true)
       if (error) throw error
       return siguiente
+    },
+
+    async obtenerCorreo(): Promise<ConfiguracionCorreo> {
+      if (!client) return correoPredeterminada
+      const { data, error } = await client
+        .from('configuracion_correo')
+        .select('notificar_cliente_activo, modo_envio, correo_soporte')
+        .eq('id', true)
+        .single()
+      if (error) throw error
+      return data as ConfiguracionCorreo
+    },
+
+    async actualizarCorreo(input: ConfiguracionCorreo): Promise<void> {
+      if (!client) throw new Error('Supabase no está configurado.')
+      const { data } = await client.auth.getUser()
+      if (!data.user) throw new Error('Sesión no válida.')
+      const { error } = await client
+        .from('configuracion_correo')
+        .update({
+          ...input,
+          actualizado_por: data.user.id,
+          actualizado_en: new Date().toISOString(),
+        })
+        .eq('id', true)
+      if (error) throw error
     },
   }
 }

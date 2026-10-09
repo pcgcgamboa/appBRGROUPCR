@@ -41,8 +41,8 @@ export function RequestCommunications({ solicitudId }: { solicitudId: string }) 
       <div className="flex items-center gap-2">
         <MessageSquare className="size-5 text-primary" />
         <div>
-          <h3 className="font-semibold">ComunicaciÃ³n con el Cliente</h3>
-          <p className="text-sm text-muted-foreground">EnvÃ­e mensajes, documentos o proformas.</p>
+          <h3 className="font-semibold">Comunicación con el Cliente</h3>
+          <p className="text-sm text-muted-foreground">Envíe mensajes, documentos o proformas.</p>
         </div>
       </div>
       {(comunicaciones.error || enviar.error) && (
@@ -68,7 +68,7 @@ export function RequestCommunications({ solicitudId }: { solicitudId: string }) 
         </label>
         {tipo === 'proforma' && (
           <label className="grid gap-1 text-sm font-medium">
-            Monto de la proforma (â‚¡)
+            Monto de la proforma (₡)
             <Input
               type="number"
               min="0"
@@ -93,7 +93,7 @@ export function RequestCommunications({ solicitudId }: { solicitudId: string }) 
             onChange={(e) => setArchivos(Array.from(e.target.files ?? []))}
           />
           <span className="text-xs font-normal text-muted-foreground">
-            PDF o imÃ¡genes, mÃ¡ximo 10 MB por archivo.
+            PDF o imágenes, máximo 10 MB por archivo.
           </span>
         </label>
         <Button
@@ -108,7 +108,7 @@ export function RequestCommunications({ solicitudId }: { solicitudId: string }) 
           onClick={() => void guardar()}
         >
           <Send className="mr-2 size-4" />
-          {enviar.isPending ? 'Enviandoâ€¦' : 'Enviar al Cliente'}
+          {enviar.isPending ? 'Enviando…' : 'Enviar al Cliente'}
         </Button>
       </div>
       <div className="space-y-3">
@@ -129,7 +129,7 @@ export function RequestCommunications({ solicitudId }: { solicitudId: string }) 
             </div>
             <p className="mt-2 whitespace-pre-wrap text-sm">{item.mensaje}</p>
             {item.monto !== null && (
-              <p className="mt-2 font-semibold">â‚¡{Number(item.monto).toLocaleString('es-CR')}</p>
+              <p className="mt-2 font-semibold">₡{Number(item.monto).toLocaleString('es-CR')}</p>
             )}
             <p className="mt-2 text-xs text-muted-foreground">
               {item.remitente?.nombre_completo ?? 'Sistema'}
@@ -158,7 +158,7 @@ export function RequestCommunications({ solicitudId }: { solicitudId: string }) 
           </article>
         ))}
         {!comunicaciones.isLoading && !comunicaciones.data?.length && (
-          <p className="text-sm text-muted-foreground">No hay comunicaciones todavÃ­a.</p>
+          <p className="text-sm text-muted-foreground">No hay comunicaciones todavía.</p>
         )}
       </div>
     </section>

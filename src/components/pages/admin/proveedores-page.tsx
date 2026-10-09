@@ -1,25 +1,26 @@
-﻿import { useMemo } from 'react'
+import { Package, X } from 'lucide-react'
+import { useMemo, useRef, useState } from 'react'
+import { Button } from '@/components/atoms/button'
 import { CatalogManager } from '@/components/organisms/catalog-manager'
-import { useCatalogo } from '@/features/catalogos/hooks/use-catalogo'
 import type { CampoCatalogo, Material, Proveedor } from '@/features/catalogos/types/catalogos.types'
 
 const supplierFields: CampoCatalogo[] = [
   { name: 'nombre', label: 'Proveedor', required: true },
-  { name: 'identificacion', label: 'IdentificaciÃ³n' },
+  { name: 'identificacion', label: 'Identificación' },
   { name: 'persona_contacto', label: 'Persona de contacto', required: true },
-  { name: 'telefono', label: 'TelÃ©fono', required: true },
+  { name: 'telefono', label: 'Teléfono', required: true },
   { name: 'celular', label: 'Celular' },
   { name: 'correo', label: 'Correo', type: 'email' },
   {
     name: 'articulos_provee',
-    label: 'Resumen de artÃ­culos que provee',
+    label: 'Resumen de artículos que provee',
     type: 'textarea',
     required: true,
   },
   { name: 'provincia', label: 'Provincia', required: true },
-  { name: 'canton', label: 'CantÃ³n', required: true },
+  { name: 'canton', label: 'Cantón', required: true },
   { name: 'distrito', label: 'Distrito', required: true },
-  { name: 'direccion', label: 'DirecciÃ³n exacta', type: 'textarea' },
+  { name: 'direccion', label: 'Dirección exacta', type: 'textarea' },
   { name: 'activo', label: 'Proveedor activo', type: 'checkbox' },
 ]
 
@@ -31,19 +32,10 @@ const valoresProducto = {
 }
 
 export function ProveedoresPage() {
-  const { listado: proveedores } = useCatalogo<Proveedor>('proveedores')
+  const [proveedorProductos, setProveedorProductos] = useState<Proveedor | null>(null)
+  const panelProductosRef = useRef<HTMLDivElement>(null)
   const productFields = useMemo<CampoCatalogo[]>(
     () => [
-      {
-        name: 'proveedor_id',
-        label: 'Proveedor',
-        type: 'select',
-        required: true,
-        options:
-          proveedores.data
-            ?.filter((proveedor) => proveedor.activo)
-            .map((proveedor) => ({ value: proveedor.id, label: proveedor.nombre })) ?? [],
-      },
       {
         name: 'naturaleza_provision',
         label: 'Tipo de oferta',
@@ -55,7 +47,7 @@ export function ProveedoresPage() {
         ],
       },
       { name: 'nombre', label: 'Producto o servicio', required: true },
-      { name: 'descripcion', label: 'DescripciÃ³n', type: 'textarea' },
+      { name: 'descripcion', label: 'Descripción', type: 'textarea' },
       { name: 'unidad_medida', label: 'Unidad de cobro', required: true },
       {
         name: 'tipo_costo',
@@ -76,20 +68,33 @@ export function ProveedoresPage() {
       },
       { name: 'activo', label: 'Producto activo', type: 'checkbox' },
     ],
-    [proveedores.data],
-  )
-  const nombresProveedores = useMemo(
-    () => new Map(proveedores.data?.map((proveedor) => [proveedor.id, proveedor.nombre]) ?? []),
-    [proveedores.data],
+    [],
   )
 
+  function gestionarProductos(proveedor: Proveedor) {
+    setProveedorProductos(proveedor)
+    requestAnimationFrame(() =>
+      panelProductosRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+    )
+  }
   return (
     <div className="space-y-10">
       <CatalogManager<Proveedor>
         tabla="proveedores"
         title="Proveedores"
-        description="Administre los contactos y la ubicaciÃ³n de los proveedores."
+        description="Administre los contactos y la ubicación de los proveedores."
         fields={supplierFields}
+        extraActions={(proveedor) => (
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label={'Gestionar productos de ' + proveedor.nombre}
+            title="Gestionar productos"
+            onClick={() => gestionarProductos(proveedor)}
+          >
+            <Package className="size-4" aria-hidden="true" />
+          </Button>
+        )}
         columns={[
           'nombre',
           'persona_contacto',
@@ -102,49 +107,57 @@ export function ProveedoresPage() {
         columnLabels={{
           nombre: 'Proveedor',
           persona_contacto: 'Contacto',
-          telefono: 'TelÃ©fono',
+          telefono: 'Teléfono',
           correo: 'Correo',
-          articulos_provee: 'ArtÃ­culos',
-          provincia: 'UbicaciÃ³n',
+          articulos_provee: 'Artículos',
+          provincia: 'Ubicación',
           activo: 'Activo',
         }}
       />
 
-      <CatalogManager<Material>
-        tabla="materiales"
-        title="Productos provistos"
-        description="Registre productos o servicios de cada proveedor y defina si su costo es fijo o por hora."
-        fields={productFields}
-        defaultValues={valoresProducto}
-        filterItem={esProductoProveedor}
-        columns={[
-          'proveedor_id',
-          'naturaleza_provision',
-          'nombre',
-          'unidad_medida',
-          'tipo_costo',
-          'costo_referencial',
-          'activo',
-        ]}
-        columnLabels={{
-          proveedor_id: 'Proveedor',
-          nombre: 'Producto',
-          unidad_medida: 'Unidad',
-          tipo_costo: 'Modalidad',
-          costo_referencial: 'Costo',
-          activo: 'Activo',
-        }}
-        renderCell={(item, column) => {
-          if (column === 'naturaleza_provision')
-            return item.naturaleza_provision === 'servicio' ? 'Servicio' : 'Material'
-          if (column === 'proveedor_id')
-            return item.proveedor_id
-              ? (nombresProveedores.get(item.proveedor_id) ?? 'Proveedor')
-              : 'â€”'
-          if (column === 'tipo_costo') return item.tipo_costo === 'hora' ? 'Por hora' : 'Fijo'
-          return String(item[column as keyof Material] ?? 'â€”')
-        }}
-      />
+      {proveedorProductos && (
+        <div ref={panelProductosRef} className="scroll-mt-24">
+          <CatalogManager<Material>
+            tabla="materiales"
+            key={proveedorProductos.id}
+            title={`Productos de ${proveedorProductos.nombre}`}
+            description="Administre únicamente los productos y servicios del proveedor seleccionado."
+            fields={productFields}
+            defaultValues={{ ...valoresProducto, proveedor_id: proveedorProductos.id }}
+            filterItem={(item) =>
+              esProductoProveedor(item) && item.proveedor_id === proveedorProductos.id
+            }
+            headerActions={
+              <Button variant="outline" onClick={() => setProveedorProductos(null)}>
+                <X className="mr-2 size-4" />
+                Cerrar productos
+              </Button>
+            }
+            columns={[
+              'naturaleza_provision',
+              'nombre',
+              'unidad_medida',
+              'tipo_costo',
+              'costo_referencial',
+              'activo',
+            ]}
+            columnLabels={{
+              nombre: 'Producto',
+              unidad_medida: 'Unidad',
+              tipo_costo: 'Modalidad',
+              costo_referencial: 'Costo',
+              activo: 'Activo',
+            }}
+            renderCell={(item, column) => {
+              if (column === 'naturaleza_provision')
+                return item.naturaleza_provision === 'servicio' ? 'Servicio' : 'Material'
+
+              if (column === 'tipo_costo') return item.tipo_costo === 'hora' ? 'Por hora' : 'Fijo'
+              return String(item[column as keyof Material] ?? '—')
+            }}
+          />
+        </div>
+      )}
     </div>
   )
 }

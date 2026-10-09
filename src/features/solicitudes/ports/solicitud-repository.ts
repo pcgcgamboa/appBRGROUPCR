@@ -16,11 +16,25 @@ export interface Intervencion {
   motivo_rechazo_cancelacion: string | null
 }
 
+export interface EquipoNuevoInput {
+  nombre: string
+  marca?: string
+  modelo?: string
+  serie?: string
+}
+
 export interface CrearSolicitudInput extends SolicitudFormData {
   cliente_id: string
   solicitante_id: string
   archivos: File[]
   como_gestor?: boolean
+  /** Equipo ya registrado para el cliente. Si se omite y se envía `equipo_nuevo`, se crea uno
+   * nuevo en la misma transacción y queda asociado al cliente. */
+  equipo_id?: string | null
+  equipo_nuevo?: EquipoNuevoInput | null
+  /** Solicitud previa que se reclama por garantía. Obligatoria server-side cuando el tipo
+   * elegido tiene `es_garantia`. */
+  solicitud_original_id?: string | null
   /** Estable mientras el cliente reintenta el mismo envío. Un reintento con la misma clave
    * devuelve la solicitud ya creada en vez de duplicarla. */
   idempotencia_clave: string
@@ -54,7 +68,13 @@ export interface EnviarComunicacionInput {
 }
 
 export interface GestionInput {
-  accion: 'asignar' | 'cambiar_estado' | 'rechazar' | 'reabrir' | 'resolver_peticion'
+  accion:
+    | 'asignar'
+    | 'cambiar_estado'
+    | 'rechazar'
+    | 'reabrir'
+    | 'resolver_peticion'
+    | 'notificar_cliente'
   solicitud_id: string
   prioridad?: 'baja' | 'media' | 'alta' | 'urgente'
   operador_id?: string
@@ -68,6 +88,12 @@ export interface ResolverPeticionInput {
   peticion_id: string
   aprobar: boolean
   motivo?: string
+}
+
+export interface SolicitudOriginalDisponible {
+  id: string
+  numero: number
+  nombre: string
 }
 
 /**
@@ -91,4 +117,10 @@ export interface SolicitudRepository {
   gestionar(input: GestionInput): Promise<{ solicitud_id: string }>
   resolverPeticion(input: ResolverPeticionInput): Promise<{ solicitud_id: string }>
   operadoresActivos(): Promise<OperadorResumen[]>
+  /** Solicitudes ya atendidas/cerradas de un cliente y equipo — el "trabajo ya realizado" que
+   * una solicitud de garantía nueva puede reclamar. */
+  solicitudesOriginalesDisponibles(
+    clienteId: string,
+    equipoId: string,
+  ): Promise<SolicitudOriginalDisponible[]>
 }

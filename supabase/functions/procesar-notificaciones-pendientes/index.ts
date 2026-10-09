@@ -42,12 +42,15 @@ Deno.serve(async (request) => {
     await enviarNotificacionPendiente(
       {
         id: fila.id,
+        tipo: fila.tipo,
         destinatario: fila.destinatario,
-        numero: fila.numero,
-        nombre: fila.nombre,
-        clienteNombre: fila.cliente_nombre ?? '',
+        estado: fila.estado ?? undefined,
+        numero: fila.numero ?? undefined,
+        nombre: fila.nombre ?? undefined,
+        clienteNombre: fila.cliente_nombre ?? undefined,
+        asunto: fila.asunto ?? undefined,
+        cuerpoTexto: fila.cuerpo_texto ?? undefined,
       },
-      fila.estado,
       correlacionId,
     )
   }

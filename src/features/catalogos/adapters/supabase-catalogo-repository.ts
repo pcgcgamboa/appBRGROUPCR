@@ -1,6 +1,24 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { CatalogoRepository } from '@/features/catalogos/ports/catalogo-repository'
-import type { DatosFormulario, EntidadBase } from '@/features/catalogos/types/catalogos.types'
+import type {
+  DatosFormulario,
+  EntidadBase,
+  PlantillaReporte,
+} from '@/features/catalogos/types/catalogos.types'
+
+const plantillaReportePredeterminada: Omit<PlantillaReporte, 'cliente_id'> = {
+  incluir_motivo_visita: true,
+  incluir_checklist_condiciones: true,
+  incluir_fotos_categorizadas: true,
+  incluir_recomendaciones: true,
+  categorias_fotos_habilitadas: [
+    'estado_inicial',
+    'trabajo_en_proceso',
+    'resultado_final',
+    'placa_serie',
+    'otro',
+  ],
+}
 
 /**
  * Adaptador concreto de `CatalogoRepository` sobre supabase-js. Cada método
@@ -41,6 +59,27 @@ export function createSupabaseCatalogoRepository(
     async eliminar(tabla: string, id: string | number): Promise<void> {
       if (!client) throw new Error('Supabase no está configurado.')
       const { error } = await client.from(tabla).delete().eq('id', id)
+      if (error) throw error
+    },
+
+    async obtenerPlantillaReporte(clienteId: string): Promise<PlantillaReporte> {
+      if (!client) throw new Error('Supabase no está configurado.')
+      const { data, error } = await client
+        .from('clientes_plantilla_reporte')
+        .select(
+          'cliente_id, incluir_motivo_visita, incluir_checklist_condiciones, incluir_fotos_categorizadas, incluir_recomendaciones, categorias_fotos_habilitadas',
+        )
+        .eq('cliente_id', clienteId)
+        .maybeSingle()
+      if (error) throw error
+      return data ?? { cliente_id: clienteId, ...plantillaReportePredeterminada }
+    },
+
+    async guardarPlantillaReporte(input: PlantillaReporte): Promise<void> {
+      if (!client) throw new Error('Supabase no está configurado.')
+      const { error } = await client
+        .from('clientes_plantilla_reporte')
+        .upsert(input, { onConflict: 'cliente_id' })
       if (error) throw error
     },
   }

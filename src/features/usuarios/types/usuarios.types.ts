@@ -1,6 +1,15 @@
-﻿export interface UsuarioAdmin {
+﻿export type RolStaff = 'administrador' | 'encargado' | 'operador'
+
+export interface StaffDirectorioItem {
   id: string
-  email: string
+  nombre_completo: string
+  roles: RolStaff[]
+}
+
+export interface UsuarioAdmin {
+  id: string
+  cuenta: string
+  correo: string | null
   nombre_completo: string
   telefono: string | null
   cliente_id: string | null
@@ -11,7 +20,8 @@
 
 export interface DatosUsuarioAdmin {
   id?: string
-  email: string
+  cuenta: string
+  correo: string | null
   password?: string
   nombre_completo: string
   telefono: string | null

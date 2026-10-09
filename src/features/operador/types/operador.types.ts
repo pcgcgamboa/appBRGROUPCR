@@ -7,8 +7,15 @@ export interface SolicitudOperador {
   detalle: string
   estado: EstadoSolicitud
   prioridad: string | null
+  cliente_id: string | null
   cliente: { nombre: string } | null
   tipo: { nombre: string } | null
+  equipo: {
+    nombre: string
+    marca: string | null
+    modelo: string | null
+    serie: string | null
+  } | null
   peticiones: PeticionResolucion[]
   ruta: {
     vehiculo_id: string | null
@@ -93,6 +100,27 @@ export interface AdjuntoAvanceInput {
   tipo: 'imagen' | 'documento'
   mime_type: string
   tamano_bytes: number
+  /** Categoría fija de foto del reporte de atención (ver CATEGORIAS_FOTO_REPORTE); null en
+   * adjuntos normales que no pertenecen al reporte. */
+  categoria?: string | null
+}
+
+export type EstadoEquipoFinal = 'funcionando' | 'parcial' | 'sin_funcionar'
+
+export interface ReporteAtencionInput {
+  hora_llegada: string | null
+  hora_salida: string | null
+  checklist_area_trabajo_segura: boolean
+  checklist_equipo_probado: boolean
+  checklist_cliente_capacitado: boolean
+  checklist_requiere_seguimiento: boolean
+  checklist_notas: string
+  estado_equipo_final: EstadoEquipoFinal
+  recomendaciones: string
+  /** Imagen PNG en data URL, capturada del canvas de firma — ver signature-pad.tsx. */
+  firma_tecnico: string
+  firma_cliente: string
+  cedula_cliente_firma: string
 }
 
 export interface RegistrarAvanceInput {
@@ -106,6 +134,8 @@ export interface RegistrarAvanceInput {
   /** Estable mientras exista el borrador de esta solicitud — ver `obtenerClaveIdempotencia`. Un
    * reintento con la misma clave devuelve el avance ya registrado en vez de duplicarlo. */
   idempotencia_clave: string
+  /** Presente solo cuando el operador activa "Generar reporte de atención". */
+  reporte?: ReporteAtencionInput | null
 }
 
 export type EstadoSubidaAdjunto = 'pendiente' | 'subiendo' | 'listo' | 'error'
@@ -131,4 +161,9 @@ export interface AvanceResumen {
     material: { nombre: string; unidad_medida: string } | null
   }[]
   adjuntos: { id: string; nombre_archivo: string; tipo: string }[]
+  reporte_atencion: {
+    estado_equipo_final: EstadoEquipoFinal
+    ruta_storage_pdf: string | null
+    nombre_archivo_pdf: string | null
+  } | null
 }

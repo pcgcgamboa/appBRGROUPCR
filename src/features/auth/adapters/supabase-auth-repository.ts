@@ -3,12 +3,12 @@ import type { AuthRepository } from '@/features/auth/ports/auth-repository'
 import type { PerfilActual, PerfilRespuesta } from '@/features/auth/types/auth.types'
 
 /**
- * Adaptador concreto de `AuthRepository` sobre supabase-js. Cada mÃ©todo
- * verifica que el cliente estÃ© configurado (`client` puede ser
-ull` cuando
- * las variables de entorno de Supabase no estÃ¡n presentes) para no romper el
- * arranque de la app â€” el chequeo se hace por mÃ©todo, no al construir la
- * instancia, replicando el patrÃ³n `if (!supabase) ...` que ya usaban los
+ * Adaptador concreto de `AuthRepository` sobre supabase-js. Cada método
+ * verifica que el cliente esté configurado (`client` puede ser
+ * `null` cuando
+ * las variables de entorno de Supabase no están presentes) para no romper el
+ * arranque de la app — el chequeo se hace por método, no al construir la
+ * instancia, replicando el patrón `if (!supabase) ...` que ya usaban los
  * hooks y componentes.
  */
 export function createSupabaseAuthRepository(client: SupabaseClient | null): AuthRepository {
@@ -27,10 +27,18 @@ export function createSupabaseAuthRepository(client: SupabaseClient | null): Aut
       return () => data.subscription.unsubscribe()
     },
 
-    async iniciarSesion(email: string, password: string): Promise<void> {
-      if (!client) return
-      const { error } = await client.auth.signInWithPassword({ email, password })
-      if (error) throw error
+    async iniciarSesion(cuenta: string, password: string): Promise<void> {
+      if (!client) throw new Error('Supabase no está configurado.')
+      const { data, error } = await client.functions.invoke('iniciar-sesion', {
+        body: { cuenta, password },
+      })
+      if (error || !data?.access_token || !data?.refresh_token)
+        throw error ?? new Error('Cuenta o contraseña incorrecta.')
+      const { error: sessionError } = await client.auth.setSession({
+        access_token: data.access_token as string,
+        refresh_token: data.refresh_token as string,
+      })
+      if (sessionError) throw sessionError
     },
 
     async cerrarSesion(): Promise<void> {
@@ -60,7 +68,7 @@ export function createSupabaseAuthRepository(client: SupabaseClient | null): Aut
       return firma.signedUrl
     },
     async obtenerPerfil(usuarioId: string): Promise<PerfilActual> {
-      if (!client) throw new Error('No hay una sesiÃ³n activa.')
+      if (!client) throw new Error('No hay una sesión activa.')
       const { data, error } = await client
         .from('usuarios')
         .select(

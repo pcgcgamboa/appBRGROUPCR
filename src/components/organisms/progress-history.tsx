@@ -1,8 +1,21 @@
+import { FileText } from 'lucide-react'
 import { Badge } from '@/components/atoms/badge'
-import { useAvancesSolicitud } from '@/features/operador/hooks/use-operador'
+import { Button } from '@/components/atoms/button'
+import { useAvancesSolicitud, useUrlFirmadaReporte } from '@/features/operador/hooks/use-operador'
 
 export function ProgressHistory({ solicitudId }: { solicitudId: string }) {
   const avances = useAvancesSolicitud(solicitudId)
+  const urlReporte = useUrlFirmadaReporte()
+
+  async function verReporte(rutaStorage: string) {
+    // Abre la pestaña de inmediato (dentro del gesto del clic) y solo después la redirige a la
+    // URL firmada — esperar el async primero perdería el gesto de usuario y el navegador
+    // bloquearía silenciosamente el popup.
+    const ventana = window.open('', '_blank')
+    const url = await urlReporte.mutateAsync(rutaStorage)
+    if (ventana) ventana.location.href = url
+  }
+
   return (
     <section className="space-y-3">
       <h2 className="text-lg font-semibold">Bitácora registrada</h2>
@@ -33,6 +46,19 @@ export function ProgressHistory({ solicitudId }: { solicitudId: string }) {
             )}
             {avance.adjuntos.length > 0 && (
               <p className="mt-3 text-sm">{avance.adjuntos.length} adjunto(s)</p>
+            )}
+            {avance.reporte_atencion?.ruta_storage_pdf && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-3"
+                disabled={urlReporte.isPending}
+                onClick={() => verReporte(avance.reporte_atencion!.ruta_storage_pdf!)}
+              >
+                <FileText className="mr-2 size-4" />
+                Ver reporte de atención
+              </Button>
             )}
           </article>
         ))

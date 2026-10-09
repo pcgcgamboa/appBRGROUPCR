@@ -4,6 +4,11 @@ import type { CampoCatalogo, TipoSolicitud } from '@/features/catalogos/types/ca
 const fields: CampoCatalogo[] = [
   { name: 'nombre', label: 'Nombre', required: true },
   { name: 'descripcion', label: 'Descripción', type: 'textarea' },
+  {
+    name: 'es_garantia',
+    label: 'Es garantía (exige equipo y solicitud original al crear)',
+    type: 'checkbox',
+  },
   { name: 'activo', label: 'Tipo activo', type: 'checkbox' },
 ]
 
@@ -14,8 +19,13 @@ export function TiposPage() {
       title="Tipos de solicitud"
       description="Servicios disponibles para nuevas solicitudes."
       fields={fields}
-      columns={['nombre', 'descripcion', 'activo']}
-      columnLabels={{ nombre: 'Nombre', descripcion: 'Descripción', activo: 'Activo' }}
+      columns={['nombre', 'descripcion', 'es_garantia', 'activo']}
+      columnLabels={{
+        nombre: 'Nombre',
+        descripcion: 'Descripción',
+        es_garantia: 'Garantía',
+        activo: 'Activo',
+      }}
     />
   )
 }

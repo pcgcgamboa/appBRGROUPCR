@@ -46,7 +46,7 @@ export function GridPagination({
           Anterior
         </Button>
         <span>
-          Página {current} de {pages}
+          Pág. {current} de {pages}
         </span>
         <Button
           variant="outline"

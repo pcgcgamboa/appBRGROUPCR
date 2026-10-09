@@ -1,7 +1,11 @@
 import { CircleDollarSign, PackageSearch } from 'lucide-react'
+import { type ReactNode, useMemo } from 'react'
 import { Skeleton } from '@/components/atoms/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/atoms/tabs'
+import { ThOrdenable } from '@/components/atoms/th-ordenable'
 import { useReporteCostosMateriales } from '@/features/reportes/hooks/use-dashboard'
+import type { ReporteCostosMateriales } from '@/features/reportes/types/reportes.types'
+import { useOrdenamiento, type ValorOrdenable } from '@/hooks/use-ordenamiento'
 import { normalizarError } from '@/lib/errores'
 
 const moneda = new Intl.NumberFormat('es-CR', {
@@ -10,46 +14,62 @@ const moneda = new Intl.NumberFormat('es-CR', {
   maximumFractionDigits: 2,
 })
 
-function TablaCostos({
-  encabezados,
-  filas,
-}: {
-  encabezados: string[]
-  filas: (string | number)[][]
-}) {
+type FilaSolicitud = ReporteCostosMateriales['por_solicitud'][number]
+type FilaRuta = ReporteCostosMateriales['por_ruta'][number]
+type FilaEncargado = ReporteCostosMateriales['por_encargado'][number]
+
+interface ColumnaCostos<T> {
+  id: string
+  label: string
+  render: (item: T) => ReactNode
+  // El ordenamiento actúa sobre el objeto fuente, no sobre `render` ya formateado (una fecha o un
+  // monto en colones ya convertidos a texto no se ordenan correctamente como string).
+  sortValue: (item: T) => ValorOrdenable
+}
+
+function TablaCostos<T>({ columnas, filas }: { columnas: ColumnaCostos<T>[]; filas: T[] }) {
+  const accesores = useMemo(
+    () => Object.fromEntries(columnas.map((columna) => [columna.id, columna.sortValue])),
+    [columnas],
+  )
+  const { datosOrdenados, columnaActiva, direccion, ordenarPor } = useOrdenamiento(filas, accesores)
   return (
     <div className="overflow-x-auto rounded-lg border bg-card shadow-sm">
       <table className="w-full min-w-[680px] text-left text-sm">
         <thead className="bg-muted text-muted-foreground">
           <tr>
-            {encabezados.map((encabezado, indice) => (
-              <th
-                key={encabezado}
+            {columnas.map((columna, indice) => (
+              <ThOrdenable
+                key={columna.id}
+                columna={columna.id}
+                ordenActual={columnaActiva}
+                direccion={direccion}
+                onOrdenar={ordenarPor}
                 className={
-                  indice === encabezados.length - 1
+                  indice === columnas.length - 1
                     ? 'px-4 py-3 text-right font-semibold'
                     : 'px-4 py-3 font-semibold'
                 }
               >
-                {encabezado}
-              </th>
+                {columna.label}
+              </ThOrdenable>
             ))}
           </tr>
         </thead>
         <tbody>
-          {filas.length ? (
-            filas.map((fila, indiceFila) => (
+          {datosOrdenados.length ? (
+            datosOrdenados.map((item, indiceFila) => (
               <tr key={indiceFila} className="border-t transition-colors hover:bg-accent/50">
-                {fila.map((valor, indice) => (
+                {columnas.map((columna, indice) => (
                   <td
-                    key={indice}
+                    key={columna.id}
                     className={
-                      indice === fila.length - 1
+                      indice === columnas.length - 1
                         ? 'px-4 py-3 text-right font-semibold tabular-nums'
                         : 'px-4 py-3'
                     }
                   >
-                    {valor}
+                    {columna.render(item)}
                   </td>
                 ))}
               </tr>
@@ -57,7 +77,7 @@ function TablaCostos({
           ) : (
             <tr>
               <td
-                colSpan={encabezados.length}
+                colSpan={columnas.length}
                 className="px-4 py-10 text-center text-muted-foreground"
               >
                 No hay costos de inventario registrados para este análisis.
@@ -69,6 +89,89 @@ function TablaCostos({
     </div>
   )
 }
+
+// Fuera del componente: referencia estable entre renders — un array de columnas nuevo en cada
+// render obliga a useOrdenamiento (dentro de TablaCostos) a reconstruir su lógica interna en cada
+// interacción (ver el mismo arreglo en bandeja-encargado-page.tsx).
+const columnasSolicitud: ColumnaCostos<FilaSolicitud>[] = [
+  {
+    id: 'solicitud',
+    label: 'Solicitud',
+    render: (item) => `#${item.numero} · ${item.nombre}`,
+    sortValue: (item) => item.numero,
+  },
+  {
+    id: 'cliente',
+    label: 'Cliente',
+    render: (item) => item.cliente,
+    sortValue: (item) => item.cliente,
+  },
+  {
+    id: 'registros',
+    label: 'Registros',
+    render: (item) => item.registros_materiales,
+    sortValue: (item) => item.registros_materiales,
+  },
+  {
+    id: 'costo',
+    label: 'Costo',
+    render: (item) => moneda.format(item.costo_total),
+    sortValue: (item) => item.costo_total,
+  },
+]
+const columnasRuta: ColumnaCostos<FilaRuta>[] = [
+  {
+    id: 'ruta',
+    label: 'Ruta',
+    render: (item) => `${item.codigo} · ${item.nombre}`,
+    sortValue: (item) => `${item.codigo} ${item.nombre}`,
+  },
+  {
+    id: 'fecha',
+    label: 'Fecha',
+    render: (item) => new Intl.DateTimeFormat('es-CR').format(new Date(`${item.fecha}T12:00:00`)),
+    sortValue: (item) => item.fecha,
+  },
+  {
+    id: 'encargado',
+    label: 'Encargado',
+    render: (item) => item.encargado,
+    sortValue: (item) => item.encargado,
+  },
+  {
+    id: 'solicitudes',
+    label: 'Solicitudes',
+    render: (item) => item.solicitudes,
+    sortValue: (item) => item.solicitudes,
+  },
+  {
+    id: 'costo',
+    label: 'Costo',
+    render: (item) => moneda.format(item.costo_total),
+    sortValue: (item) => item.costo_total,
+  },
+]
+const columnasEncargado: ColumnaCostos<FilaEncargado>[] = [
+  {
+    id: 'encargado',
+    label: 'Encargado',
+    render: (item) => item.encargado,
+    sortValue: (item) => item.encargado,
+  },
+  { id: 'rutas', label: 'Rutas', render: (item) => item.rutas, sortValue: (item) => item.rutas },
+  {
+    id: 'solicitudes',
+    label: 'Solicitudes',
+    render: (item) => item.solicitudes,
+    sortValue: (item) => item.solicitudes,
+  },
+  {
+    id: 'costo',
+    label: 'Costo',
+    render: (item) => moneda.format(item.costo_total),
+    sortValue: (item) => item.costo_total,
+  },
+]
 
 export function MaterialCostReports() {
   const reporte = useReporteCostosMateriales()
@@ -122,38 +225,13 @@ export function MaterialCostReports() {
             <TabsTrigger value="encargado">Por encargado</TabsTrigger>
           </TabsList>
           <TabsContent value="solicitud">
-            <TablaCostos
-              encabezados={['Solicitud', 'Cliente', 'Registros', 'Costo']}
-              filas={reporte.data.por_solicitud.map((item) => [
-                `#${item.numero} · ${item.nombre}`,
-                item.cliente,
-                item.registros_materiales,
-                moneda.format(item.costo_total),
-              ])}
-            />
+            <TablaCostos filas={reporte.data.por_solicitud} columnas={columnasSolicitud} />
           </TabsContent>
           <TabsContent value="ruta">
-            <TablaCostos
-              encabezados={['Ruta', 'Fecha', 'Encargado', 'Solicitudes', 'Costo']}
-              filas={reporte.data.por_ruta.map((item) => [
-                `${item.codigo} · ${item.nombre}`,
-                new Intl.DateTimeFormat('es-CR').format(new Date(`${item.fecha}T12:00:00`)),
-                item.encargado,
-                item.solicitudes,
-                moneda.format(item.costo_total),
-              ])}
-            />
+            <TablaCostos filas={reporte.data.por_ruta} columnas={columnasRuta} />
           </TabsContent>
           <TabsContent value="encargado">
-            <TablaCostos
-              encabezados={['Encargado', 'Rutas', 'Solicitudes', 'Costo']}
-              filas={reporte.data.por_encargado.map((item) => [
-                item.encargado,
-                item.rutas,
-                item.solicitudes,
-                moneda.format(item.costo_total),
-              ])}
-            />
+            <TablaCostos filas={reporte.data.por_encargado} columnas={columnasEncargado} />
           </TabsContent>
         </Tabs>
       ) : null}

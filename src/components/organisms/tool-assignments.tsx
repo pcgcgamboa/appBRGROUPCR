@@ -2,8 +2,21 @@
 import { Button } from '@/components/atoms/button'
 import { Input } from '@/components/atoms/input'
 import { Select } from '@/components/atoms/select'
+import { ThOrdenable } from '@/components/atoms/th-ordenable'
 import { useGestionHerramientas } from '@/features/inventario/hooks/use-asignaciones-herramientas'
+import type { AsignacionHerramienta } from '@/features/inventario/types/inventario.types'
+import { useOrdenamiento } from '@/hooks/use-ordenamiento'
 import { normalizarError } from '@/lib/errores'
+
+// Fuera del componente: referencia estable entre renders — evita que useOrdenamiento reconstruya
+// su lógica interna en cada tecla/clic (ver el mismo arreglo en bandeja-encargado-page.tsx).
+const accesoresOrdenamiento = {
+  herramienta: (item: AsignacionHerramienta) => item.herramienta?.nombre ?? null,
+  activo: (item: AsignacionHerramienta) => item.herramienta?.numero_activo ?? null,
+  asignadaA: (item: AsignacionHerramienta) => item.usuario?.nombre_completo ?? null,
+  entrega: (item: AsignacionHerramienta) => item.asignada_en,
+  observaciones: (item: AsignacionHerramienta) => item.observaciones_entrega,
+}
 
 export function ToolAssignments() {
   const gestion = useGestionHerramientas()
@@ -20,6 +33,12 @@ export function ToolAssignments() {
     [asignaciones],
   )
   const ocupadas = useMemo(() => new Set(activas.map((item) => item.herramienta_id)), [activas])
+  const {
+    datosOrdenados: activasOrdenadas,
+    columnaActiva,
+    direccion,
+    ordenarPor,
+  } = useOrdenamiento(activas, accesoresOrdenamiento)
   async function asignar(event: FormEvent) {
     event.preventDefault()
     await gestion.asignar.mutateAsync({
@@ -104,16 +123,38 @@ export function ToolAssignments() {
         <table className="w-full min-w-[720px] text-left text-sm">
           <thead>
             <tr>
-              <th className="p-3">Herramienta</th>
-              <th>Activo</th>
-              <th>Asignada a</th>
-              <th>Entrega</th>
-              <th>Observaciones</th>
+              <ThOrdenable
+                columna="herramienta"
+                ordenActual={columnaActiva}
+                direccion={direccion}
+                onOrdenar={ordenarPor}
+                className="p-3"
+              >
+                Herramienta
+              </ThOrdenable>
+              {(
+                [
+                  ['activo', 'Activo'],
+                  ['asignadaA', 'Asignada a'],
+                  ['entrega', 'Entrega'],
+                  ['observaciones', 'Observaciones'],
+                ] as const
+              ).map(([columna, etiqueta]) => (
+                <ThOrdenable
+                  key={columna}
+                  columna={columna}
+                  ordenActual={columnaActiva}
+                  direccion={direccion}
+                  onOrdenar={ordenarPor}
+                >
+                  {etiqueta}
+                </ThOrdenable>
+              ))}
               <th>Acción</th>
             </tr>
           </thead>
           <tbody>
-            {activas.map((item) => (
+            {activasOrdenadas.map((item) => (
               <tr key={item.id} className="border-t">
                 <td className="p-3 font-medium">{item.herramienta?.nombre}</td>
                 <td>{item.herramienta?.numero_activo}</td>

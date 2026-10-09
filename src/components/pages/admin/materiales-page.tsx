@@ -10,7 +10,7 @@ export function MaterialesPage() {
     () => [
       {
         name: 'categoria',
-        label: 'CategorÃ­a',
+        label: 'Categoría',
         type: 'select',
         required: true,
         options: [
@@ -20,11 +20,11 @@ export function MaterialesPage() {
         ],
       },
       { name: 'nombre', label: 'Nombre', required: true },
-      { name: 'descripcion', label: 'DescripciÃ³n', type: 'textarea' },
+      { name: 'descripcion', label: 'Descripción', type: 'textarea' },
       { name: 'unidad_medida', label: 'Unidad de medida', required: true },
       {
         name: 'numero_activo',
-        label: 'NÃºmero de activo',
+        label: 'Número de activo',
         required: true,
         visibleWhen: { field: 'categoria', equals: 'herramienta' },
       },
@@ -89,7 +89,7 @@ export function MaterialesPage() {
           'activo',
         ]}
         columnLabels={{
-          categoria: 'CategorÃ­a',
+          categoria: 'Categoría',
           nombre: 'Elemento',
           numero_activo: 'Activo',
           proveedor_id: 'Proveedor',
@@ -103,9 +103,14 @@ export function MaterialesPage() {
           if (column === 'proveedor_id')
             return item.proveedor_id
               ? (nombresProveedores.get(item.proveedor_id) ?? 'Proveedor')
-              : 'â€”'
+              : '—'
           if (column === 'tipo_costo') return item.tipo_costo === 'hora' ? 'Por hora' : 'Fijo'
-          return String(item[column as keyof Material] ?? 'â€”')
+          return String(item[column as keyof Material] ?? '—')
+        }}
+        sortAccessors={{
+          categoria: (item) => etiquetasCategoria[item.categoria],
+          proveedor_id: (item) =>
+            item.proveedor_id ? (nombresProveedores.get(item.proveedor_id) ?? null) : null,
         }}
       />
       <ToolAssignments />

@@ -1,4 +1,8 @@
-import type { DatosFormulario, EntidadBase } from '@/features/catalogos/types/catalogos.types'
+import type {
+  DatosFormulario,
+  EntidadBase,
+  PlantillaReporte,
+} from '@/features/catalogos/types/catalogos.types'
 
 /**
  * Puerto del dominio `catalogos`: define el contrato de acceso a datos sin
@@ -18,4 +22,9 @@ export interface CatalogoRepository {
     values: DatosFormulario,
   ): Promise<string | number>
   eliminar(tabla: string, id: string | number): Promise<void>
+  /** `clientes_plantilla_reporte` no tiene columna `id` (su llave es `cliente_id`), así que no
+   * encaja en `listar`/`guardar` genéricos — se resuelve con valores por defecto si el cliente
+   * todavía no tiene fila propia. */
+  obtenerPlantillaReporte(clienteId: string): Promise<PlantillaReporte>
+  guardarPlantillaReporte(input: PlantillaReporte): Promise<void>
 }

@@ -53,6 +53,22 @@ export interface RutaProcesoInput {
   }>
 }
 
+export interface SolicitudProgramada {
+  solicitud_id: string
+  fecha_programada: string
+  solicitud: {
+    numero: number
+    nombre: string
+    estado: string
+    prioridad: string | null
+    operador_id: string | null
+    operador: { nombre_completo: string } | null
+  } | null
+  ruta_solicitudes: Array<{
+    ruta: { id: string; codigo: string; fecha_programada: string } | null
+  }>
+}
+
 export interface RutaGasto {
   id: string
   ruta_id: string

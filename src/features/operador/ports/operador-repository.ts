@@ -30,4 +30,12 @@ export interface OperadorRepository {
   }): Promise<string>
   subirAdjunto(rutaStorage: string, archivo: File): Promise<void>
   eliminarAdjuntos(rutasStorage: string[]): Promise<void>
+  urlFirmadaAdjunto(rutaStorage: string): Promise<string>
+  urlFirmadaReporte(rutaStorage: string): Promise<string>
+  subirReportePdf(rutaStorage: string, archivo: Blob): Promise<void>
+  completarReportePdf(
+    avanceId: string,
+    rutaStoragePdf: string,
+    nombreArchivoPdf: string,
+  ): Promise<void>
 }
