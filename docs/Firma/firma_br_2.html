@@ -1,0 +1,116 @@
+<!--
+  FIRMA DE CORREO — BR Mantenimiento General (LISTA PARA USAR)
+  ------------------------------------------------------------------
+  Los 5 archivos (logo, poster, video, GIF y este mismo HTML) ya están
+  alojados públicamente en Cloudflare R2:
+    https://pub-cfde5e21d14340599b62622f340093ad.r2.dev/Publicos/
+  Las URLs de abajo ya apuntan ahí — no hace falta reemplazar nada.
+
+  CÓMO USARLA
+  1) Pegue este HTML en el editor de firma de Gmail/Outlook usando la
+     opción "Insertar HTML" o el modo de edición de código fuente.
+     (En Gmail: Configuración > Ver toda la configuración > Firma >
+     el editor acepta texto enriquecido; para HTML avanzado puede
+     pegar el contenido ya renderizado copiando/pegando esta firma
+     abierta en un navegador, o usar una extensión de firma HTML).
+  2) Actualice nombre, cargo, teléfono y correo por los de cada persona
+     que use esta firma (los datos actuales son de ejemplo: Ericka
+     Bolaños, Coordinadora de Servicio al Cliente).
+  3) Envíe pruebas a los clientes de correo que realmente usarán los
+     destinatarios (Gmail, Outlook y Apple Mail al menos) antes de
+     distribuirla al equipo.
+
+  Nota: el bucket de R2 quedó con acceso público habilitado — cualquiera
+  con estas URLs puede ver los archivos (no están listados/indexados).
+  Si más adelante se conecta un dominio propio (ej. cdn.brmantenimiento.cr)
+  a este bucket, solo hay que reemplazar el dominio en las 4 URLs de abajo.
+  ------------------------------------------------------------------
+  NOTA TÉCNICA — por qué NO hay una etiqueta <video> aquí (a propósito):
+  La primera versión sí usaba <video> con <source> y el GIF como
+  respaldo — funciona perfecto si el HTML se envía tal cual (por
+  ejemplo, un servidor de correo que arma el mensaje directamente).
+  PERO si el flujo real es "abrir este archivo en el navegador,
+  seleccionar todo, copiar y pegar en Gmail/Outlook" (el caso de uso
+  de esta firma), se rompe en dos pasos distintos, confirmados
+  probando el copiado real:
+    1. Chrome, al copiar una selección que incluye <video>, descarta
+       TODO su contenido interno (<source> y la imagen de respaldo)
+       — solo deja la etiqueta <video> vacía en el portapapeles.
+    2. Gmail, al pegar, además elimina el atributo "poster" de lo
+       poco que quedaba. Resultado real observado en Gmail:
+       <video width="600" height="300" controls="controls" ...></video>
+       — completamente vacío, sin imagen ni forma de reproducir nada.
+  Por eso la firma usa directamente una imagen (el GIF animado, con el
+  primer cuadro ya diseñado como portada + botón de play) envuelta en
+  un enlace <a> al video — exactamente lo que se pidió ("la firma es
+  una imagen, y desde ahí se accede al video"). Este patrón (imagen +
+  enlace, sin <video>) sí sobrevive el copiado/pegado tal cual, porque
+  es la misma estructura que el logo de arriba, que sí funciona.
+-->
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0"
+       style="width:600px;max-width:100%;font-family:Arial,Helvetica,sans-serif;border-collapse:collapse;">
+  <tr>
+    <td style="padding:0 0 14px 0;" valign="top">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td valign="middle" style="padding-right:14px;">
+            <img src="https://pub-cfde5e21d14340599b62622f340093ad.r2.dev/Publicos/logo_br_2.png" alt="BR Mantenimiento General" width="62" height="52"
+                 style="display:block;border:0;border-radius:8px;">
+          </td>
+          <td valign="middle" style="border-left:3px solid #d6161a;padding-left:14px;">
+            <div style="font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:20px;color:#111a26;font-weight:bold;">
+              Ericka Bolaños
+            </div>
+            <div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:16px;color:#5a6b7a;">
+              Coordinadora de Servicio al Cliente
+            </div>
+            <div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#d6161a;font-weight:bold;letter-spacing:.3px;">
+              BR MANTENIMIENTO GENERAL
+            </div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <tr>
+    <td style="padding:0 0 12px 0;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:19px;color:#3c4a58;">
+        <tr>
+          <td style="padding-right:18px;white-space:nowrap;">
+            <b>Tel:</b>&nbsp;+506 2222-3333&nbsp;&nbsp;<b>Cel:</b>&nbsp;+506 8888-4444
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <b>Correo:</b>&nbsp;<a href="mailto:info@brmantenimiento.cr" style="color:#2e86ab;text-decoration:none;">info@brmantenimiento.cr</a>
+            &nbsp;&nbsp;<b>Web:</b>&nbsp;<a href="https://www.brmantenimiento.cr" style="color:#2e86ab;text-decoration:none;">www.brmantenimiento.cr</a>
+          </td>
+        </tr>
+        <tr>
+          <td>Zona Industrial El Coyol, Alajuela, Costa Rica</td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <tr>
+    <td style="padding:2px 0 12px 0;border-top:1px solid #e3e7eb;font-size:1px;line-height:1px;">&nbsp;</td>
+  </tr>
+
+  <tr>
+    <td align="center" style="padding:0 0 6px 0;">
+      <a href="https://pub-cfde5e21d14340599b62622f340093ad.r2.dev/Publicos/servicios_br_2.mp4" target="_blank" style="text-decoration:none;display:inline-block;">
+        <img src="https://pub-cfde5e21d14340599b62622f340093ad.r2.dev/Publicos/servicios_br_2.gif"
+             alt="▶ Reproducir video — Servicios BR Mantenimiento General: mantenimiento de edificaciones, hornos industriales y reparaciones"
+             width="600" height="300"
+             style="display:block;width:100%;max-width:600px;height:auto;border:0;border-radius:6px;">
+      </a>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" style="padding:0 0 4px 0;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:15px;color:#8a97a3;">
+      ▶ Reprodúzcalo arriba, o haga clic para ver el video completo de nuestros servicios
+    </td>
+  </tr>
+</table>

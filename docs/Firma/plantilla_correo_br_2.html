@@ -1,0 +1,125 @@
+<!--
+  PLANTILLA DE CORREO — BR Mantenimiento General (LISTA PARA ENVIAR)
+  ------------------------------------------------------------------
+  Versión final: mensaje + firma con video de servicios, usando los
+  archivos ya alojados públicamente en Cloudflare R2 (sin base64
+  embebido — a diferencia de plantilla_correo_br_1.html, que solo
+  sirve para previsualizar localmente, este archivo es liviano y
+  funciona igual al copiarlo dentro de un correo real).
+
+  CÓMO USAR
+  1) Reemplace "Estimado(a) señor(a) Rodríguez" y el resto del cuerpo
+     por el mensaje real para cada cliente.
+  2) Copie todo el contenido, ábralo en un navegador, seleccione todo
+     (Ctrl+A) y cópielo (Ctrl+C) directo al cuerpo de un correo nuevo
+     en Gmail/Outlook — así se pega como HTML enriquecido, no como
+     texto plano ni código fuente.
+  3) La firma al final ya incluye el video de servicios: se ve el
+     primer cuadro (portada con botón de play) y al hacer clic abre
+     el video. En Apple Mail/Samsung Mail reproduce con controles
+     nativos directamente dentro del correo.
+  ------------------------------------------------------------------
+-->
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0"
+       style="width:600px;max-width:100%;font-family:Arial,Helvetica,sans-serif;border-collapse:collapse;">
+  <tr>
+    <td style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:22px;color:#222b33;padding-bottom:16px;">
+      Estimado(a) señor(a) Rodríguez,
+    </td>
+  </tr>
+  <tr>
+    <td style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:22px;color:#222b33;padding-bottom:16px;">
+      Le escribimos para confirmar la visita de mantenimiento preventivo
+      programada para el próximo <b>15 de setiembre</b> en sus instalaciones.
+      Nuestro equipo revisará los sistemas eléctricos, mecánicos y el horno
+      industrial de la planta, conforme al contrato de servicio vigente.
+    </td>
+  </tr>
+  <tr>
+    <td style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:22px;color:#222b33;padding-bottom:16px;">
+      Le compartimos un breve video con un resumen de nuestros servicios de
+      mantenimiento de edificaciones, instalación de hornos industriales y
+      reparaciones — puede verlo haciendo clic en la imagen de nuestra firma,
+      al final de este correo.
+    </td>
+  </tr>
+  <tr>
+    <td style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:22px;color:#222b33;padding-bottom:28px;">
+      Quedamos atentos a cualquier consulta.<br>
+      Saludos cordiales,
+    </td>
+  </tr>
+
+  <!-- ===================== FIRMA ===================== -->
+  <tr>
+    <td>
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0"
+             style="width:600px;max-width:100%;font-family:Arial,Helvetica,sans-serif;border-collapse:collapse;">
+        <tr>
+          <td style="padding:0 0 14px 0;" valign="top">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td valign="middle" style="padding-right:14px;">
+                  <img src="https://pub-cfde5e21d14340599b62622f340093ad.r2.dev/Publicos/logo_br_2.png" alt="BR Mantenimiento General" width="62" height="52"
+                       style="display:block;border:0;border-radius:8px;">
+                </td>
+                <td valign="middle" style="border-left:3px solid #d6161a;padding-left:14px;">
+                  <div style="font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:20px;color:#111a26;font-weight:bold;">
+                    Ericka Bolaños
+                  </div>
+                  <div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:16px;color:#5a6b7a;">
+                    Coordinadora de Servicio al Cliente
+                  </div>
+                  <div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#d6161a;font-weight:bold;letter-spacing:.3px;">
+                    BR MANTENIMIENTO GENERAL
+                  </div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:0 0 12px 0;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:19px;color:#3c4a58;">
+              <tr>
+                <td style="padding-right:18px;white-space:nowrap;">
+                  <b>Tel:</b>&nbsp;+506 2222-3333&nbsp;&nbsp;<b>Cel:</b>&nbsp;+506 8888-4444
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <b>Correo:</b>&nbsp;<a href="mailto:info@brmantenimiento.cr" style="color:#2e86ab;text-decoration:none;">info@brmantenimiento.cr</a>
+                  &nbsp;&nbsp;<b>Web:</b>&nbsp;<a href="https://www.brmantenimiento.cr" style="color:#2e86ab;text-decoration:none;">www.brmantenimiento.cr</a>
+                </td>
+              </tr>
+              <tr>
+                <td>Zona Industrial El Coyol, Alajuela, Costa Rica</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:2px 0 12px 0;border-top:1px solid #e3e7eb;font-size:1px;line-height:1px;">&nbsp;</td>
+        </tr>
+
+        <tr>
+          <td align="center" style="padding:0 0 6px 0;">
+            <a href="https://pub-cfde5e21d14340599b62622f340093ad.r2.dev/Publicos/servicios_br_2.mp4" target="_blank" style="text-decoration:none;display:inline-block;">
+              <img src="https://pub-cfde5e21d14340599b62622f340093ad.r2.dev/Publicos/servicios_br_2.gif"
+                   alt="▶ Reproducir video — Servicios BR Mantenimiento General: mantenimiento de edificaciones, hornos industriales y reparaciones"
+                   width="600" height="300"
+                   style="display:block;width:100%;max-width:600px;height:auto;border:0;border-radius:6px;">
+            </a>
+          </td>
+        </tr>
+        <tr>
+          <td align="center" style="padding:0 0 4px 0;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:15px;color:#8a97a3;">
+            ▶ Reprodúzcalo arriba, o haga clic para ver el video completo de nuestros servicios
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
