@@ -1,4 +1,4 @@
-import { Package, X } from 'lucide-react'
+import { Package } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/atoms/button'
 import { CatalogManager } from '@/components/organisms/catalog-manager'
@@ -127,12 +127,8 @@ export function ProveedoresPage() {
             filterItem={(item) =>
               esProductoProveedor(item) && item.proveedor_id === proveedorProductos.id
             }
-            headerActions={
-              <Button variant="outline" onClick={() => setProveedorProductos(null)}>
-                <X className="mr-2 size-4" />
-                Cerrar productos
-              </Button>
-            }
+            onClose={() => setProveedorProductos(null)}
+            closeLabel="Cerrar productos"
             columns={[
               'naturaleza_provision',
               'nombre',

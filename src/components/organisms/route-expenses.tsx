@@ -8,6 +8,7 @@ import { useGastosRuta, useRegistrarGastoRuta } from '@/features/flota/hooks/use
 import type { RutaGasto, RutaProceso } from '@/features/flota/types/flota.types'
 import { useOrdenamiento } from '@/hooks/use-ordenamiento'
 import { normalizarError } from '@/lib/errores'
+import { PanelCloseButton } from '@/components/molecules/panel-close-button'
 
 // Fuera del componente: referencia estable entre renders — evita que useOrdenamiento reconstruya
 // su lógica interna en cada tecla/clic (ver el mismo arreglo en bandeja-encargado-page.tsx).
@@ -53,16 +54,14 @@ export function RouteExpenses({ ruta, onClose }: { ruta: RutaProceso; onClose: (
 
   return (
     <section className="space-y-5 rounded-lg border bg-card p-5 shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold">Gastos de {ruta.codigo}</h2>
           <p className="text-sm text-muted-foreground">
             Registre gastos generales o asígnelos a una persona involucrada.
           </p>
         </div>
-        <Button type="button" variant="outline" onClick={onClose}>
-          Cerrar
-        </Button>
+        <PanelCloseButton onClose={onClose} label="Cerrar gastos" />
       </div>
       <form onSubmit={guardar} className="grid gap-4 rounded-md border p-4 md:grid-cols-2">
         <label className="grid gap-2 text-sm font-medium">

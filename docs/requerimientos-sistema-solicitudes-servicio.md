@@ -101,8 +101,9 @@ Toda la operación (avance, materiales, vehículo, adjuntos y cambio de estado) 
 ## 4. Flujo de estados de la Solicitud
 
 ```
-Creada → Asignada → En atención → En espera de materiales → Atendida → Cerrada
+Creada (borrador) → Enviada → Asignada → En atención → En espera de materiales → Atendida → Cerrada
 ```
+- **Creada = borrador del Cliente** *(cambio del 2026-10-13)*: el Cliente (o solicitante) la crea y puede modificarla mientras esté en este estado; el proveedor no la ve en sus listados (salvo que filtre por borradores) ni puede asignarla, editarla o trabajarla. El Cliente la **envía** con el botón rojo *Enviar* (o *Guardar y enviar* en el formulario) y pasa a **Enviada**: desde ahí el proveedor la procesa (asignar, rechazar, cancelar) y el Cliente ya no puede modificarla. Las solicitudes que crea un gestor y las garantías nacen enviadas. El SLA corre desde el envío y el aviso interno de solicitud nueva sale al enviarse.
 Estados adicionales:
 - **Cancelada / Rechazada**: el Encargado puede rechazar antes de asignar.
 - **Reapertura**: una solicitud Cerrada puede reabrirse sin límite de tiempo.
@@ -110,7 +111,10 @@ Estados adicionales:
 Reglas asociadas:
 - Asignación: un solo Operador principal por solicitud (los técnicos de apoyo, sección 3.5, no reemplazan esta asignación).
 - Reasignación: permitida, solo la ejecuta el Encargado de Proceso o el Administrador.
-- Cierre: requiere que el Cliente, en autogestión, indique satisfacción de la atención o comentarios al respecto; el comentario es obligatorio si indica que no está satisfecho. PostgreSQL vuelve a comprobar la validación antes de permitir el cierre, incluso si la interfaz lo omitiera.
+- Cierre: lo ejecuta el proveedor (Encargado/Administrador, o la aprobación de una petición de cierre del Operador) desde `atendida`, sin esperar al Cliente. Una vez cerrada, el Cliente ve en "Mis solicitudes" un aviso y la acción **Evaluar** en la fila de la solicitud, que abre una evaluación corta de satisfacción (opcional, no bloquea nada); el comentario es obligatorio si indica que no está satisfecho, y una evaluación "no satisfecho" genera una notificación interna para Administrador/Encargado. *(Cambio del 2026-10-12: antes el cierre exigía la validación previa del Cliente.)*
+- Garantía: es una **solicitud nueva enlazada a la original** (`solicitud_original_id`). Mientras la garantía de una solicitud cerrada esté vigente, el Cliente la aplica con la acción **Aplicar garantía** (fila o detalle en "Mis solicitudes", que en el portal lista todas las solicitudes de su organización) describiendo la falla; la función `aplicar_garantia_solicitud` crea la solicitud heredando tipo, ubicación, equipo y cliente de la original — no depende de un tipo de servicio de catálogo —, admite una sola garantía en curso por solicitud, la registra en el seguimiento de ambas solicitudes y avisa a Administrador/Encargado. La bandeja del Encargado y el portal muestran la marca "Garantía de #N". *(Cambio del 2026-10-13.)*
+- Seguimiento del Cliente: solo muestra movimientos que le conciernen (estados, avances, adjuntos, mensajes, proformas, visitas, garantía y evaluación). Los movimientos internos del proveedor —asignación/reasignación de operador, rutas, flota, técnicos de apoyo, materiales, peticiones internas, ediciones y automatizaciones— no se le muestran (restringido por RLS).
+- Documentos del Cliente: el Cliente puede aportar contratos, identificaciones y otros documentos a su expediente, pero no proformas ni facturas (las aporta el proveedor; restringido por RLS).
 - Materiales: registro informativo, sin aprobación previa requerida.
 - El Operador no puede cancelar, rechazar, cerrar ni reabrir solicitudes; solo transiciona dentro del flujo de atención.
 

@@ -5,6 +5,7 @@ import { Input } from '@/components/atoms/input'
 import { Textarea } from '@/components/atoms/textarea'
 import type { Vehiculo } from '@/features/catalogos/types/catalogos.types'
 import { useFotosVehiculo, useGestionFotosVehiculo } from '@/features/flota/hooks/use-flota'
+import { PanelCloseButton } from '@/components/molecules/panel-close-button'
 
 export function VehiclePhotos({ vehiculo, onClose }: { vehiculo: Vehiculo; onClose: () => void }) {
   const fotos = useFotosVehiculo(vehiculo.id)
@@ -19,7 +20,7 @@ export function VehiclePhotos({ vehiculo, onClose }: { vehiculo: Vehiculo; onClo
   }
   return (
     <section className="space-y-4 rounded-lg border-2 border-primary/30 bg-card p-5 shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="flex items-center gap-2 font-semibold">
             <Camera className="size-4" />
@@ -27,9 +28,7 @@ export function VehiclePhotos({ vehiculo, onClose }: { vehiculo: Vehiculo; onClo
           </h2>
           <p className="text-sm text-muted-foreground">Registro visual del estado del vehículo.</p>
         </div>
-        <Button variant="outline" onClick={onClose}>
-          Cerrar
-        </Button>
+        <PanelCloseButton onClose={onClose} />
       </div>
       <form onSubmit={submit} className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
         <label className="grid gap-1 text-sm">

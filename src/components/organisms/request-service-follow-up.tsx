@@ -62,7 +62,7 @@ export function RequestServiceFollowUp({
           </p>
         ) : (
           <p className="text-sm text-muted-foreground">
-            La garantía inicia cuando la solicitud finalizada es aceptada y cerrada.
+            La garantía inicia cuando el proveedor cierra la solicitud.
           </p>
         )}
         {(modo === 'gestor' || vigente) && (

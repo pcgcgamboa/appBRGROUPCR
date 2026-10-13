@@ -11,13 +11,22 @@ import { normalizarError } from '@/lib/errores'
 
 const dinero = (valor: number) =>
   new Intl.NumberFormat('es-CR', { style: 'currency', currency: 'CRC' }).format(valor)
-export function RequestProformas({ solicitudId }: { solicitudId: string }) {
+export function RequestProformas({
+  solicitudId,
+  modo = 'proveedor',
+}: {
+  solicitudId: string
+  modo?: 'proveedor' | 'cliente'
+}) {
+  const esCliente = modo === 'cliente'
   const listado = useProformas(solicitudId)
   const gestion = useGestionProformas(solicitudId)
   const { session } = useSession()
   const perfil = usePerfilActual(session?.user.id)
+  // En el portal del Cliente nunca se gestiona, aunque el usuario también tenga un rol de gestión.
   const puedeGestionar =
-    perfil.data?.roles.some((rol) => rol === 'administrador' || rol === 'encargado') ?? false
+    !esCliente &&
+    (perfil.data?.roles.some((rol) => rol === 'administrador' || rol === 'encargado') ?? false)
   const error =
     listado.error ?? gestion.generar.error ?? gestion.guardar.error ?? gestion.enviar.error
   return (
@@ -26,7 +35,9 @@ export function RequestProformas({ solicitudId }: { solicitudId: string }) {
         <div>
           <h3 className="font-semibold">Proformas de costo</h3>
           <p className="text-sm text-muted-foreground">
-            Calculadas con inventario, servicios y horas registradas.
+            {esCliente
+              ? 'Proformas que el proveedor le ha enviado para esta solicitud.'
+              : 'Calculadas con inventario, servicios y horas registradas.'}
           </p>
         </div>
         {puedeGestionar && (
@@ -60,7 +71,11 @@ export function RequestProformas({ solicitudId }: { solicitudId: string }) {
         ))}
       </div>
       {!listado.isLoading && !listado.data?.length && (
-        <p className="text-sm text-muted-foreground">No hay proformas generadas.</p>
+        <p className="text-sm text-muted-foreground">
+          {esCliente
+            ? 'El proveedor aún no le ha enviado proformas.'
+            : 'No hay proformas generadas.'}
+        </p>
       )}
     </section>
   )

@@ -1,10 +1,11 @@
-﻿import { ClipboardCheck, Eye, History, ListChecks, MapPin, Send } from 'lucide-react'
+import { ClipboardCheck, Eye, History, ListChecks, MapPin, Send } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { Badge } from '@/components/atoms/badge'
 import { Button } from '@/components/atoms/button'
 import { Skeleton } from '@/components/atoms/skeleton'
 import { ConnectivityBanner } from '@/components/molecules/connectivity-banner'
 import { PageHeader } from '@/components/molecules/page-header'
+import { PanelCloseButton } from '@/components/molecules/panel-close-button'
 import { OperatorProgressForm } from '@/components/organisms/operator-progress-form'
 import { OperatorResolutionRequest } from '@/components/organisms/operator-resolution-request'
 import { InternalRequestNotes } from '@/components/organisms/internal-request-notes'
@@ -71,7 +72,7 @@ export function OperadorPage({ usuarioId }: { usuarioId: string }) {
           aria-labelledby="panel-solicitud-titulo"
           className="scroll-mt-24 space-y-6 rounded-2xl border-2 border-primary/30 bg-primary/5 p-4 shadow-sm sm:p-6"
         >
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-primary/20 pb-4">
+          <div className="flex items-start justify-between gap-3 border-b border-primary/20 pb-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-primary">
                 Solicitud en gestión · {modo === 'detalle' ? 'Detalle' : 'Registro de avance'}
@@ -85,9 +86,7 @@ export function OperadorPage({ usuarioId }: { usuarioId: string }) {
                   : 'Registre el trabajo realizado y los recursos utilizados.'}
               </p>
             </div>
-            <Button variant="outline" onClick={cerrarDetalle}>
-              Cerrar panel
-            </Button>
+            <PanelCloseButton onClose={cerrarDetalle} />
           </div>
           <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
             {modo === 'avance' ? (
@@ -137,7 +136,7 @@ export function OperadorPage({ usuarioId }: { usuarioId: string }) {
                   )}
                   <Button variant="outline" onClick={() => setTrackingVisible((actual) => !actual)}>
                     <History className="mr-2 size-4" />
-                    {trackingVisible ? 'Cerrar tracking' : 'Consultar tracking'}
+                    {trackingVisible ? 'Cerrar seguimiento' : 'Consultar seguimiento'}
                   </Button>
                 </div>
               </article>

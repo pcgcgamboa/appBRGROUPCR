@@ -6,6 +6,9 @@ export interface SolicitudCliente {
   estado: 'atendida' | 'cerrada'
   atendida_en: string | null
   cerrada_en: string | null
+  ubicacion_id: string | null
+  equipo_id: string | null
+  garantia_vence_en: string | null
   tipo: { nombre: string } | null
   operador: { nombre_completo: string } | null
   avances: { reportes_atencion: { ruta_storage_pdf: string; nombre_archivo_pdf: string } | null }[]
@@ -31,6 +34,7 @@ export type DocumentoCliente = {
   mime_type: string
   tamano_bytes: number
   creado_en: string
+  subido_por: string
   usuario: { nombre_completo: string } | null
   url?: string
 }

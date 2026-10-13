@@ -10,6 +10,7 @@ import {
   useRegistrarGestionVehiculo,
 } from '@/features/flota/hooks/use-flota'
 import { normalizarError } from '@/lib/errores'
+import { PanelCloseButton } from '@/components/molecules/panel-close-button'
 
 export function VehicleAdministration({ onClose }: { onClose: () => void }) {
   const { listado } = useCatalogo<Vehiculo>('vehiculos')
@@ -35,7 +36,7 @@ export function VehicleAdministration({ onClose }: { onClose: () => void }) {
   }
   return (
     <section className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold">Control independiente de flota</h2>
           <p className="text-sm text-muted-foreground">
@@ -43,9 +44,7 @@ export function VehicleAdministration({ onClose }: { onClose: () => void }) {
             gastos.
           </p>
         </div>
-        <Button type="button" variant="outline" onClick={onClose}>
-          Cerrar
-        </Button>
+        <PanelCloseButton onClose={onClose} />
       </div>
       <form
         onSubmit={submit}

@@ -11,6 +11,7 @@ import {
 import type { RutaProceso, TipoMovimientoVehiculo } from '@/features/flota/types/flota.types'
 import { useOrdenamiento } from '@/hooks/use-ordenamiento'
 import { normalizarError } from '@/lib/errores'
+import { PanelCloseButton } from '@/components/molecules/panel-close-button'
 
 interface MovimientoVehiculoHistorial {
   id: string
@@ -78,16 +79,14 @@ export function VehicleMovementForm({ ruta, onClose }: { ruta: RutaProceso; onCl
   const historial = historialOrdenado.slice(0, 8)
   return (
     <section className="space-y-4 rounded-lg border-2 border-primary/30 bg-card p-5 shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="font-semibold">Registro operativo · {ruta.codigo}</h2>
           <p className="text-sm text-muted-foreground">
             Combustible, kilómetros, lavado y otros gastos de {ruta.nombre}.
           </p>
         </div>
-        <Button type="button" variant="outline" onClick={onClose}>
-          Cerrar
-        </Button>
+        <PanelCloseButton onClose={onClose} />
       </div>
       <form onSubmit={submit} className="grid gap-3 sm:grid-cols-3">
         <label className="grid gap-1 text-sm">

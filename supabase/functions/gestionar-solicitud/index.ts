@@ -6,6 +6,7 @@ import { notificarEnSegundoPlano } from '../_shared/notificaciones.ts'
 type Prioridad = 'baja' | 'media' | 'alta' | 'urgente'
 type Estado =
   | 'creada'
+  | 'enviada'
   | 'asignada'
   | 'en_atencion'
   | 'en_espera_materiales'
@@ -52,7 +53,7 @@ Deno.serve(async (request) => {
     if (!payload.solicitud_id) return respuesta({ error: 'La solicitud es requerida.' }, 400)
     const { data: solicitud, error: solicitudError } = await caller
       .from('solicitudes')
-      .select('id, estado, creado_en, tipo_solicitud_id, operador_id, prioridad')
+      .select('id, estado, creado_en, enviada_en, tipo_solicitud_id, operador_id, prioridad')
       .eq('id', payload.solicitud_id)
       .single()
     if (solicitudError) throw solicitudError
@@ -61,7 +62,7 @@ Deno.serve(async (request) => {
       if (!payload.prioridad || !payload.operador_id)
         return respuesta({ error: 'Prioridad y operador son obligatorios.' }, 400)
       if (
-        !['creada', 'asignada', 'en_atencion', 'en_espera_materiales', 'atendida'].includes(
+        !['enviada', 'asignada', 'en_atencion', 'en_espera_materiales', 'atendida'].includes(
           solicitud.estado,
         )
       )
@@ -86,7 +87,8 @@ Deno.serve(async (request) => {
       if (slaError) throw slaError
       const horas = payload.prioridad === 'urgente' ? Math.min(sla.horas, 24) : sla.horas
       const vence = new Date(
-        new Date(solicitud.creado_en).getTime() + horas * 3_600_000,
+        // El SLA corre desde que el Cliente envió la solicitud (no desde que creó el borrador).
+        new Date(solicitud.enviada_en ?? solicitud.creado_en).getTime() + horas * 3_600_000,
       ).toISOString()
       const { error } = await caller
         .from('solicitudes')
@@ -95,7 +97,7 @@ Deno.serve(async (request) => {
           prioridad: payload.prioridad,
           sla_horas: horas,
           sla_vence_en: vence,
-          estado: solicitud.estado === 'creada' ? 'asignada' : solicitud.estado,
+          estado: solicitud.estado === 'enviada' ? 'asignada' : solicitud.estado,
           motivo_rechazo_cancelacion: null,
           // Mismo UPDATE que dispara los triggers de trazabilidad: quedan enlazados a esta
           // invocación en automatizacion_ejecuciones sin depender de set_config de sesión.
@@ -129,9 +131,9 @@ Deno.serve(async (request) => {
     }
 
     if (payload.accion === 'rechazar') {
-      if (solicitud.estado !== 'creada' || !payload.motivo?.trim())
+      if (solicitud.estado !== 'enviada' || !payload.motivo?.trim())
         return respuesta(
-          { error: 'Solo una solicitud creada puede rechazarse y requiere motivo.' },
+          { error: 'Solo una solicitud enviada puede rechazarse y requiere motivo.' },
           400,
         )
       const { error } = await caller

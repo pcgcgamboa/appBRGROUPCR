@@ -1,4 +1,4 @@
-import { ListChecks, Wrench } from 'lucide-react'
+import { FileText, History, ListChecks, Paperclip, Wrench } from 'lucide-react'
 import { useState } from 'react'
 import { Badge } from '@/components/atoms/badge'
 import { Button } from '@/components/atoms/button'
@@ -6,8 +6,11 @@ import { Input } from '@/components/atoms/input'
 import { Select } from '@/components/atoms/select'
 import { Textarea } from '@/components/atoms/textarea'
 import { Skeleton } from '@/components/atoms/skeleton'
+import { DisclosurePanel } from '@/components/molecules/disclosure-panel'
 import { PageHeader } from '@/components/molecules/page-header'
 import { WorkspacePanel } from '@/components/molecules/workspace-panel'
+import { RequestAttachments } from '@/components/organisms/request-attachments'
+import { RequestTimeline } from '@/components/organisms/request-timeline'
 import { useCatalogo } from '@/features/catalogos/hooks/use-catalogo'
 import type { Rol } from '@/features/catalogos/types/catalogos.types'
 import { useSolicitudesAdmin } from '@/features/solicitudes/hooks/use-solicitudes-admin'
@@ -25,7 +28,9 @@ function normalizarBusqueda(value: string) {
 }
 
 const transiciones: Record<EstadoSolicitud, EstadoSolicitud[]> = {
-  creada: ['creada', 'rechazada', 'cancelada'],
+  // Borrador del Cliente: el proveedor no actúa sobre él hasta que se envía.
+  creada: ['creada'],
+  enviada: ['enviada', 'rechazada', 'cancelada'],
   asignada: ['asignada', 'en_atencion', 'cancelada'],
   en_atencion: ['en_atencion', 'en_espera_materiales', 'atendida', 'cancelada'],
   en_espera_materiales: ['en_espera_materiales', 'en_atencion', 'atendida', 'cancelada'],
@@ -44,6 +49,7 @@ export function SolicitudesAdminPage() {
   const [operadorId, setOperadorId] = useState<string>('')
   const [motivo, setMotivo] = useState('')
   const [search, setSearch] = useState('')
+  const [verBorradores, setVerBorradores] = useState(false)
   const operadorRolId = roles.data?.find((rol) => rol.codigo === 'operador')?.id
   const operadores =
     usuarios.data?.filter(
@@ -51,18 +57,21 @@ export function SolicitudesAdminPage() {
         usuario.activo && usuario.usuario_roles.some((rol) => rol.rol_id === operadorRolId),
     ) ?? []
   const term = normalizarBusqueda(search)
-  const solicitudesFiltradas = (solicitudes.data ?? []).filter((solicitud) =>
-    normalizarBusqueda(
-      [
-        solicitud.numero,
-        solicitud.nombre,
-        solicitud.cliente?.nombre,
-        solicitud.operador?.nombre_completo,
-        solicitud.solicitante?.nombre_completo,
-      ]
-        .filter(Boolean)
-        .join(' '),
-    ).includes(term),
+  // Los borradores del Cliente no le llegan al proveedor salvo que los consulte explícitamente.
+  const solicitudesFiltradas = (solicitudes.data ?? []).filter(
+    (solicitud) =>
+      (verBorradores ? solicitud.estado === 'creada' : solicitud.estado !== 'creada') &&
+      normalizarBusqueda(
+        [
+          solicitud.numero,
+          solicitud.nombre,
+          solicitud.cliente?.nombre,
+          solicitud.operador?.nombre_completo,
+          solicitud.solicitante?.nombre_completo,
+        ]
+          .filter(Boolean)
+          .join(' '),
+      ).includes(term),
   )
   const requiereOperador = [
     'asignada',
@@ -110,7 +119,7 @@ export function SolicitudesAdminPage() {
         title="Listado de solicitudes"
         description="Busque y seleccione una solicitud para realizar una intervención administrativa."
       >
-        <div className="rounded-lg border bg-card p-4">
+        <div className="grid gap-3 rounded-lg border bg-card p-4 sm:grid-cols-[1fr_auto] sm:items-end">
           <label className="grid gap-2 text-sm font-medium">
             Buscar por usuario o solicitud
             <Input
@@ -119,6 +128,15 @@ export function SolicitudesAdminPage() {
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
+          </label>
+          <label className="flex min-h-11 items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              className="size-4"
+              checked={verBorradores}
+              onChange={(event) => setVerBorradores(event.target.checked)}
+            />
+            Ver solo borradores del Cliente
           </label>
         </div>
         <div className="overflow-x-auto rounded-lg border bg-card shadow-sm">
@@ -186,7 +204,68 @@ export function SolicitudesAdminPage() {
           icon={Wrench}
           title={`Intervenir #${seleccionada.numero}: ${seleccionada.nombre}`}
           description="Actualice la asignación o el estado de esta solicitud."
+          onClose={() => setSeleccionada(null)}
         >
+          <div className="space-y-3">
+            <DisclosurePanel
+              icon={FileText}
+              title="Datos de la solicitud"
+              description="Información registrada por el Cliente y la gestión del proveedor."
+            >
+              <dl className="grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
+                {(
+                  [
+                    ['Cliente', seleccionada.cliente?.nombre],
+                    ['Tipo', seleccionada.tipo?.nombre],
+                    ['Estado', seleccionada.estado.replace(/_/g, ' ')],
+                    ['Prioridad', seleccionada.prioridad ?? 'Sin definir'],
+                    ['Solicitante', seleccionada.solicitante?.nombre_completo],
+                    ['Operador', seleccionada.operador?.nombre_completo],
+                    [
+                      'Ubicación',
+                      seleccionada.ubicacion
+                        ? `${seleccionada.ubicacion.nombre} — ${seleccionada.ubicacion.provincia}, ${seleccionada.ubicacion.canton}, ${seleccionada.ubicacion.distrito}`
+                        : null,
+                    ],
+                    ['Creada', new Date(seleccionada.creado_en).toLocaleString('es-CR')],
+                    [
+                      'Fecha límite (SLA)',
+                      seleccionada.sla_vence_en
+                        ? new Date(seleccionada.sla_vence_en).toLocaleString('es-CR')
+                        : null,
+                    ],
+                  ] as const
+                ).map(([etiqueta, valor]) => (
+                  <div key={etiqueta}>
+                    <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      {etiqueta}
+                    </dt>
+                    <dd className="mt-0.5">{valor ?? '—'}</dd>
+                  </div>
+                ))}
+                <div className="sm:col-span-2 lg:col-span-3">
+                  <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Detalle
+                  </dt>
+                  <dd className="mt-0.5 whitespace-pre-wrap">{seleccionada.detalle}</dd>
+                </div>
+              </dl>
+            </DisclosurePanel>
+            <DisclosurePanel
+              icon={Paperclip}
+              title="Documentos adjuntos"
+              description="Fotos y documentos que aportó el Cliente o se registraron en los avances."
+            >
+              <RequestAttachments solicitudId={seleccionada.id} />
+            </DisclosurePanel>
+            <DisclosurePanel
+              icon={History}
+              title="Seguimiento de la solicitud"
+              description="Historial completo de cambios y operaciones."
+            >
+              <RequestTimeline solicitudId={seleccionada.id} />
+            </DisclosurePanel>
+          </div>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <label className="grid gap-2 text-sm font-medium">
               Operador

@@ -4,8 +4,9 @@ import { Button } from '@/components/atoms/button'
 import type { SolicitudAdmin } from '@/features/solicitudes/types/solicitudes.types'
 
 const centroCostaRica: [number, number] = [9.7489, -83.7534]
+// Sin 'creada': los borradores del Cliente no le llegan al proveedor.
 const estadosActivos = new Set([
-  'creada',
+  'enviada',
   'asignada',
   'en_atencion',
   'en_espera_materiales',
@@ -14,6 +15,7 @@ const estadosActivos = new Set([
 
 const colores: Record<string, string> = {
   creada: '#64748b',
+  enviada: '#dc2626',
   asignada: '#2563eb',
   en_atencion: '#0f766e',
   en_espera_materiales: '#d97706',

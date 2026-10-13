@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { ACTIVIDADES_VISIBLES_CLIENTE } from '@/features/cliente/lib/actividades-visibles'
 import type {
   ClienteRepository,
   SubirDocumentoInput,
@@ -25,7 +26,7 @@ export function createSupabaseClienteRepository(client: SupabaseClient | null): 
       const { data, error } = await client
         .from('solicitudes')
         .select(
-          'id, numero, nombre, detalle, estado, atendida_en, cerrada_en, tipo:tipos_solicitud(nombre), operador:usuarios!solicitudes_operador_id_fkey(nombre_completo), avances(reportes_atencion(ruta_storage_pdf, nombre_archivo_pdf)), validacion:validaciones_cierre(satisfecho, comentario, calificacion, llego_a_tiempo, recomendaria_tecnico, validado_en)',
+          'id, numero, nombre, detalle, estado, atendida_en, cerrada_en, ubicacion_id, equipo_id, garantia_vence_en, tipo:tipos_solicitud(nombre), operador:usuarios!solicitudes_operador_id_fkey(nombre_completo), avances(reportes_atencion(ruta_storage_pdf, nombre_archivo_pdf)), validacion:validaciones_cierre(satisfecho, comentario, calificacion, llego_a_tiempo, recomendaria_tecnico, validado_en)',
         )
         .eq('cliente_id', clienteId)
         .in('estado', ['atendida', 'cerrada'])
@@ -66,7 +67,7 @@ export function createSupabaseClienteRepository(client: SupabaseClient | null): 
       const { data, error } = await client
         .from('cliente_documentos')
         .select(
-          'id,cliente_id,tipo,nombre,descripcion,fecha_documento,nombre_archivo,ruta_storage,mime_type,tamano_bytes,creado_en,usuario:usuarios!cliente_documentos_subido_por_fkey(nombre_completo)',
+          'id,cliente_id,tipo,nombre,descripcion,fecha_documento,nombre_archivo,ruta_storage,mime_type,tamano_bytes,creado_en,subido_por,usuario:usuarios!cliente_documentos_subido_por_fkey(nombre_completo)',
         )
         .eq('cliente_id', clienteId)
         .order('creado_en', { ascending: false })
@@ -112,12 +113,19 @@ export function createSupabaseClienteRepository(client: SupabaseClient | null): 
 
     async eliminarDocumento(documento: DocumentoCliente): Promise<string> {
       if (!client) throw new Error('Supabase no está configurado.')
+      // Primero la fila: si RLS no permite borrarla, PostgREST no da error sino 0 filas — se
+      // detecta con `select` y se avisa, en vez de borrar el archivo y dejar el registro huérfano.
+      const { data, error } = await client
+        .from('cliente_documentos')
+        .delete()
+        .eq('id', documento.id)
+        .select('id')
+      if (error) throw error
+      if (!data?.length) throw new Error('No tiene permiso para eliminar este documento.')
       const storage = await client.storage
         .from('clientes-documentos')
         .remove([documento.ruta_storage])
       if (storage.error) throw storage.error
-      const { error } = await client.from('cliente_documentos').delete().eq('id', documento.id)
-      if (error) throw error
       return documento.cliente_id
     },
 
@@ -147,6 +155,7 @@ export function createSupabaseClienteRepository(client: SupabaseClient | null): 
           'solicitud_id',
           solicitudes.map((x) => x.id),
         )
+        .in('tipo', [...ACTIVIDADES_VISIBLES_CLIENTE])
         .order('creado_en', { ascending: false })
       if (error) throw error
       return data as unknown as TrackingCliente[]

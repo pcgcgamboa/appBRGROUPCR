@@ -1,7 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type {
   AgregarMaterialInput,
+  AplicarGarantiaInput,
   CrearSolicitudInput,
+  EditarBorradorInput,
   EditarSolicitudInput,
   EnviarComunicacionInput,
   GestionInput,
@@ -13,7 +15,9 @@ import type {
 import type {
   Comunicacion,
   MaterialSolicitud,
+  AdjuntoSolicitud,
   MiSolicitud,
+  SolicitudPortalCliente,
   OperadorResumen,
   SolicitudAdmin,
 } from '@/features/solicitudes/types/solicitudes.types'
@@ -29,6 +33,54 @@ function tipoArchivo(archivo: File) {
   if (extension === 'webp') return 'image/webp'
   if (extension === 'pdf') return 'application/pdf'
   return ''
+}
+
+function validarArchivos(archivos: File[]) {
+  for (const archivo of archivos) {
+    if (!tiposPermitidos.has(tipoArchivo(archivo)))
+      throw new Error(`El tipo de archivo ${archivo.name} no está permitido.`)
+    if (archivo.size > 10 * 1024 * 1024)
+      throw new Error(`${archivo.name} supera el límite de 10 MB.`)
+  }
+}
+
+/**
+ * Sube cada archivo al bucket y registra su fila en `adjuntos`; si el registro falla, retira el
+ * archivo subido. `contexto` encabeza los mensajes de error ("Solicitud #12 creada", "Los datos
+ * se guardaron"), porque para entonces la operación principal ya se hizo.
+ */
+async function subirAdjuntos(
+  client: SupabaseClient,
+  solicitudId: string,
+  archivos: File[],
+  subidoPor: string,
+  contexto: string,
+) {
+  for (const archivo of archivos) {
+    const mimeType = tipoArchivo(archivo)
+    const adjuntoId = crypto.randomUUID()
+    const nombreSeguro = archivo.name.normalize('NFKD').replace(/[^a-zA-Z0-9._-]/g, '_')
+    const ruta = `${solicitudId}/${adjuntoId}/${nombreSeguro}`
+    const { error: uploadError } = await client.storage
+      .from('solicitudes-adjuntos')
+      .upload(ruta, archivo, { contentType: mimeType, upsert: false })
+    if (uploadError)
+      throw new Error(`${contexto}, pero falló el adjunto ${archivo.name}: ${uploadError.message}`)
+    const { error: metadataError } = await client.from('adjuntos').insert({
+      id: adjuntoId,
+      solicitud_id: solicitudId,
+      subido_por: subidoPor,
+      nombre_archivo: archivo.name,
+      ruta_storage: ruta,
+      tipo: mimeType.startsWith('image/') ? 'imagen' : 'documento',
+      mime_type: mimeType,
+      tamano_bytes: archivo.size,
+    })
+    if (metadataError) {
+      await client.storage.from('solicitudes-adjuntos').remove([ruta])
+      throw new Error(`${contexto}, pero no se registró el adjunto ${archivo.name}.`)
+    }
+  }
 }
 
 /**
@@ -48,7 +100,7 @@ export function createSupabaseSolicitudRepository(
       const { data, error } = await client
         .from('solicitudes')
         .select(
-          'id, numero, nombre, detalle, cliente_id, ubicacion_id, prioridad, estado, operador_id, motivo_rechazo_cancelacion, sla_horas, sla_vence_en, creado_en, tipo_solicitud_id, cliente:clientes(nombre), tipo:tipos_solicitud(nombre), ubicacion:ubicaciones(nombre, provincia, canton, distrito, latitud, longitud), ruta:rutas(latitud, longitud), operador:usuarios!solicitudes_operador_id_fkey(nombre_completo), solicitante:usuarios!solicitudes_solicitante_id_fkey(nombre_completo), validacion:validaciones_cierre(satisfecho, comentario, validado_en), peticiones:solicitud_peticiones_resolucion(id, tipo, motivo, estado, creado_en, comentario_resolucion)',
+          'id, numero, nombre, detalle, cliente_id, ubicacion_id, prioridad, estado, operador_id, motivo_rechazo_cancelacion, sla_horas, sla_vence_en, creado_en, tipo_solicitud_id, original:solicitud_original_id(numero), cliente:clientes(nombre), tipo:tipos_solicitud(nombre), ubicacion:ubicaciones(nombre, provincia, canton, distrito, latitud, longitud), ruta:rutas(latitud, longitud), operador:usuarios!solicitudes_operador_id_fkey(nombre_completo), solicitante:usuarios!solicitudes_solicitante_id_fkey(nombre_completo), validacion:validaciones_cierre(satisfecho, comentario, validado_en), peticiones:solicitud_peticiones_resolucion(id, tipo, motivo, estado, creado_en, comentario_resolucion)',
         )
         .order('creado_en', { ascending: false })
       if (error) throw error
@@ -61,18 +113,107 @@ export function createSupabaseSolicitudRepository(
       if (error) throw error
     },
 
+    async enviarSolicitud(solicitudId: string): Promise<void> {
+      if (!client) throw new Error('Supabase no está configurado.')
+      const { error } = await client.rpc('enviar_solicitud', { p_solicitud_id: solicitudId })
+      if (error) throw error
+    },
+
+    async editarBorrador(input: EditarBorradorInput): Promise<void> {
+      if (!client) throw new Error('Supabase no está configurado.')
+      validarArchivos(input.archivos)
+      const { error } = await client.rpc('editar_solicitud_borrador', {
+        p_solicitud_id: input.id,
+        p_nombre: input.nombre,
+        p_tipo_solicitud_id: input.tipo_solicitud_id,
+        p_ubicacion_id: input.ubicacion_id,
+        p_detalle: input.detalle,
+        p_equipo_id: input.equipo_id,
+      })
+      if (error) throw error
+      if (!input.archivos.length) return
+      const { data: authData, error: authError } = await client.auth.getUser()
+      if (authError || !authData.user)
+        throw new Error('Los cambios se guardaron, pero no fue posible adjuntar los archivos.')
+      await subirAdjuntos(
+        client,
+        input.id,
+        input.archivos,
+        authData.user.id,
+        'Los cambios se guardaron',
+      )
+    },
+
+    async ultimaUbicacionEquipo(equipoId: string): Promise<string | null> {
+      if (!client) throw new Error('Supabase no está configurado.')
+      const { data, error } = await client
+        .from('solicitudes')
+        .select('ubicacion_id')
+        .eq('equipo_id', equipoId)
+        .not('ubicacion_id', 'is', null)
+        .order('creado_en', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (error) throw error
+      return (data as { ubicacion_id: string } | null)?.ubicacion_id ?? null
+    },
+
+    async adjuntos(solicitudId: string): Promise<AdjuntoSolicitud[]> {
+      if (!client) throw new Error('Supabase no está configurado.')
+      const { data, error } = await client
+        .from('adjuntos')
+        .select('id, nombre_archivo, ruta_storage, mime_type, subido_por, creado_en')
+        .eq('solicitud_id', solicitudId)
+        .order('creado_en', { ascending: true })
+      if (error) throw error
+      return Promise.all(
+        (data as AdjuntoSolicitud[]).map(async (adjunto) => {
+          const { data: enlace } = await client.storage
+            .from('solicitudes-adjuntos')
+            .createSignedUrl(adjunto.ruta_storage, 3600)
+          return { ...adjunto, url: enlace?.signedUrl }
+        }),
+      )
+    },
+
+    async eliminarAdjunto(adjunto: AdjuntoSolicitud): Promise<void> {
+      if (!client) throw new Error('Supabase no está configurado.')
+      // Primero la fila: si RLS no lo permite no hay error, sino 0 filas (se avisa).
+      const { data, error } = await client
+        .from('adjuntos')
+        .delete()
+        .eq('id', adjunto.id)
+        .select('id')
+      if (error) throw error
+      if (!data?.length) throw new Error('No tiene permiso para eliminar este adjunto.')
+      const { error: storageError } = await client.storage
+        .from('solicitudes-adjuntos')
+        .remove([adjunto.ruta_storage])
+      if (storageError) throw storageError
+    },
+
+    async aplicarGarantia({
+      solicitud_original_id,
+      detalle,
+      idempotencia_clave,
+    }: AplicarGarantiaInput): Promise<{ id: string; numero: number }> {
+      if (!client) throw new Error('Supabase no está configurado.')
+      const { data, error } = await client.rpc('aplicar_garantia_solicitud', {
+        p_solicitud_original_id: solicitud_original_id,
+        p_detalle: detalle,
+        p_idempotencia_clave: idempotencia_clave ?? null,
+      })
+      if (error) throw error
+      return data as { id: string; numero: number }
+    },
+
     async crear({
       archivos,
       como_gestor,
       ...values
     }: CrearSolicitudInput): Promise<{ id: string; numero: number }> {
       if (!client) throw new Error('Supabase no está configurado.')
-      for (const archivo of archivos) {
-        if (!tiposPermitidos.has(tipoArchivo(archivo)))
-          throw new Error(`El tipo de archivo ${archivo.name} no está permitido.`)
-        if (archivo.size > 10 * 1024 * 1024)
-          throw new Error(`${archivo.name} supera el límite de 10 MB.`)
-      }
+      validarArchivos(archivos)
       const parametros = {
         p_nombre: values.nombre,
         p_tipo_solicitud_id: values.tipo_solicitud_id,
@@ -91,48 +232,19 @@ export function createSupabaseSolicitudRepository(
         : await client.rpc('crear_solicitud_portal', parametros)
       if (error) throw error
       const solicitud = data as { id: string; numero: number }
-
-      for (const archivo of archivos) {
-        const mimeType = tipoArchivo(archivo)
-        const adjuntoId = crypto.randomUUID()
-        const nombreSeguro = archivo.name.normalize('NFKD').replace(/[^a-zA-Z0-9._-]/g, '_')
-        const ruta = `${solicitud.id}/${adjuntoId}/${nombreSeguro}`
-        const { error: uploadError } = await client.storage
-          .from('solicitudes-adjuntos')
-          .upload(ruta, archivo, { contentType: mimeType, upsert: false })
-        if (uploadError)
-          throw new Error(
-            `Solicitud #${solicitud.numero} creada, pero falló el adjunto ${archivo.name}: ${uploadError.message}`,
-          )
-        const { error: metadataError } = await client.from('adjuntos').insert({
-          id: adjuntoId,
-          solicitud_id: solicitud.id,
-          subido_por: values.solicitante_id,
-          nombre_archivo: archivo.name,
-          ruta_storage: ruta,
-          tipo: mimeType.startsWith('image/') ? 'imagen' : 'documento',
-          mime_type: mimeType,
-          tamano_bytes: archivo.size,
-        })
-        if (metadataError) {
-          await client.storage.from('solicitudes-adjuntos').remove([ruta])
-          throw new Error(
-            `Solicitud #${solicitud.numero} creada, pero no se registró el adjunto ${archivo.name}.`,
-          )
-        }
-      }
+      await subirAdjuntos(
+        client,
+        solicitud.id,
+        archivos,
+        values.solicitante_id,
+        `Solicitud #${solicitud.numero} creada`,
+      )
       return solicitud
     },
 
     async editarDatos(input: EditarSolicitudInput): Promise<void> {
       if (!client) throw new Error('Supabase no está configurado.')
-
-      for (const archivo of input.archivos) {
-        if (!tiposPermitidos.has(tipoArchivo(archivo)))
-          throw new Error(`El tipo de archivo ${archivo.name} no está permitido.`)
-        if (archivo.size > 10 * 1024 * 1024)
-          throw new Error(`${archivo.name} supera el límite de 10 MB.`)
-      }
+      validarArchivos(input.archivos)
 
       const { error } = await client.rpc('editar_datos_solicitud', {
         p_solicitud_id: input.solicitud_id,
@@ -153,34 +265,13 @@ export function createSupabaseSolicitudRepository(
           'Los datos se guardaron, pero no fue posible identificar al usuario para adjuntar archivos.',
         )
 
-      for (const archivo of input.archivos) {
-        const mimeType = tipoArchivo(archivo)
-        const adjuntoId = crypto.randomUUID()
-        const nombreSeguro = archivo.name.normalize('NFKD').replace(/[^a-zA-Z0-9._-]/g, '_')
-        const ruta = `${input.solicitud_id}/${adjuntoId}/${nombreSeguro}`
-        const { error: uploadError } = await client.storage
-          .from('solicitudes-adjuntos')
-          .upload(ruta, archivo, { contentType: mimeType, upsert: false })
-        if (uploadError)
-          throw new Error(
-            `Los datos se guardaron, pero falló el adjunto ${archivo.name}: ${uploadError.message}`,
-          )
-
-        const { error: metadataError } = await client.from('adjuntos').insert({
-          id: adjuntoId,
-          solicitud_id: input.solicitud_id,
-          subido_por: authData.user.id,
-          nombre_archivo: archivo.name,
-          ruta_storage: ruta,
-          tipo: mimeType.startsWith('image/') ? 'imagen' : 'documento',
-          mime_type: mimeType,
-          tamano_bytes: archivo.size,
-        })
-        if (metadataError) {
-          await client.storage.from('solicitudes-adjuntos').remove([ruta])
-          throw new Error(`Los datos se guardaron, pero no se registró el adjunto ${archivo.name}.`)
-        }
-      }
+      await subirAdjuntos(
+        client,
+        input.solicitud_id,
+        input.archivos,
+        authData.user.id,
+        'Los datos se guardaron',
+      )
     },
 
     async misSolicitudes(usuarioId?: string): Promise<MiSolicitud[]> {
@@ -188,12 +279,25 @@ export function createSupabaseSolicitudRepository(
       const { data, error } = await client
         .from('solicitudes')
         .select(
-          'id, numero, nombre, estado, prioridad, creado_en, sla_vence_en, tipo:tipos_solicitud(nombre)',
+          'id, numero, nombre, detalle, estado, prioridad, creado_en, sla_vence_en, tipo_solicitud_id, ubicacion_id, equipo_id, tipo:tipos_solicitud(nombre)',
         )
         .eq('solicitante_id', usuarioId)
         .order('creado_en', { ascending: false })
       if (error) throw error
       return data as unknown as MiSolicitud[]
+    },
+
+    async solicitudesPortalCliente(clienteId: string): Promise<SolicitudPortalCliente[]> {
+      if (!client) throw new Error('Supabase no está configurado.')
+      const { data, error } = await client
+        .from('solicitudes')
+        .select(
+          'id, numero, nombre, detalle, estado, prioridad, creado_en, sla_vence_en, cerrada_en, tipo_solicitud_id, ubicacion_id, equipo_id, garantia_vence_en, tipo:tipos_solicitud(nombre), operador:usuarios!solicitudes_operador_id_fkey(nombre_completo), ubicacion:ubicaciones(nombre, provincia, canton, distrito, otras_senas), equipo:equipos_cliente(nombre, marca, modelo, serie), original:solicitud_original_id(numero, nombre), garantias:solicitudes!solicitud_original_id(numero, estado), avances(reportes_atencion(ruta_storage_pdf)), validacion:validaciones_cierre(satisfecho, comentario, calificacion, llego_a_tiempo, recomendaria_tecnico, validado_en)',
+        )
+        .eq('cliente_id', clienteId)
+        .order('creado_en', { ascending: false })
+      if (error) throw error
+      return data as unknown as SolicitudPortalCliente[]
     },
 
     async materiales(solicitudId: string): Promise<MaterialSolicitud[]> {
@@ -230,7 +334,7 @@ export function createSupabaseSolicitudRepository(
       const { data, error } = await client
         .from('solicitud_comunicaciones')
         .select(
-          'id,solicitud_id,tipo,asunto,mensaje,monto,creado_en,remitente:usuarios!solicitud_comunicaciones_enviado_por_fkey(nombre_completo),adjuntos:solicitud_comunicacion_adjuntos(id,nombre_archivo,ruta_storage,mime_type)',
+          'id,solicitud_id,tipo,asunto,mensaje,monto,creado_en,enviado_por,remitente:usuarios!solicitud_comunicaciones_enviado_por_fkey(nombre_completo),adjuntos:solicitud_comunicacion_adjuntos(id,nombre_archivo,ruta_storage,mime_type)',
         )
         .eq('solicitud_id', solicitudId)
         .order('creado_en', { ascending: false })

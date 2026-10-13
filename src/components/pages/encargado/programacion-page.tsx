@@ -158,6 +158,7 @@ export function ProgramacionPage() {
           icon={Settings2}
           title={editando ? `Editar programación ${editando.codigo}` : 'Nueva programación'}
           description="Seleccione las solicitudes, el responsable, los participantes y los vehículos de la ruta."
+          onClose={() => setEditando(undefined)}
         >
           <ProcessRouteForm
             key={editando?.id ?? `nueva-${fechaInicial ?? 'hoy'}`}
@@ -185,12 +186,8 @@ export function ProgramacionPage() {
           icon={CalendarDays}
           title="Asignar solicitud al día"
           description="La solicitud se mostrará únicamente en la fecha seleccionada."
+          onClose={() => setFechaSemana(null)}
         >
-          <div className="flex justify-end">
-            <Button type="button" variant="outline" size="sm" onClick={() => setFechaSemana(null)}>
-              Cerrar
-            </Button>
-          </div>
           <form
             className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_220px_auto] sm:items-end"
             onSubmit={async (event) => {
@@ -361,7 +358,7 @@ export function ProgramacionPage() {
                         Editar ruta
                       </Button>
                       <Button variant="outline" onClick={() => setTrackingRuta(r)}>
-                        Ver tracking
+                        Ver seguimiento
                       </Button>
                       <Button variant="outline" onClick={() => abrirGastos(r)}>
                         Gastos

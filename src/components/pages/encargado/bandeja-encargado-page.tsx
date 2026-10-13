@@ -1,4 +1,4 @@
-﻿import {
+import {
   CalendarClock,
   History,
   List,
@@ -7,6 +7,7 @@
   Map,
   MessageSquare,
   Package,
+  Paperclip,
   Plus,
   Settings2,
   ShieldCheck,
@@ -40,6 +41,7 @@ import { RequestTechnicians } from '@/components/organisms/request-technicians'
 import { RequestGeneralDataForm } from '@/components/organisms/request-general-data-form'
 import { RequestMaterials } from '@/components/organisms/request-materials'
 import { RequestTimeline } from '@/components/organisms/request-timeline'
+import { RequestAttachments } from '@/components/organisms/request-attachments'
 import { RequestCommunications } from '@/components/organisms/request-communications'
 import { InternalRequestNotes } from '@/components/organisms/internal-request-notes'
 import { RequestServiceFollowUp } from '@/components/organisms/request-service-follow-up'
@@ -62,11 +64,9 @@ const transiciones: Partial<Record<EstadoSolicitud, EstadoSolicitud[]>> = {
   atendida: ['cerrada', 'en_atencion', 'cancelada'],
 }
 
+// El cierre ya no espera la validación del Cliente: este evalúa el servicio después del cierre.
 function transicionesDisponibles(solicitud: SolicitudAdmin) {
-  const disponibles = transiciones[solicitud.estado] ?? []
-  return solicitud.estado === 'atendida' && !solicitud.validacion
-    ? disponibles.filter((estado) => estado !== 'cerrada')
-    : disponibles
+  return transiciones[solicitud.estado] ?? []
 }
 
 const rango = { urgente: 0, alta: 1, media: 2, baja: 3 }
@@ -149,11 +149,16 @@ export function BandejaEncargadoPage() {
           const matchesSearch = normalizarBusqueda(
             `${item.numero} ${item.nombre} ${item.cliente?.nombre ?? ''} ${item.tipo?.nombre ?? ''} ${item.operador?.nombre_completo ?? ''} ${item.solicitante?.nombre_completo ?? ''}`,
           ).includes(term)
+          // Los borradores del Cliente ("creada") no le llegan al proveedor: solo se ven si se
+          // filtra por ese estado explícitamente.
           const matchesStatus =
-            statusFilter === 'todas' ||
-            (statusFilter === 'activas'
-              ? !['cerrada', 'cancelada', 'rechazada'].includes(item.estado)
-              : item.estado === statusFilter)
+            statusFilter === 'creada'
+              ? item.estado === 'creada'
+              : item.estado !== 'creada' &&
+                (statusFilter === 'todas' ||
+                  (statusFilter === 'activas'
+                    ? !['cerrada', 'cancelada', 'rechazada'].includes(item.estado)
+                    : item.estado === statusFilter))
           const matchesOperador = !operadorFilter || item.operador_id === operadorFilter
           return matchesSearch && matchesStatus && matchesOperador
         })
@@ -222,6 +227,7 @@ export function BandejaEncargadoPage() {
           clienteId={null}
           comoGestor
           onCreated={() => setCreando(false)}
+          onClose={() => setCreando(false)}
         />
       )}
       {trackingSeleccionada && (
@@ -229,14 +235,10 @@ export function BandejaEncargadoPage() {
           <WorkspacePanel
             variant="management"
             icon={History}
-            title={`Tracking #${trackingSeleccionada.numero}: ${trackingSeleccionada.nombre}`}
+            title={`Seguimiento #${trackingSeleccionada.numero}: ${trackingSeleccionada.nombre}`}
             description="Consulta exclusiva del historial de cambios y operaciones de esta solicitud."
-            actions={
-              <Button variant="outline" onClick={() => setTrackingSeleccionada(null)}>
-                <X className="mr-2 size-4" />
-                Cerrar tracking
-              </Button>
-            }
+            onClose={() => setTrackingSeleccionada(null)}
+            closeLabel="Cerrar seguimiento"
           >
             <RequestTimeline solicitudId={trackingSeleccionada.id} />
           </WorkspacePanel>
@@ -250,27 +252,18 @@ export function BandejaEncargadoPage() {
             title={`Gestionar #${seleccionada.numero}: ${seleccionada.nombre}`}
             description="Actualice la solicitud, su asignación, estado y recursos asociados."
             actions={
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={gestionar.isPending}
-                  onClick={() => void notificarCliente(seleccionada.id)}
-                >
-                  <Mail className="mr-2 size-4" />
-                  Enviar correo al cliente
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setSeleccionada(null)}
-                  aria-label="Cerrar panel de modificación"
-                  title="Cerrar panel"
-                >
-                  <X className="size-4" />
-                </Button>
-              </>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={gestionar.isPending}
+                onClick={() => void notificarCliente(seleccionada.id)}
+              >
+                <Mail className="mr-2 size-4" />
+                Enviar correo al cliente
+              </Button>
             }
+            onClose={() => setSeleccionada(null)}
+            closeLabel="Cerrar panel de modificación"
           >
             {' '}
             <div className="mb-4 rounded-lg border bg-muted/30 p-4 text-sm">
@@ -345,11 +338,6 @@ export function BandejaEncargadoPage() {
                     Rechazar petición
                   </Button>
                 </div>
-                {peticionPendiente.tipo === 'cierre' && !seleccionada.validacion && (
-                  <p className="text-xs text-warning-soft-foreground">
-                    El cierre solo podrá aprobarse después de la validación del Cliente.
-                  </p>
-                )}
               </div>
             )}
             {admiteReasignacion && (
@@ -385,7 +373,13 @@ export function BandejaEncargadoPage() {
                 </Button>
               </div>
             )}
-            {seleccionada.estado === 'creada' || seleccionada.estado === 'asignada' ? (
+            {seleccionada.estado === 'creada' && (
+              <p className="mt-4 rounded-md bg-warning-soft p-3 text-sm text-warning-soft-foreground">
+                Borrador del Cliente: todavía no la ha enviado, así que no puede asignarse ni
+                modificarse.
+              </p>
+            )}
+            {seleccionada.estado === 'enviada' || seleccionada.estado === 'asignada' ? (
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <label className="grid gap-2 text-sm font-medium">
                   Prioridad
@@ -425,11 +419,11 @@ export function BandejaEncargadoPage() {
                       })
                     }
                   >
-                    {seleccionada.estado === 'creada'
+                    {seleccionada.estado === 'enviada'
                       ? 'Asignar solicitud'
                       : 'Guardar reasignación'}
                   </Button>
-                  {seleccionada.estado === 'creada' && (
+                  {seleccionada.estado === 'enviada' && (
                     <Button
                       variant="outline"
                       className="text-destructive hover:bg-destructive-soft"
@@ -471,9 +465,9 @@ export function BandejaEncargadoPage() {
               </div>
             ) : transicionesDisponibles(seleccionada).length ? (
               <div className="mt-4 grid gap-4">
-                {seleccionada.estado === 'atendida' && !seleccionada.validacion && (
-                  <p className="rounded-md bg-warning-soft p-3 text-sm text-warning-soft-foreground">
-                    El Cliente debe validar la atención antes de habilitar el cierre.
+                {seleccionada.estado === 'atendida' && (
+                  <p className="text-sm text-muted-foreground">
+                    Al cerrar, se le pedirá al Cliente una evaluación corta de satisfacción.
                   </p>
                 )}
                 <label className="grid gap-2 text-sm font-medium">
@@ -511,10 +505,6 @@ export function BandejaEncargadoPage() {
                   Aplicar cambio
                 </Button>
               </div>
-            ) : seleccionada.estado === 'atendida' && !seleccionada.validacion ? (
-              <p className="mt-4 rounded-md bg-warning-soft p-3 text-sm text-warning-soft-foreground">
-                El Cliente debe validar la atención antes del cierre.
-              </p>
             ) : (
               <p className="mt-4 text-sm text-muted-foreground">
                 Este estado no admite acciones adicionales.
@@ -525,6 +515,13 @@ export function BandejaEncargadoPage() {
               <p className="text-xs text-muted-foreground">
                 Abra únicamente la sección que necesite consultar o actualizar.
               </p>
+              <DisclosurePanel
+                icon={Paperclip}
+                title="Documentos adjuntos"
+                description="Fotos y documentos que aportó el Cliente o se registraron en los avances."
+              >
+                <RequestAttachments solicitudId={seleccionada.id} />
+              </DisclosurePanel>
               <DisclosurePanel
                 icon={Package}
                 title="Inventario asociado"
@@ -562,7 +559,7 @@ export function BandejaEncargadoPage() {
               </DisclosurePanel>{' '}
               <DisclosurePanel
                 icon={History}
-                title="Tracking de la solicitud"
+                title="Seguimiento de la solicitud"
                 description="Consulte el historial completo de cambios y operaciones."
               >
                 <RequestTimeline solicitudId={seleccionada.id} />
@@ -600,13 +597,14 @@ export function BandejaEncargadoPage() {
           }}
         >
           <option value="activas">Solicitudes activas</option>
-          <option value="todas">Todos los estados</option>
-          <option value="creada">Creadas</option>
+          <option value="todas">Todos los estados (sin borradores)</option>
+          <option value="enviada">Enviadas (por asignar)</option>
           <option value="asignada">Asignadas</option>
           <option value="en_atencion">En atención</option>
           <option value="atendida">Atendidas</option>
           <option value="cerrada">Cerradas</option>
           <option value="cancelada">Canceladas</option>
+          <option value="creada">Borradores del Cliente (no enviadas)</option>
         </Select>
         <Select
           value={sortBy}
@@ -691,6 +689,11 @@ export function BandejaEncargadoPage() {
                     <td className="px-4 py-3">
                       <div className="font-medium">{item.nombre}</div>
                       <div className="text-xs text-muted-foreground">{item.tipo?.nombre}</div>
+                      {item.original && (
+                        <div className="mt-1 w-fit rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                          Garantía de #{item.original.numero}
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3">{item.cliente?.nombre}</td>
                     <td className="px-4 py-3">
@@ -721,7 +724,7 @@ export function BandejaEncargadoPage() {
                           }}
                         >
                           <History className="mr-2 size-4" />
-                          Ver tracking
+                          Ver seguimiento
                         </Button>
                         <Button variant="outline" onClick={() => abrir(item)}>
                           Gestionar

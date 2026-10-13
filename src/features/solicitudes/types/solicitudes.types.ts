@@ -1,5 +1,8 @@
 export type EstadoSolicitud =
+  /** Borrador del Cliente: el proveedor no lo trabaja hasta que se envía. */
   | 'creada'
+  /** Enviada por el Cliente: lista para que el proveedor la procese. */
+  | 'enviada'
   | 'asignada'
   | 'en_atencion'
   | 'en_espera_materiales'
@@ -13,6 +16,8 @@ export interface SolicitudAdmin {
   numero: number
   nombre: string
   detalle: string
+  /** Si es una solicitud de garantía: la solicitud original que reclama. */
+  original: { numero: number } | null
   cliente_id: string
   ubicacion_id: string
   prioridad: 'baja' | 'media' | 'alta' | 'urgente' | null
@@ -65,11 +70,60 @@ export interface MiSolicitud {
   id: string
   numero: number
   nombre: string
+  detalle: string
   estado: string
   prioridad: string | null
   creado_en: string
   sla_vence_en: string | null
+  /** Datos para modificar el borrador mientras está en "creada". */
+  tipo_solicitud_id: string
+  ubicacion_id: string | null
+  equipo_id: string | null
   tipo: { nombre: string } | null
+}
+
+/** Fila de "Mis solicitudes" en el portal del Cliente: todas las solicitudes de su organización. */
+export interface SolicitudPortalCliente extends MiSolicitud {
+  cerrada_en: string | null
+  garantia_vence_en: string | null
+  operador: { nombre_completo: string } | null
+  ubicacion: {
+    nombre: string
+    provincia: string
+    canton: string
+    distrito: string
+    otras_senas: string | null
+  } | null
+  equipo: {
+    nombre: string
+    marca: string | null
+    modelo: string | null
+    serie: string | null
+  } | null
+  /** Si esta solicitud es una garantía: la solicitud original que reclama. */
+  original: { numero: number; nombre: string } | null
+  /** Garantías aplicadas sobre esta solicitud. */
+  garantias: { numero: number; estado: string }[]
+  avances: { reportes_atencion: { ruta_storage_pdf: string } | null }[]
+  validacion: {
+    satisfecho: boolean
+    comentario: string | null
+    calificacion: number | null
+    llego_a_tiempo: boolean | null
+    recomendaria_tecnico: boolean | null
+    validado_en: string
+  } | null
+}
+
+/** Archivo adjunto de una solicitud (evidencia del Cliente o del operador). */
+export type AdjuntoSolicitud = {
+  id: string
+  nombre_archivo: string
+  ruta_storage: string
+  mime_type: string
+  subido_por: string
+  creado_en: string
+  url?: string
 }
 
 export type Comunicacion = {
@@ -80,6 +134,7 @@ export type Comunicacion = {
   mensaje: string
   monto: number | null
   creado_en: string
+  enviado_por: string
   remitente: { nombre_completo: string } | null
   adjuntos: {
     id: string

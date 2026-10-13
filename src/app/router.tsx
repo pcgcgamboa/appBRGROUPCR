@@ -85,16 +85,6 @@ const ClienteDocumentosRoute = lazy(() =>
     default: m.ClienteDocumentosRoute,
   })),
 )
-const ClienteTrackingRoute = lazy(() =>
-  import('@/components/pages/cliente/cliente-page').then((m) => ({
-    default: m.ClienteTrackingRoute,
-  })),
-)
-const ClienteValidacionesRoute = lazy(() =>
-  import('@/components/pages/cliente/cliente-page').then((m) => ({
-    default: m.ClienteValidacionesRoute,
-  })),
-)
 const BolsaEmpleoPage = lazy(() =>
   import('@/components/pages/bolsa-empleo-page').then((m) => ({ default: m.BolsaEmpleoPage })),
 )
@@ -306,8 +296,11 @@ export function AppRouter() {
               >
                 <Route index element={<Navigate to="solicitudes" replace />} />
                 <Route path="solicitudes" element={<ClienteSolicitudesRoute />} />
-                <Route path="validaciones" element={<ClienteValidacionesRoute />} />
-                <Route path="tracking" element={<ClienteTrackingRoute />} />
+                {/* La validación pasó a "Servicios finalizados" dentro de Mis solicitudes. */}
+                <Route path="validaciones" element={<Navigate to="../solicitudes" replace />} />
+                {/* El seguimiento se consulta por solicitud desde "Ver detalle" en Mis solicitudes. */}
+                <Route path="seguimiento" element={<Navigate to="../solicitudes" replace />} />
+                <Route path="tracking" element={<Navigate to="../solicitudes" replace />} />
                 <Route path="documentos" element={<ClienteDocumentosRoute />} />
               </Route>
             </Route>

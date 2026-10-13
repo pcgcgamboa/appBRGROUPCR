@@ -1,16 +1,34 @@
 import { Activity, Clock3 } from 'lucide-react'
+import { useMemo } from 'react'
 import { Skeleton } from '@/components/atoms/skeleton'
 import { GridPagination } from '@/components/molecules/grid-pagination'
 import { TrackingControls } from '@/components/molecules/tracking-controls'
+import { ACTIVIDADES_VISIBLES_CLIENTE } from '@/features/cliente/lib/actividades-visibles'
 import { useTrackingSolicitud } from '@/features/solicitudes/hooks/use-tracking-solicitud'
 import { useTrackingFilters } from '@/hooks/use-tracking-filters'
 import { normalizarError } from '@/lib/errores'
 
 const formatoFecha = new Intl.DateTimeFormat('es-CR', { dateStyle: 'medium', timeStyle: 'short' })
 
-export function RequestTimeline({ solicitudId }: { solicitudId: string }) {
+export function RequestTimeline({
+  solicitudId,
+  vistaCliente = false,
+}: {
+  solicitudId: string
+  /** Portal del Cliente: solo movimientos que le conciernen, aunque el usuario tenga otros roles. */
+  vistaCliente?: boolean
+}) {
   const tracking = useTrackingSolicitud(solicitudId)
-  const filters = useTrackingFilters(tracking.data ?? [], {
+  const actividades = useMemo(
+    () =>
+      vistaCliente
+        ? (tracking.data ?? []).filter((item) =>
+            (ACTIVIDADES_VISIBLES_CLIENTE as readonly string[]).includes(item.tipo),
+          )
+        : (tracking.data ?? []),
+    [tracking.data, vistaCliente],
+  )
+  const filters = useTrackingFilters(actividades, {
     date: (item) => item.creado_en,
     type: (item) => item.tipo,
     text: (item) =>
@@ -19,18 +37,25 @@ export function RequestTimeline({ solicitudId }: { solicitudId: string }) {
         .join(' '),
   })
   return (
-    <section className="rounded-xl border bg-card p-4" aria-labelledby="tracking-title">
-      <div className="flex items-center gap-2">
-        <Activity className="size-5 text-primary" />
-        <div>
-          <h3 id="tracking-title" className="font-semibold">
-            Tracking de la solicitud
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            Historial completo de cambios y operaciones.
-          </p>
+    // En la vista del Cliente va dentro de un panel plegable que ya trae título y borde.
+    <section
+      className={vistaCliente ? undefined : 'rounded-xl border bg-card p-4'}
+      aria-labelledby={vistaCliente ? undefined : 'tracking-title'}
+      aria-label={vistaCliente ? 'Seguimiento de la solicitud' : undefined}
+    >
+      {!vistaCliente && (
+        <div className="flex items-center gap-2">
+          <Activity className="size-5 text-primary" />
+          <div>
+            <h3 id="tracking-title" className="font-semibold">
+              Seguimiento de la solicitud
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Historial completo de cambios y operaciones.
+            </p>
+          </div>
         </div>
-      </div>
+      )}
       {tracking.error && (
         <p
           role="alert"

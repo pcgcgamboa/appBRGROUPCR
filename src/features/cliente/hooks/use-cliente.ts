@@ -23,6 +23,7 @@ export function useValidarAtencion() {
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['solicitudes-cliente'] }),
+        queryClient.invalidateQueries({ queryKey: ['mis-solicitudes'] }),
         queryClient.invalidateQueries({ queryKey: ['solicitudes-admin'] }),
       ])
     },

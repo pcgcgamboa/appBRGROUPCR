@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { PanelCloseButton } from '@/components/molecules/panel-close-button'
 import { cn } from '@/lib/utils'
 
 type WorkspacePanelProps = {
@@ -7,6 +8,9 @@ type WorkspacePanelProps = {
   description?: string
   icon: LucideIcon
   actions?: ReactNode
+  /** Si se indica, el panel muestra una X para cerrarlo en la esquina superior derecha. */
+  onClose?: () => void
+  closeLabel?: string
   children: ReactNode
   className?: string
   variant: 'management' | 'list'
@@ -17,6 +21,8 @@ export function WorkspacePanel({
   description,
   icon: Icon,
   actions,
+  onClose,
+  closeLabel,
   children,
   className,
   variant,
@@ -33,25 +39,30 @@ export function WorkspacePanel({
     >
       <div
         className={cn(
-          'flex flex-wrap items-center justify-between gap-3 border-b pb-4',
+          'flex items-start justify-between gap-3 border-b pb-4',
           management ? 'border-primary/20' : 'border-border',
         )}
       >
-        <div className="flex min-w-0 items-center gap-3">
-          <span
-            className={cn(
-              'flex size-10 shrink-0 items-center justify-center rounded-lg shadow-sm',
-              management ? 'bg-primary text-primary-foreground' : 'bg-card text-primary',
-            )}
-          >
-            <Icon className="size-5" />
-          </span>
-          <div className="min-w-0">
-            <h2 className="font-semibold">{title}</h2>
-            {description && <p className="text-sm text-muted-foreground">{description}</p>}
+        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <span
+              className={cn(
+                'flex size-10 shrink-0 items-center justify-center rounded-lg shadow-sm',
+                management ? 'bg-primary text-primary-foreground' : 'bg-card text-primary',
+              )}
+            >
+              <Icon className="size-5" />
+            </span>
+            <div className="min-w-0">
+              <h2 className="font-semibold">{title}</h2>
+              {description && <p className="text-sm text-muted-foreground">{description}</p>}
+            </div>
           </div>
+          {actions}
         </div>
-        {actions}
+        {onClose && (
+          <PanelCloseButton onClose={onClose} label={closeLabel} className="-mr-2 -mt-1" />
+        )}
       </div>
       {children}
     </section>

@@ -24,7 +24,7 @@ export function RouteTimeline({ ruta, onClose }: { ruta: RutaProceso; onClose: (
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="w-[min(96vw,80rem)] max-w-none">
-        <DialogTitle>Tracking de ruta {ruta.codigo}</DialogTitle>
+        <DialogTitle>Seguimiento de ruta {ruta.codigo}</DialogTitle>
         <DialogDescription>
           Cambios, solicitudes, vehículos y movimientos operativos.
         </DialogDescription>

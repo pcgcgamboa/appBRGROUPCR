@@ -36,6 +36,7 @@ import {
 } from '@/components/atoms/alert-dialog'
 import { FormField } from '@/components/molecules/form-field'
 import { PageHeader } from '@/components/molecules/page-header'
+import { PanelCloseButton } from '@/components/molecules/panel-close-button'
 import { GridPagination } from '@/components/molecules/grid-pagination'
 import { ThOrdenable } from '@/components/atoms/th-ordenable'
 import { useCatalogo } from '@/features/catalogos/hooks/use-catalogo'
@@ -61,6 +62,9 @@ interface CatalogManagerProps<T> {
   onSaved?: (id: string | number) => Promise<void>
   extraActions?: (item: T) => ReactNode
   headerActions?: ReactNode
+  /** Cuando el catálogo se muestra como panel cerrable: X en la esquina superior derecha. */
+  onClose?: () => void
+  closeLabel?: string
   defaultValues?: DatosFormulario
   filterItem?: (item: T) => boolean
   renderCell?: (item: T, column: string) => ReactNode
@@ -90,6 +94,8 @@ export function CatalogManager<T extends EntidadBase>({
   onSaved,
   extraActions,
   headerActions,
+  onClose,
+  closeLabel,
   defaultValues,
   filterItem,
   renderCell,
@@ -247,15 +253,18 @@ export function CatalogManager<T extends EntidadBase>({
 
   return (
     <section className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <PageHeader title={title} description={description} />
-        <div className="flex flex-wrap gap-2">
-          {headerActions}
-          <Button onClick={abrirNuevo}>
-            <Plus className="mr-2 size-4" />
-            Nuevo registro
-          </Button>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-1 flex-wrap items-start justify-between gap-4">
+          <PageHeader title={title} description={description} />
+          <div className="flex flex-wrap gap-2">
+            {headerActions}
+            <Button onClick={abrirNuevo}>
+              <Plus className="mr-2 size-4" />
+              Nuevo registro
+            </Button>
+          </div>
         </div>
+        {onClose && <PanelCloseButton onClose={onClose} label={closeLabel} />}
       </div>
 
       <Dialog open={formVisible} onOpenChange={setFormVisible}>

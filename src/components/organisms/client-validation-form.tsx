@@ -9,9 +9,11 @@ import { normalizarError } from '@/lib/errores'
 export function ClientValidationForm({
   solicitud,
   onSaved,
+  onCancel = onSaved,
 }: {
-  solicitud: SolicitudCliente
+  solicitud: Pick<SolicitudCliente, 'id' | 'numero' | 'nombre' | 'validacion'>
   onSaved: () => void
+  onCancel?: () => void
 }) {
   const validar = useValidarAtencion()
   const [satisfecho, setSatisfecho] = useState(solicitud.validacion?.satisfecho ?? true)
@@ -36,7 +38,7 @@ export function ClientValidationForm({
   return (
     <form onSubmit={enviar} className="space-y-5 rounded-lg border bg-card p-5 shadow-sm">
       <div>
-        <h2 className="font-semibold">Validar solicitud #{solicitud.numero}</h2>
+        <h2 className="font-semibold">Evalúe el servicio · solicitud #{solicitud.numero}</h2>
         <p className="text-sm text-muted-foreground">{solicitud.nombre}</p>
       </div>
       <fieldset>
@@ -126,9 +128,9 @@ export function ClientValidationForm({
       )}
       <div className="flex gap-3">
         <Button type="submit" disabled={validar.isPending}>
-          {validar.isPending ? 'Guardando…' : 'Enviar validación'}
+          {validar.isPending ? 'Guardando…' : 'Enviar evaluación'}
         </Button>
-        <Button type="button" variant="outline" onClick={onSaved}>
+        <Button type="button" variant="outline" onClick={onCancel}>
           Cancelar
         </Button>
       </div>

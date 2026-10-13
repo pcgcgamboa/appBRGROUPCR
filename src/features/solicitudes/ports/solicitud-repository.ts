@@ -2,7 +2,9 @@ import type {
   Comunicacion,
   EstadoSolicitud,
   MaterialSolicitud,
+  AdjuntoSolicitud,
   MiSolicitud,
+  SolicitudPortalCliente,
   OperadorResumen,
   SolicitudAdmin,
 } from '@/features/solicitudes/types/solicitudes.types'
@@ -21,6 +23,19 @@ export interface EquipoNuevoInput {
   marca?: string
   modelo?: string
   serie?: string
+}
+
+export interface EditarBorradorInput extends SolicitudFormData {
+  id: string
+  equipo_id: string | null
+  /** Archivos nuevos a adjuntar al borrador. */
+  archivos: File[]
+}
+
+export interface AplicarGarantiaInput {
+  solicitud_original_id: string
+  detalle: string
+  idempotencia_clave?: string
 }
 
 export interface CrearSolicitudInput extends SolicitudFormData {
@@ -107,8 +122,21 @@ export interface SolicitudRepository {
   listarAdmin(): Promise<SolicitudAdmin[]>
   intervenir(input: Intervencion): Promise<void>
   crear(input: CrearSolicitudInput): Promise<{ id: string; numero: number }>
+  /** Portal del Cliente: envía un borrador ("creada" → "enviada") para que el proveedor lo procese. */
+  enviarSolicitud(solicitudId: string): Promise<void>
+  /** Portal del Cliente: modifica un borrador (solo mientras está en "creada"). */
+  editarBorrador(input: EditarBorradorInput): Promise<void>
+  /** Ubicación reportada en la solicitud más reciente de un equipo (null si no tiene ninguna). */
+  ultimaUbicacionEquipo(equipoId: string): Promise<string | null>
+  /** Adjuntos de la solicitud, con URL firmada para visualizarlos. */
+  adjuntos(solicitudId: string): Promise<AdjuntoSolicitud[]>
+  eliminarAdjunto(adjunto: AdjuntoSolicitud): Promise<void>
+  /** Crea una solicitud de garantía enlazada a una solicitud cerrada con garantía vigente. */
+  aplicarGarantia(input: AplicarGarantiaInput): Promise<{ id: string; numero: number }>
   editarDatos(input: EditarSolicitudInput): Promise<void>
   misSolicitudes(usuarioId?: string): Promise<MiSolicitud[]>
+  /** Todas las solicitudes de la organización del Cliente, con evaluación, garantía y reporte. */
+  solicitudesPortalCliente(clienteId: string): Promise<SolicitudPortalCliente[]>
   materiales(solicitudId: string): Promise<MaterialSolicitud[]>
   agregarMaterial(input: AgregarMaterialInput): Promise<void>
   comunicaciones(solicitudId?: string): Promise<Comunicacion[]>
