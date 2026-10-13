@@ -1,5 +1,6 @@
 import {
   CalendarClock,
+  FileText,
   History,
   List,
   Lock,
@@ -41,6 +42,7 @@ import { RequestTechnicians } from '@/components/organisms/request-technicians'
 import { RequestGeneralDataForm } from '@/components/organisms/request-general-data-form'
 import { RequestMaterials } from '@/components/organisms/request-materials'
 import { RequestTimeline } from '@/components/organisms/request-timeline'
+import { ProgressHistory } from '@/components/organisms/progress-history'
 import { RequestAttachments } from '@/components/organisms/request-attachments'
 import { RequestCommunications } from '@/components/organisms/request-communications'
 import { InternalRequestNotes } from '@/components/organisms/internal-request-notes'
@@ -521,6 +523,13 @@ export function BandejaEncargadoPage() {
                 description="Fotos y documentos que aportó el Cliente o se registraron en los avances."
               >
                 <RequestAttachments solicitudId={seleccionada.id} />
+              </DisclosurePanel>
+              <DisclosurePanel
+                icon={FileText}
+                title="Avances y reportes de atención"
+                description="Bitácora del operador y los reportes de atención en PDF."
+              >
+                <ProgressHistory solicitudId={seleccionada.id} />
               </DisclosurePanel>
               <DisclosurePanel
                 icon={Package}

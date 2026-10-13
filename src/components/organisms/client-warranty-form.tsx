@@ -19,7 +19,8 @@ export function ClientWarrantyForm({
   onCancel,
 }: {
   solicitud: SolicitudPortalCliente
-  onAplicada: (numero: number) => void
+  /** Recibe el borrador de garantía creado, para abrirlo en modo Modificar. */
+  onAplicada: (borrador: { id: string; numero: number }) => void
   onCancel: () => void
 }) {
   const aplicar = useAplicarGarantia()
@@ -34,7 +35,7 @@ export function ClientWarrantyForm({
       detalle,
       idempotencia_clave: claveIdempotencia.current,
     })
-    onAplicada(resultado.numero)
+    onAplicada(resultado)
   }
 
   return (
@@ -83,7 +84,8 @@ export function ClientWarrantyForm({
         />
         <span className="text-xs font-normal text-muted-foreground">
           Se creará una solicitud de garantía enlazada a la #{solicitud.numero}, con su mismo tipo,
-          ubicación y equipo. Quedará registrada en el seguimiento de ambas.
+          ubicación y equipo. Quedará como borrador para que la revise o modifique antes de enviarla
+          al proveedor.
         </span>
       </label>
       {aplicar.error && (
@@ -101,7 +103,7 @@ export function ClientWarrantyForm({
           disabled={aplicar.isPending || detalle.trim().length < 10}
         >
           <ShieldCheck className="mr-2 size-4" />
-          {aplicar.isPending ? 'Enviando…' : 'Aplicar garantía'}
+          {aplicar.isPending ? 'Creando…' : 'Crear borrador de garantía'}
         </Button>
         <Button type="button" variant="outline" className="min-h-11" onClick={onCancel}>
           Cancelar

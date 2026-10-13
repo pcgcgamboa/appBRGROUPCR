@@ -143,7 +143,11 @@ export function OperadorPage({ usuarioId }: { usuarioId: string }) {
             )}
             <div className="space-y-6">
               <RequestTechnicians solicitudId={seleccionada.id} />
-              <ProgressHistory solicitudId={seleccionada.id} />
+              <ProgressHistory
+                solicitudId={seleccionada.id}
+                solicitud={seleccionada}
+                operadorNombre={perfil.data?.nombre_completo ?? ''}
+              />
             </div>
           </div>
           {modo === 'detalle' && (

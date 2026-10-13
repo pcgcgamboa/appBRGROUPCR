@@ -292,7 +292,7 @@ export function createSupabaseSolicitudRepository(
       const { data, error } = await client
         .from('solicitudes')
         .select(
-          'id, numero, nombre, detalle, estado, prioridad, creado_en, sla_vence_en, cerrada_en, tipo_solicitud_id, ubicacion_id, equipo_id, garantia_vence_en, tipo:tipos_solicitud(nombre), operador:usuarios!solicitudes_operador_id_fkey(nombre_completo), ubicacion:ubicaciones(nombre, provincia, canton, distrito, otras_senas), equipo:equipos_cliente(nombre, marca, modelo, serie), original:solicitud_original_id(numero, nombre), garantias:solicitudes!solicitud_original_id(numero, estado), avances(reportes_atencion(ruta_storage_pdf)), validacion:validaciones_cierre(satisfecho, comentario, calificacion, llego_a_tiempo, recomendaria_tecnico, validado_en)',
+          'id, numero, nombre, detalle, estado, prioridad, creado_en, sla_vence_en, cerrada_en, tipo_solicitud_id, ubicacion_id, equipo_id, garantia_vence_en, tipo:tipos_solicitud(nombre), operador:usuarios!solicitudes_operador_id_fkey(nombre_completo), ubicacion:ubicaciones(nombre, provincia, canton, distrito, otras_senas), equipo:equipos_cliente(nombre, marca, modelo, serie), original:solicitud_original_id(numero, nombre), garantias:solicitudes!solicitud_original_id(numero, estado), avances(creado_en, reportes_atencion(ruta_storage_pdf, estado_equipo_final, recomendaciones, checklist_requiere_seguimiento, creado_en)), validacion:validaciones_cierre(satisfecho, comentario, calificacion, llego_a_tiempo, recomendaria_tecnico, validado_en)',
         )
         .eq('cliente_id', clienteId)
         .order('creado_en', { ascending: false })

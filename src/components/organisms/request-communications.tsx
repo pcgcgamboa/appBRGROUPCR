@@ -1,4 +1,4 @@
-import { FileText, MessageSquare, Paperclip, Send } from 'lucide-react'
+import { FileText, MessageSquare, Paperclip, Plus, Send } from 'lucide-react'
 import { useState } from 'react'
 import { Badge } from '@/components/atoms/badge'
 import { Button } from '@/components/atoms/button'
@@ -42,6 +42,8 @@ export function RequestCommunications({
   const [mensaje, setMensaje] = useState('')
   const [monto, setMonto] = useState('')
   const [archivos, setArchivos] = useState<File[]>([])
+  // El formulario de envío está cerrado por defecto; se abre con "Nuevo mensaje".
+  const [redactando, setRedactando] = useState(false)
   const tipoEnvio = esCliente ? 'mensaje' : tipo
   const proformasFormales = useProformas(solicitudId)
   const [seccion, setSeccion] = useState<'mensajes' | 'proformas' | 'documentos'>('mensajes')
@@ -66,6 +68,16 @@ export function RequestCommunications({
     setMensaje('')
     setMonto('')
     setArchivos([])
+    setRedactando(false)
+  }
+
+  function cancelarMensaje() {
+    setAsunto('')
+    setMensaje('')
+    setMonto('')
+    setArchivos([])
+    enviar.reset()
+    setRedactando(false)
   }
 
   const historial = (items: Comunicacion[], vacio: string) => (
@@ -136,8 +148,12 @@ export function RequestCommunications({
     ? 'Aún no hay mensajes. Escriba al proveedor si tiene alguna consulta.'
     : 'No hay mensajes todavía.'
 
-  const redactar = (
+  const redactar = redactando ? (
     <div className="grid gap-3 rounded-lg bg-muted/40 p-3 sm:grid-cols-2">
+      <div className="flex items-center justify-between gap-3 sm:col-span-2">
+        <h4 className="font-semibold">Nuevo mensaje</h4>
+        <PanelCloseButton onClose={cancelarMensaje} label="Cerrar nuevo mensaje" />
+      </div>
       {!esCliente && (
         <label className="grid gap-1 text-sm font-medium">
           Tipo
@@ -187,21 +203,36 @@ export function RequestCommunications({
           PDF o imágenes, máximo 10 MB por archivo.
         </span>
       </label>
-      <Button
-        className="min-h-11 w-fit sm:col-span-2"
-        disabled={
-          enviar.isPending ||
-          !asunto.trim() ||
-          !mensaje.trim() ||
-          (tipoEnvio === 'proforma' && (!monto || Number(monto) < 0)) ||
-          archivos.some((x) => x.size > 10 * 1024 * 1024)
-        }
-        onClick={() => void guardar()}
-      >
-        <Send className="mr-2 size-4" />
-        {enviar.isPending ? 'Enviando…' : esCliente ? 'Enviar al proveedor' : 'Enviar al Cliente'}
-      </Button>
+      <div className="flex flex-wrap gap-2 sm:col-span-2">
+        <Button
+          className="min-h-11"
+          disabled={
+            enviar.isPending ||
+            !asunto.trim() ||
+            !mensaje.trim() ||
+            (tipoEnvio === 'proforma' && (!monto || Number(monto) < 0)) ||
+            archivos.some((x) => x.size > 10 * 1024 * 1024)
+          }
+          onClick={() => void guardar()}
+        >
+          <Send className="mr-2 size-4" />
+          {enviar.isPending ? 'Enviando…' : esCliente ? 'Enviar al proveedor' : 'Enviar al Cliente'}
+        </Button>
+        <Button
+          variant="outline"
+          className="min-h-11"
+          disabled={enviar.isPending}
+          onClick={cancelarMensaje}
+        >
+          Cancelar
+        </Button>
+      </div>
     </div>
+  ) : (
+    <Button className="min-h-11 w-fit" onClick={() => setRedactando(true)}>
+      <Plus className="mr-2 size-4" />
+      Nuevo mensaje
+    </Button>
   )
 
   return (

@@ -90,7 +90,7 @@ export function createSupabaseOperadorRepository(
       const { data, error } = await requerirCliente()
         .from('avances')
         .select(
-          'id, horas_trabajadas, porcentaje, narrativa, creado_en, vehiculo:vehiculos(placa), solicitud_materiales(cantidad, material:materiales(nombre, unidad_medida)), adjuntos(id, nombre_archivo, tipo), reporte_atencion:reportes_atencion(estado_equipo_final, ruta_storage_pdf, nombre_archivo_pdf)',
+          'id, horas_trabajadas, porcentaje, narrativa, creado_en, vehiculo:vehiculos(placa), solicitud_materiales(cantidad, material:materiales(nombre, unidad_medida)), adjuntos(id, nombre_archivo, tipo, ruta_storage, categoria), reporte_atencion:reportes_atencion(hora_llegada, hora_salida, checklist_area_trabajo_segura, checklist_equipo_probado, checklist_cliente_capacitado, checklist_requiere_seguimiento, checklist_notas, estado_equipo_final, recomendaciones, firma_tecnico, firma_cliente, cedula_cliente_firma, ruta_storage_pdf, nombre_archivo_pdf, creado_por)',
         )
         .eq('solicitud_id', solicitudId)
         .order('creado_en', { ascending: false })

@@ -247,15 +247,20 @@ export function SolicitantePage({
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogTitle>Aplicar garantía</DialogTitle>
           <DialogDescription>
-            Se abrirá una nueva solicitud enlazada al trabajo ya realizado.
+            Se creará un borrador enlazado al trabajo ya realizado; podrá revisarlo antes de
+            enviarlo.
           </DialogDescription>
           {garantiaDe && (
             <ClientWarrantyForm
               solicitud={garantiaDe}
               onCancel={() => setGarantiaDe(null)}
-              onAplicada={(numero) => {
+              onAplicada={(borrador) => {
                 setGarantiaDe(null)
-                toast.success(`Se creó la solicitud de garantía #${numero}.`)
+                // Abre el borrador en modo Modificar para revisarlo y enviarlo.
+                setPanel({ id: borrador.id, modo: 'detalle' })
+                toast.success(
+                  `Borrador de garantía #${borrador.numero} creado. Revíselo y pulse Enviar.`,
+                )
               }}
             />
           )}

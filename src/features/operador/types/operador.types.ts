@@ -160,10 +160,21 @@ export interface AvanceResumen {
     cantidad: number
     material: { nombre: string; unidad_medida: string } | null
   }[]
-  adjuntos: { id: string; nombre_archivo: string; tipo: string }[]
-  reporte_atencion: {
-    estado_equipo_final: EstadoEquipoFinal
-    ruta_storage_pdf: string | null
-    nombre_archivo_pdf: string | null
-  } | null
+  adjuntos: {
+    id: string
+    nombre_archivo: string
+    tipo: string
+    ruta_storage: string
+    categoria: string | null
+  }[]
+  /** Datos completos del reporte: permiten regenerar el PDF si no se generó al registrar el avance. */
+  reporte_atencion:
+    | (Omit<ReporteAtencionInput, 'checklist_notas' | 'recomendaciones'> & {
+        checklist_notas: string | null
+        recomendaciones: string | null
+        ruta_storage_pdf: string | null
+        nombre_archivo_pdf: string | null
+        creado_por: string
+      })
+    | null
 }

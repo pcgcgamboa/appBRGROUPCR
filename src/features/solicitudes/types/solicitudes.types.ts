@@ -104,7 +104,17 @@ export interface SolicitudPortalCliente extends MiSolicitud {
   original: { numero: number; nombre: string } | null
   /** Garantías aplicadas sobre esta solicitud. */
   garantias: { numero: number; estado: string }[]
-  avances: { reportes_atencion: { ruta_storage_pdf: string } | null }[]
+  /** Avances del operador con su reporte de atención (si lo generó). */
+  avances: {
+    creado_en: string
+    reportes_atencion: {
+      ruta_storage_pdf: string | null
+      estado_equipo_final: 'funcionando' | 'parcial' | 'sin_funcionar'
+      recomendaciones: string | null
+      checklist_requiere_seguimiento: boolean
+      creado_en: string
+    } | null
+  }[]
   validacion: {
     satisfecho: boolean
     comentario: string | null

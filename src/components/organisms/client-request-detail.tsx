@@ -14,6 +14,11 @@ import type { SolicitudPortalCliente } from '@/features/solicitudes/types/solici
 
 const fecha = new Intl.DateTimeFormat('es-CR', { dateStyle: 'medium', timeStyle: 'short' })
 const soloFecha = new Intl.DateTimeFormat('es-CR', { dateStyle: 'medium' })
+const estadoEquipo = {
+  funcionando: 'Funcionando',
+  parcial: 'Funcionamiento parcial',
+  sin_funcionar: 'Sin funcionar',
+} as const
 
 /** Texto de la garantía con la razón cuando no se puede aplicar. */
 function estadoGarantia(solicitud: SolicitudPortalCliente) {
@@ -71,6 +76,10 @@ export function ClientRequestDetail({
   onVerReporte: (rutaStorage: string) => void
 }) {
   const reporte = rutaReporte(solicitud)
+  // Reportes de atención del operador, del más reciente al más antiguo.
+  const reportes = solicitud.avances
+    .flatMap((avance) => (avance.reportes_atencion ? [avance.reportes_atencion] : []))
+    .sort((a, b) => b.creado_en.localeCompare(a.creado_en))
   const [verSeguimiento, setVerSeguimiento] = useState(false)
   return (
     <div className="space-y-4">
@@ -148,6 +157,56 @@ export function ClientRequestDetail({
           </div>
         </aside>
       </div>
+      {reportes.length > 0 && (
+        <section className="space-y-3 rounded-2xl border bg-card p-5 shadow-sm">
+          <h3 className="flex items-center gap-2 font-semibold">
+            <FileText className="size-4 text-primary" />
+            Reporte de atención
+          </h3>
+          <ul className="space-y-3">
+            {reportes.map((item, indice) => (
+              <li key={`${item.creado_en}-${indice}`} className="rounded-lg border p-4 text-sm">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <p className="font-medium">
+                      Atención del {fecha.format(new Date(item.creado_en))}
+                    </p>
+                    <p>
+                      Estado final del equipo:{' '}
+                      <span className="font-medium">{estadoEquipo[item.estado_equipo_final]}</span>
+                    </p>
+                    {item.checklist_requiere_seguimiento && (
+                      <p className="text-warning-soft-foreground">
+                        El técnico indicó que requiere seguimiento.
+                      </p>
+                    )}
+                  </div>
+                  {item.ruta_storage_pdf ? (
+                    <Button
+                      variant="outline"
+                      className="min-h-11"
+                      onClick={() => onVerReporte(item.ruta_storage_pdf ?? '')}
+                    >
+                      <FileText className="mr-2 size-4" />
+                      Ver reporte (PDF)
+                    </Button>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      El PDF del reporte está en preparación.
+                    </p>
+                  )}
+                </div>
+                {item.recomendaciones && (
+                  <p className="mt-2 whitespace-pre-wrap text-muted-foreground">
+                    <span className="font-medium text-foreground">Recomendaciones: </span>
+                    {item.recomendaciones}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       {verSeguimiento && (
         <section
           id={`seguimiento-${solicitud.id}`}
