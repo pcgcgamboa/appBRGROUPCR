@@ -1,5 +1,5 @@
 import { Activity, ChevronDown, FileText, ShieldCheck, Star } from 'lucide-react'
-import { type ReactNode, useState } from 'react'
+import { type ReactNode, useRef, useState } from 'react'
 import { Button } from '@/components/atoms/button'
 import { PanelCloseButton } from '@/components/molecules/panel-close-button'
 import { RequestTimeline } from '@/components/organisms/request-timeline'
@@ -11,6 +11,7 @@ import {
   rutaReporte,
 } from '@/features/solicitudes/lib/portal-cliente'
 import type { SolicitudPortalCliente } from '@/features/solicitudes/types/solicitudes.types'
+import { useDesplazarAlMostrar } from '@/hooks/use-desplazar-al-mostrar'
 
 const fecha = new Intl.DateTimeFormat('es-CR', { dateStyle: 'medium', timeStyle: 'short' })
 const soloFecha = new Intl.DateTimeFormat('es-CR', { dateStyle: 'medium' })
@@ -81,6 +82,8 @@ export function ClientRequestDetail({
     .flatMap((avance) => (avance.reportes_atencion ? [avance.reportes_atencion] : []))
     .sort((a, b) => b.creado_en.localeCompare(a.creado_en))
   const [verSeguimiento, setVerSeguimiento] = useState(false)
+  const seguimientoRef = useRef<HTMLElement>(null)
+  useDesplazarAlMostrar(verSeguimiento, seguimientoRef)
   return (
     <div className="space-y-4">
       <div className="grid gap-4 rounded-2xl border bg-card p-5 shadow-sm lg:grid-cols-[minmax(0,2fr)_minmax(16rem,1fr)]">
@@ -120,7 +123,7 @@ export function ClientRequestDetail({
           </div>
           <div className="flex flex-wrap gap-2">
             <Button
-              variant="outline"
+              variant={verSeguimiento ? 'default' : 'outline'}
               className="min-h-11"
               aria-expanded={verSeguimiento}
               aria-controls={`seguimiento-${solicitud.id}`}
@@ -210,12 +213,15 @@ export function ClientRequestDetail({
       {verSeguimiento && (
         <section
           id={`seguimiento-${solicitud.id}`}
-          className="space-y-3 rounded-2xl border bg-card p-5 shadow-sm"
+          ref={seguimientoRef}
+          className="scroll-mt-24 space-y-4 rounded-2xl border border-l-4 border-l-primary bg-card p-5 shadow-md"
         >
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h3 className="flex items-center gap-2 font-semibold">
-                <Activity className="size-4 text-primary" />
+              <h3 className="flex items-center gap-3 font-semibold">
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+                  <Activity className="size-4" />
+                </span>
                 Seguimiento de la solicitud #{solicitud.numero}
               </h3>
               <p className="text-sm text-muted-foreground">

@@ -1,5 +1,5 @@
 import { FileText, MessageSquare, Paperclip, Plus, Send } from 'lucide-react'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Badge } from '@/components/atoms/badge'
 import { Button } from '@/components/atoms/button'
 import { Input } from '@/components/atoms/input'
@@ -15,6 +15,7 @@ import {
   useEnviarComunicacion,
 } from '@/features/solicitudes/hooks/use-comunicaciones-solicitud'
 import type { Comunicacion } from '@/features/solicitudes/types/solicitudes.types'
+import { useDesplazarAlMostrar } from '@/hooks/use-desplazar-al-mostrar'
 
 const fecha = new Intl.DateTimeFormat('es-CR', { dateStyle: 'medium', timeStyle: 'short' })
 
@@ -44,6 +45,8 @@ export function RequestCommunications({
   const [archivos, setArchivos] = useState<File[]>([])
   // El formulario de envío está cerrado por defecto; se abre con "Nuevo mensaje".
   const [redactando, setRedactando] = useState(false)
+  const redactarRef = useRef<HTMLDivElement>(null)
+  useDesplazarAlMostrar(redactando, redactarRef)
   const tipoEnvio = esCliente ? 'mensaje' : tipo
   const proformasFormales = useProformas(solicitudId)
   const [seccion, setSeccion] = useState<'mensajes' | 'proformas' | 'documentos'>('mensajes')
@@ -149,7 +152,10 @@ export function RequestCommunications({
     : 'No hay mensajes todavía.'
 
   const redactar = redactando ? (
-    <div className="grid gap-3 rounded-lg bg-muted/40 p-3 sm:grid-cols-2">
+    <div
+      ref={redactarRef}
+      className="grid scroll-mt-24 gap-3 rounded-lg bg-muted/40 p-3 sm:grid-cols-2"
+    >
       <div className="flex items-center justify-between gap-3 sm:col-span-2">
         <h4 className="font-semibold">Nuevo mensaje</h4>
         <PanelCloseButton onClose={cancelarMensaje} label="Cerrar nuevo mensaje" />

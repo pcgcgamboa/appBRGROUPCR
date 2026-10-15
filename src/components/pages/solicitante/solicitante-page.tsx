@@ -1,5 +1,6 @@
 import {
   ChevronDown,
+  Eye,
   FileText,
   MessageSquare,
   Pencil,
@@ -9,8 +10,9 @@ import {
   Star,
   X,
 } from 'lucide-react'
-import { Fragment, useMemo, useState } from 'react'
+import { Fragment, useMemo, useRef, useState } from 'react'
 import { Badge } from '@/components/atoms/badge'
+import { ExpandedRowPanel } from '@/components/molecules/expanded-row-panel'
 import { Button } from '@/components/atoms/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/atoms/dialog'
 import { Input } from '@/components/atoms/input'
@@ -43,6 +45,7 @@ import type {
   MiSolicitud,
   SolicitudPortalCliente,
 } from '@/features/solicitudes/types/solicitudes.types'
+import { useDesplazarAlMostrar } from '@/hooks/use-desplazar-al-mostrar'
 import { useOrdenamiento } from '@/hooks/use-ordenamiento'
 import { normalizarError } from '@/lib/errores'
 
@@ -94,6 +97,7 @@ export function SolicitantePage({
   // Un solo panel abierto en toda la tabla: el detalle (o la edición del borrador) o los mensajes
   // de UNA solicitud. Abrir cualquiera de los dos en otra fila cierra el que estaba abierto.
   const [panel, setPanel] = useState<{ id: string; modo: 'detalle' | 'mensajes' } | null>(null)
+  const panelAbiertoRef = useRef<HTMLDivElement>(null)
   function alternarPanel(id: string, modo: 'detalle' | 'mensajes') {
     setPanel((actual) => (actual?.id === id && actual.modo === modo ? null : { id, modo }))
   }
@@ -156,6 +160,8 @@ export function SolicitantePage({
     ordenarPor,
   } = useOrdenamiento(filtradas, accesoresOrdenamiento)
   const porEvaluar = modoCliente ? portal.filter(pendienteDeEvaluar).length : 0
+  const panelEnTabla = panel && solicitudesOrdenadas.some((item) => item.id === panel.id)
+  useDesplazarAlMostrar(panelEnTabla ? `${panel.id}-${panel.modo}` : null, panelAbiertoRef)
   const columnas = modoCliente ? COLUMNAS_CLIENTE : COLUMNAS
   const totalColumnas = columnas.length + 1
   const hayFiltros =
@@ -370,11 +376,23 @@ export function SolicitantePage({
                     <tr
                       className={
                         expandida || mensajesAbiertos
-                          ? 'border-t bg-accent/40'
-                          : 'border-t transition-colors hover:bg-accent/50'
+                          ? 'border-t bg-primary-soft'
+                          : panel
+                            ? 'border-t opacity-55 transition hover:bg-accent/50 hover:opacity-100'
+                            : 'border-t transition-colors hover:bg-accent/50'
                       }
                     >
-                      <td className="px-4 py-3">#{solicitud.numero}</td>
+                      {/* La fila del panel abierto se marca con una barra lateral; las demás se
+                          atenúan para centrar la atención en el panel. */}
+                      <td
+                        className={
+                          expandida || mensajesAbiertos
+                            ? 'border-l-4 border-l-primary px-4 py-3 font-semibold text-primary-soft-foreground'
+                            : 'border-l-4 border-l-transparent px-4 py-3'
+                        }
+                      >
+                        #{solicitud.numero}
+                      </td>
                       <td className="px-4 py-3">
                         <span className="font-medium">{solicitud.nombre}</span>
                         {fila?.original && (
@@ -507,36 +525,54 @@ export function SolicitantePage({
                       </td>
                     </tr>
                     {expandida && (
-                      <tr id={panelId} className="bg-muted/30">
-                        <td colSpan={totalColumnas} className="space-y-4 px-4 pb-5 pt-2">
-                          <SolicitudForm
-                            key={solicitud.id}
-                            usuarioId={usuarioId}
-                            clienteId={clienteId}
-                            borrador={solicitud}
-                            soloLectura={!esBorrador}
-                            onCreated={() => setPanel(null)}
-                            onClose={() => setPanel(null)}
-                          />
-                          {fila && !esBorrador && (
-                            <ClientRequestDetail
-                              solicitud={fila}
-                              onEvaluar={() => evaluar(fila)}
-                              onAplicarGarantia={() => aplicarGarantia(fila)}
-                              onVerReporte={(ruta) => void verReporte(ruta)}
+                      <tr id={panelId}>
+                        <td colSpan={totalColumnas} className="px-2 pb-6 pt-1 sm:px-4">
+                          <ExpandedRowPanel
+                            panelRef={panelAbiertoRef}
+                            icon={esBorrador ? Pencil : Eye}
+                            etiqueta={esBorrador ? 'Editando borrador' : 'Consultando solicitud'}
+                            descripcion={
+                              esBorrador
+                                ? 'El proveedor la recibirá cuando la envíe'
+                                : 'Datos registrados, atención y seguimiento'
+                            }
+                          >
+                            <SolicitudForm
+                              key={solicitud.id}
+                              usuarioId={usuarioId}
+                              clienteId={clienteId}
+                              borrador={solicitud}
+                              soloLectura={!esBorrador}
+                              onCreated={() => setPanel(null)}
+                              onClose={() => setPanel(null)}
                             />
-                          )}
+                            {fila && !esBorrador && (
+                              <ClientRequestDetail
+                                solicitud={fila}
+                                onEvaluar={() => evaluar(fila)}
+                                onAplicarGarantia={() => aplicarGarantia(fila)}
+                                onVerReporte={(ruta) => void verReporte(ruta)}
+                              />
+                            )}
+                          </ExpandedRowPanel>
                         </td>
                       </tr>
                     )}
                     {mensajesAbiertos && (
-                      <tr id={panelId} className="bg-muted/30">
-                        <td colSpan={totalColumnas} className="px-4 pb-5 pt-2">
-                          <RequestCommunications
-                            solicitudId={solicitud.id}
-                            modo="cliente"
-                            onClose={() => setPanel(null)}
-                          />
+                      <tr id={panelId}>
+                        <td colSpan={totalColumnas} className="px-2 pb-6 pt-1 sm:px-4">
+                          <ExpandedRowPanel
+                            panelRef={panelAbiertoRef}
+                            icon={MessageSquare}
+                            etiqueta="Mensajes"
+                            descripcion={`Solicitud #${solicitud.numero}`}
+                          >
+                            <RequestCommunications
+                              solicitudId={solicitud.id}
+                              modo="cliente"
+                              onClose={() => setPanel(null)}
+                            />
+                          </ExpandedRowPanel>
                         </td>
                       </tr>
                     )}

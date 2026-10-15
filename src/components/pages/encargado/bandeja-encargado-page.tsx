@@ -1,7 +1,9 @@
 import {
   CalendarClock,
+  ClipboardList,
   FileText,
   History,
+  LayoutGrid,
   List,
   Lock,
   Mail,
@@ -10,10 +12,15 @@ import {
   Package,
   Paperclip,
   Plus,
+  RefreshCw,
+  RotateCcw,
   Settings2,
   ShieldCheck,
+  UserCog,
+  UserPlus,
   Users,
   X,
+  XCircle,
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
@@ -23,10 +30,19 @@ import { Select } from '@/components/atoms/select'
 import { Input } from '@/components/atoms/input'
 import { Textarea } from '@/components/atoms/textarea'
 import { Skeleton } from '@/components/atoms/skeleton'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/atoms/dialog'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/atoms/tabs'
 import { PageHeader } from '@/components/molecules/page-header'
 import { GridPagination } from '@/components/molecules/grid-pagination'
+import { PanelSection } from '@/components/molecules/panel-section'
 import { WorkspacePanel } from '@/components/molecules/workspace-panel'
-import { DisclosurePanel } from '@/components/molecules/disclosure-panel'
 import { SolicitudForm } from '@/components/organisms/solicitud-form'
 import { SolicitudesMap } from '@/components/organisms/solicitudes-map'
 import { SlaBadge } from '@/components/molecules/sla-badge'
@@ -60,6 +76,7 @@ function normalizarBusqueda(value: string) {
 }
 
 const transiciones: Partial<Record<EstadoSolicitud, EstadoSolicitud[]>> = {
+  enviada: ['cancelada'],
   asignada: ['en_atencion', 'cancelada'],
   en_atencion: ['en_espera_materiales', 'atendida', 'cancelada'],
   en_espera_materiales: ['en_atencion', 'atendida', 'cancelada'],
@@ -72,6 +89,17 @@ function transicionesDisponibles(solicitud: SolicitudAdmin) {
 }
 
 const rango = { urgente: 0, alta: 1, media: 2, baja: 3 }
+
+const secciones = [
+  { valor: 'documentos', etiqueta: 'Documentos', icono: Paperclip },
+  { valor: 'avances', etiqueta: 'Avances y reportes', icono: FileText },
+  { valor: 'inventario', etiqueta: 'Inventario', icono: Package },
+  { valor: 'tecnicos', etiqueta: 'Técnicos', icono: Users },
+  { valor: 'comunicacion', etiqueta: 'Comunicación', icono: MessageSquare },
+  { valor: 'notas', etiqueta: 'Notas internas', icono: Lock },
+  { valor: 'garantia', etiqueta: 'Garantía y llegada', icono: ShieldCheck },
+  { valor: 'seguimiento', etiqueta: 'Seguimiento', icono: History },
+] as const
 
 // Fuera del componente: referencia estable entre renders. Pasarle a useOrdenamiento un objeto de
 // accesores nuevo en cada render (o datos recalculados sin memoizar) obliga a @tanstack/react-table
@@ -97,6 +125,8 @@ export function BandejaEncargadoPage() {
   const [operadorId, setOperadorId] = useState('')
   const [estado, setEstado] = useState<EstadoSolicitud>('asignada')
   const [motivo, setMotivo] = useState('')
+  const [dialogo, setDialogo] = useState<'asignar' | 'rechazar' | 'estado' | 'reabrir' | null>(null)
+  const [seccion, setSeccion] = useState('documentos')
   const [comentarioPeticion, setComentarioPeticion] = useState('')
   const [creando, setCreando] = useState(false)
   const [vista, setVista] = useState<'lista' | 'mapa'>('lista')
@@ -125,10 +155,13 @@ export function BandejaEncargadoPage() {
     setEstado(transicionesDisponibles(item)[0] ?? item.estado)
     setMotivo('')
     setComentarioPeticion('')
+    setDialogo(null)
+    setSeccion('documentos')
   }
 
   async function ejecutar(input: Parameters<typeof gestionar.mutateAsync>[0]) {
     await gestionar.mutateAsync(input)
+    setDialogo(null)
     setSeleccionada(null)
   }
 
@@ -183,9 +216,12 @@ export function BandejaEncargadoPage() {
   const peticionPendiente = seleccionada?.peticiones.find(
     (peticion) => peticion.estado === 'pendiente',
   )
-  const admiteReasignacion =
+  // Asignar (enviada, aún sin operador) o Reasignar (ya en manos de un operador).
+  const puedeAsignar = seleccionada?.estado === 'enviada'
+  const puedeReasignar = Boolean(
     seleccionada &&
-    ['en_atencion', 'en_espera_materiales', 'atendida'].includes(seleccionada.estado)
+    ['asignada', 'en_atencion', 'en_espera_materiales', 'atendida'].includes(seleccionada.estado),
+  )
 
   return (
     <section className="space-y-6">
@@ -252,333 +288,470 @@ export function BandejaEncargadoPage() {
             variant="management"
             icon={Settings2}
             title={`Gestionar #${seleccionada.numero}: ${seleccionada.nombre}`}
+            status={
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-xs font-semibold capitalize text-primary-foreground">
+                Estado: {seleccionada.estado.replace(/_/g, ' ')}
+              </span>
+            }
             description="Actualice la solicitud, su asignación, estado y recursos asociados."
             actions={
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={gestionar.isPending}
-                onClick={() => void notificarCliente(seleccionada.id)}
-              >
-                <Mail className="mr-2 size-4" />
-                Enviar correo al cliente
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                {(puedeAsignar || puedeReasignar) && (
+                  <Button size="sm" onClick={() => setDialogo('asignar')}>
+                    {puedeAsignar ? (
+                      <UserPlus className="mr-2 size-4" />
+                    ) : (
+                      <UserCog className="mr-2 size-4" />
+                    )}
+                    {puedeAsignar ? 'Asignar' : 'Reasignar'}
+                  </Button>
+                )}
+                {puedeAsignar && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-destructive hover:bg-destructive-soft"
+                    onClick={() => {
+                      setMotivo('')
+                      setDialogo('rechazar')
+                    }}
+                  >
+                    <XCircle className="mr-2 size-4" />
+                    Rechazar
+                  </Button>
+                )}
+                {transicionesDisponibles(seleccionada).length > 0 && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                      setEstado(transicionesDisponibles(seleccionada)[0])
+                      setMotivo('')
+                      setDialogo('estado')
+                    }}
+                  >
+                    <RefreshCw className="mr-2 size-4" />
+                    Cambiar estado
+                  </Button>
+                )}
+                {seleccionada.estado === 'cerrada' && (
+                  <Button size="sm" variant="secondary" onClick={() => setDialogo('reabrir')}>
+                    <RotateCcw className="mr-2 size-4" />
+                    Reabrir
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={gestionar.isPending}
+                  onClick={() => void notificarCliente(seleccionada.id)}
+                >
+                  <Mail className="mr-2 size-4" />
+                  Enviar correo al cliente
+                </Button>
+              </div>
             }
             onClose={() => setSeleccionada(null)}
             closeLabel="Cerrar panel de modificación"
           >
-            {' '}
-            <div className="mb-4 rounded-lg border bg-muted/30 p-4 text-sm">
-              <p className="font-semibold">Ubicación de atención</p>
-              <p>
-                {seleccionada.ubicacion
-                  ? `${seleccionada.ubicacion.nombre} · ${seleccionada.ubicacion.distrito}, ${seleccionada.ubicacion.canton}, ${seleccionada.ubicacion.provincia}`
-                  : 'Ubicación no disponible'}
-              </p>
-              {seleccionada.ubicacion?.latitud != null &&
-                seleccionada.ubicacion.longitud != null && (
-                  <a
-                    className="mt-2 inline-block font-medium text-primary hover:underline"
-                    href={`https://www.google.com/maps?q=${seleccionada.ubicacion.latitud},${seleccionada.ubicacion.longitud}`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Consultar en el mapa
-                  </a>
-                )}
-            </div>{' '}
-            <RequestGeneralDataForm
-              solicitud={seleccionada}
-              operadorNombre={seleccionada.operador?.nombre_completo}
-              onSaved={() => setSeleccionada(null)}
-            />
-            {peticionPendiente && (
-              <div className="mt-4 space-y-3 rounded-xl border border-warning/30 bg-warning-soft p-4">
-                <div>
-                  <p className="font-semibold text-warning-soft-foreground">
-                    Solicitud de {peticionPendiente.tipo === 'cierre' ? 'cierre' : 'cancelación'}{' '}
-                    del Operador
-                  </p>
-                  <p className="mt-1 text-sm text-warning-soft-foreground">
-                    {peticionPendiente.motivo}
-                  </p>
+            <div className="space-y-6">
+              <PanelSection
+                id="informacion-solicitud-titulo"
+                icon={ClipboardList}
+                title="Información de la solicitud"
+                description="Datos registrados, ubicación, equipo y peticiones del operador."
+              >
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-lg border bg-muted/30 p-4 text-sm">
+                    <p className="font-semibold">Ubicación de atención</p>
+                    <p>
+                      {seleccionada.ubicacion
+                        ? `${seleccionada.ubicacion.nombre} · ${seleccionada.ubicacion.distrito}, ${seleccionada.ubicacion.canton}, ${seleccionada.ubicacion.provincia}`
+                        : 'Ubicación no disponible'}
+                    </p>
+                    {seleccionada.ubicacion?.latitud != null &&
+                      seleccionada.ubicacion.longitud != null && (
+                        <a
+                          className="mt-2 inline-block font-medium text-primary hover:underline"
+                          href={`https://www.google.com/maps?q=${seleccionada.ubicacion.latitud},${seleccionada.ubicacion.longitud}`}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Consultar en el mapa
+                        </a>
+                      )}
+                  </div>
+                  <div className="rounded-lg border bg-muted/30 p-4 text-sm">
+                    <p className="font-semibold">Equipo</p>
+                    {seleccionada.equipo ? (
+                      <>
+                        <p>
+                          {[
+                            seleccionada.equipo.nombre,
+                            seleccionada.equipo.marca,
+                            seleccionada.equipo.modelo,
+                          ]
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </p>
+                        {seleccionada.equipo.serie && (
+                          <p className="text-muted-foreground">
+                            Serie: {seleccionada.equipo.serie}
+                          </p>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-muted-foreground">
+                        El servicio no está asociado a un equipo.
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <Textarea
-                  value={comentarioPeticion}
-                  placeholder="Comentario de la decisión (obligatorio al rechazar)"
-                  onChange={(event) => setComentarioPeticion(event.target.value)}
+                <RequestGeneralDataForm
+                  solicitud={seleccionada}
+                  operadorNombre={seleccionada.operador?.nombre_completo}
+                  onSaved={() => setSeleccionada(null)}
                 />
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    disabled={gestionar.isPending}
-                    onClick={() =>
-                      void ejecutar({
-                        accion: 'resolver_peticion',
-                        solicitud_id: seleccionada.id,
-                        peticion_id: peticionPendiente.id,
-                        aprobar: true,
-                        motivo: comentarioPeticion,
-                      })
-                    }
-                  >
-                    Aprobar petición
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="text-destructive hover:bg-destructive-soft"
-                    disabled={gestionar.isPending || comentarioPeticion.trim().length < 5}
-                    onClick={() =>
-                      void ejecutar({
-                        accion: 'resolver_peticion',
-                        solicitud_id: seleccionada.id,
-                        peticion_id: peticionPendiente.id,
-                        aprobar: false,
-                        motivo: comentarioPeticion,
-                      })
-                    }
-                  >
-                    Rechazar petición
-                  </Button>
-                </div>
-              </div>
-            )}
-            {admiteReasignacion && (
-              <div className="mt-4 grid gap-3 rounded-xl border bg-muted/40 p-4 sm:grid-cols-[1fr_auto] sm:items-end">
-                <label className="grid gap-2 text-sm font-medium">
-                  Reasignar a otro operador
-                  <Select
-                    value={operadorId}
-                    onChange={(event) => setOperadorId(event.target.value)}
-                  >
-                    <option value="">Seleccione…</option>
-                    {operadores.data?.map((operador) => (
-                      <option key={operador.id} value={operador.id}>
-                        {operador.nombre_completo}
-                      </option>
-                    ))}
-                  </Select>
-                </label>
-                <Button
-                  disabled={
-                    !operadorId || operadorId === seleccionada.operador_id || gestionar.isPending
-                  }
-                  onClick={() =>
-                    void ejecutar({
-                      accion: 'asignar',
-                      solicitud_id: seleccionada.id,
-                      prioridad: seleccionada.prioridad ?? prioridad,
-                      operador_id: operadorId,
-                    })
-                  }
-                >
-                  Reasignar solicitud
-                </Button>
-              </div>
-            )}
-            {seleccionada.estado === 'creada' && (
-              <p className="mt-4 rounded-md bg-warning-soft p-3 text-sm text-warning-soft-foreground">
-                Borrador del Cliente: todavía no la ha enviado, así que no puede asignarse ni
-                modificarse.
-              </p>
-            )}
-            {seleccionada.estado === 'enviada' || seleccionada.estado === 'asignada' ? (
-              <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <label className="grid gap-2 text-sm font-medium">
-                  Prioridad
-                  <Select
-                    value={prioridad}
-                    onChange={(event) => setPrioridad(event.target.value as typeof prioridad)}
-                  >
-                    <option value="baja">Baja</option>
-                    <option value="media">Media</option>
-                    <option value="alta">Alta</option>
-                    <option value="urgente">Urgente (24 h)</option>
-                  </Select>
-                </label>
-                <label className="grid gap-2 text-sm font-medium">
-                  Operador
-                  <Select
-                    value={operadorId}
-                    onChange={(event) => setOperadorId(event.target.value)}
-                  >
-                    <option value="">Seleccione…</option>
-                    {operadores.data?.map((operador) => (
-                      <option key={operador.id} value={operador.id}>
-                        {operador.nombre_completo}
-                      </option>
-                    ))}
-                  </Select>
-                </label>
-                <div className="flex flex-wrap gap-3 sm:col-span-2">
-                  <Button
-                    disabled={!operadorId || gestionar.isPending}
-                    onClick={() =>
-                      void ejecutar({
-                        accion: 'asignar',
-                        solicitud_id: seleccionada.id,
-                        prioridad,
-                        operador_id: operadorId,
-                      })
-                    }
-                  >
-                    {seleccionada.estado === 'enviada'
-                      ? 'Asignar solicitud'
-                      : 'Guardar reasignación'}
-                  </Button>
-                  {seleccionada.estado === 'enviada' && (
-                    <Button
-                      variant="outline"
-                      className="text-destructive hover:bg-destructive-soft"
-                      onClick={() => setEstado('rechazada')}
-                    >
-                      Rechazar
-                    </Button>
-                  )}
-                </div>
-                {estado === 'rechazada' && (
-                  <div className="grid gap-3 sm:col-span-2">
+                {peticionPendiente && (
+                  <div className="space-y-3 rounded-xl border border-warning/30 bg-warning-soft p-4">
+                    <div>
+                      <p className="font-semibold text-warning-soft-foreground">
+                        Solicitud de{' '}
+                        {peticionPendiente.tipo === 'cierre' ? 'cierre' : 'cancelación'} del
+                        Operador
+                      </p>
+                      <p className="mt-1 text-sm text-warning-soft-foreground">
+                        {peticionPendiente.motivo}
+                      </p>
+                    </div>
                     <Textarea
-                      placeholder="Motivo del rechazo"
-                      value={motivo}
-                      onChange={(event) => setMotivo(event.target.value)}
+                      value={comentarioPeticion}
+                      placeholder="Comentario de la decisión (obligatorio al rechazar)"
+                      onChange={(event) => setComentarioPeticion(event.target.value)}
                     />
-                    <Button
-                      className="w-fit"
-                      disabled={!motivo.trim()}
-                      onClick={() =>
-                        void ejecutar({ accion: 'rechazar', solicitud_id: seleccionada.id, motivo })
-                      }
-                    >
-                      Confirmar rechazo
-                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        disabled={gestionar.isPending}
+                        onClick={() =>
+                          void ejecutar({
+                            accion: 'resolver_peticion',
+                            solicitud_id: seleccionada.id,
+                            peticion_id: peticionPendiente.id,
+                            aprobar: true,
+                            motivo: comentarioPeticion,
+                          })
+                        }
+                      >
+                        Aprobar petición
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="text-destructive hover:bg-destructive-soft"
+                        disabled={gestionar.isPending || comentarioPeticion.trim().length < 5}
+                        onClick={() =>
+                          void ejecutar({
+                            accion: 'resolver_peticion',
+                            solicitud_id: seleccionada.id,
+                            peticion_id: peticionPendiente.id,
+                            aprobar: false,
+                            motivo: comentarioPeticion,
+                          })
+                        }
+                      >
+                        Rechazar petición
+                      </Button>
+                    </div>
                   </div>
                 )}
-              </div>
-            ) : seleccionada.estado === 'cerrada' ? (
-              <div className="mt-4">
-                <Button
-                  onClick={() =>
-                    void ejecutar({ accion: 'reabrir', solicitud_id: seleccionada.id })
-                  }
-                  disabled={gestionar.isPending}
-                >
-                  Reabrir solicitud
-                </Button>
-              </div>
-            ) : transicionesDisponibles(seleccionada).length ? (
-              <div className="mt-4 grid gap-4">
-                {seleccionada.estado === 'atendida' && (
-                  <p className="text-sm text-muted-foreground">
-                    Al cerrar, se le pedirá al Cliente una evaluación corta de satisfacción.
+                {seleccionada.estado === 'creada' && (
+                  <p className="rounded-md bg-warning-soft p-3 text-sm text-warning-soft-foreground">
+                    Borrador del Cliente: todavía no la ha enviado, así que no puede asignarse ni
+                    modificarse.
                   </p>
                 )}
-                <label className="grid gap-2 text-sm font-medium">
-                  Nuevo estado
-                  <Select
-                    value={estado}
-                    onChange={(event) => setEstado(event.target.value as EstadoSolicitud)}
-                  >
-                    {transicionesDisponibles(seleccionada).map((item) => (
-                      <option key={item} value={item}>
-                        {item.replace(/_/g, ' ')}
-                      </option>
+                {seleccionada.estado !== 'creada' &&
+                  !transicionesDisponibles(seleccionada).length &&
+                  seleccionada.estado !== 'cerrada' && (
+                    <p className="text-sm text-muted-foreground">
+                      Esta solicitud ya no admite más cambios de estado.
+                    </p>
+                  )}
+              </PanelSection>
+              <PanelSection
+                id="complementaria-titulo"
+                icon={LayoutGrid}
+                title="Información complementaria"
+                description="Documentos, avances, recursos, comunicación y seguimiento de la solicitud."
+              >
+                {/* Pestañas: se muestra solo la sección elegida, en el mismo lugar. */}
+                <Tabs value={seccion} onValueChange={setSeccion}>
+                  <TabsList aria-label="Información complementaria">
+                    {secciones.map(({ valor, etiqueta, icono: Icono }) => (
+                      <TabsTrigger key={valor} value={valor} className="h-10 px-3">
+                        <Icono className="mr-2 size-4" />
+                        {etiqueta}
+                      </TabsTrigger>
                     ))}
-                  </Select>
-                </label>
-                {estado === 'cancelada' && (
-                  <Textarea
-                    placeholder="Motivo de cancelación"
-                    value={motivo}
-                    onChange={(event) => setMotivo(event.target.value)}
-                  />
-                )}
-                <Button
-                  className="w-fit"
-                  disabled={gestionar.isPending || (estado === 'cancelada' && !motivo.trim())}
-                  onClick={() =>
-                    void ejecutar({
-                      accion: 'cambiar_estado',
-                      solicitud_id: seleccionada.id,
-                      estado,
-                      motivo,
-                    })
-                  }
-                >
-                  Aplicar cambio
-                </Button>
-              </div>
-            ) : (
-              <p className="mt-4 text-sm text-muted-foreground">
-                Este estado no admite acciones adicionales.
-              </p>
-            )}
-            <div className="mt-6 space-y-3">
-              <h3 className="text-sm font-semibold">Información complementaria</h3>
-              <p className="text-xs text-muted-foreground">
-                Abra únicamente la sección que necesite consultar o actualizar.
-              </p>
-              <DisclosurePanel
-                icon={Paperclip}
-                title="Documentos adjuntos"
-                description="Fotos y documentos que aportó el Cliente o se registraron en los avances."
-              >
-                <RequestAttachments solicitudId={seleccionada.id} />
-              </DisclosurePanel>
-              <DisclosurePanel
-                icon={FileText}
-                title="Avances y reportes de atención"
-                description="Bitácora del operador y los reportes de atención en PDF."
-              >
-                <ProgressHistory solicitudId={seleccionada.id} />
-              </DisclosurePanel>
-              <DisclosurePanel
-                icon={Package}
-                title="Inventario asociado"
-                description="Consulte o registre materiales utilizados en la solicitud."
-              >
-                <RequestMaterials solicitudId={seleccionada.id} />
-              </DisclosurePanel>
-              <DisclosurePanel
-                icon={Users}
-                title="Técnicos de la solicitud"
-                description="Consulte y administre el personal técnico relacionado."
-              >
-                <RequestTechnicians solicitudId={seleccionada.id} />
-              </DisclosurePanel>
-              <DisclosurePanel
-                icon={MessageSquare}
-                title="Comunicación con el cliente"
-                description="Envíe mensajes, adjuntos o proformas relacionados con la solicitud."
-              >
-                <RequestCommunications solicitudId={seleccionada.id} />
-              </DisclosurePanel>
-              <DisclosurePanel
-                icon={Lock}
-                title="Notas internas"
-                description="Coordine con el resto del staff sin que el cliente lo vea."
-              >
-                <InternalRequestNotes solicitudId={seleccionada.id} />
-              </DisclosurePanel>
-              <DisclosurePanel
-                icon={ShieldCheck}
-                title="Garantía, llegada y equipo"
-                description="Gestione la garantía e informe al cliente la llegada y las personas asignadas."
-              >
-                <RequestServiceFollowUp solicitudId={seleccionada.id} modo="gestor" />
-              </DisclosurePanel>{' '}
-              <DisclosurePanel
-                icon={History}
-                title="Seguimiento de la solicitud"
-                description="Consulte el historial completo de cambios y operaciones."
-              >
-                <RequestTimeline solicitudId={seleccionada.id} />
-              </DisclosurePanel>
+                  </TabsList>
+                  <div className="mt-3 rounded-xl border bg-muted/20 p-4">
+                    <TabsContent value="documentos" className="mt-0">
+                      <RequestAttachments solicitudId={seleccionada.id} />
+                    </TabsContent>
+                    <TabsContent value="avances" className="mt-0">
+                      <ProgressHistory solicitudId={seleccionada.id} />
+                    </TabsContent>
+                    <TabsContent value="inventario" className="mt-0">
+                      <RequestMaterials solicitudId={seleccionada.id} />
+                    </TabsContent>
+                    <TabsContent value="tecnicos" className="mt-0">
+                      <RequestTechnicians solicitudId={seleccionada.id} />
+                    </TabsContent>
+                    <TabsContent value="comunicacion" className="mt-0">
+                      <RequestCommunications solicitudId={seleccionada.id} />
+                    </TabsContent>
+                    <TabsContent value="notas" className="mt-0">
+                      <InternalRequestNotes solicitudId={seleccionada.id} />
+                    </TabsContent>
+                    <TabsContent value="garantia" className="mt-0">
+                      <RequestServiceFollowUp solicitudId={seleccionada.id} modo="gestor" />
+                    </TabsContent>
+                    <TabsContent value="seguimiento" className="mt-0">
+                      <RequestTimeline solicitudId={seleccionada.id} />
+                    </TabsContent>
+                  </div>
+                </Tabs>
+              </PanelSection>
             </div>
             <Button variant="outline" className="mt-4" onClick={() => setSeleccionada(null)}>
               Cerrar panel
             </Button>
           </WorkspacePanel>
         </div>
+      )}
+      {seleccionada && (
+        <Dialog
+          open={dialogo === 'asignar'}
+          onOpenChange={(abierto) => !abierto && setDialogo(null)}
+        >
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>
+                {puedeAsignar ? 'Asignar' : 'Reasignar'} solicitud #{seleccionada.numero}
+              </DialogTitle>
+              <DialogDescription>
+                {puedeAsignar
+                  ? 'Defina la prioridad (calcula la fecha límite) y el operador responsable.'
+                  : `Operador actual: ${seleccionada.operador?.nombre_completo ?? '—'}. La fecha límite se recalcula si cambia la prioridad.`}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4">
+              <label className="grid gap-2 text-sm font-medium">
+                Prioridad
+                <Select
+                  value={prioridad}
+                  onChange={(event) => setPrioridad(event.target.value as typeof prioridad)}
+                >
+                  <option value="baja">Baja</option>
+                  <option value="media">Media</option>
+                  <option value="alta">Alta</option>
+                  <option value="urgente">Urgente (24 h)</option>
+                </Select>
+              </label>
+              <label className="grid gap-2 text-sm font-medium">
+                Operador
+                <Select value={operadorId} onChange={(event) => setOperadorId(event.target.value)}>
+                  <option value="">Seleccione…</option>
+                  {operadores.data?.map((operador) => (
+                    <option key={operador.id} value={operador.id}>
+                      {operador.nombre_completo}
+                    </option>
+                  ))}
+                </Select>
+              </label>
+              {gestionar.error && (
+                <p
+                  role="alert"
+                  className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground"
+                >
+                  {normalizarError(gestionar.error).mensaje}
+                </p>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDialogo(null)}>
+                Cancelar
+              </Button>
+              <Button
+                disabled={
+                  !operadorId ||
+                  gestionar.isPending ||
+                  (puedeReasignar &&
+                    operadorId === seleccionada.operador_id &&
+                    prioridad === seleccionada.prioridad)
+                }
+                onClick={() =>
+                  void ejecutar({
+                    accion: 'asignar',
+                    solicitud_id: seleccionada.id,
+                    prioridad,
+                    operador_id: operadorId,
+                  })
+                }
+              >
+                {gestionar.isPending
+                  ? 'Guardando…'
+                  : puedeAsignar
+                    ? 'Asignar solicitud'
+                    : 'Guardar reasignación'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+      {seleccionada && (
+        <Dialog
+          open={dialogo === 'rechazar'}
+          onOpenChange={(abierto) => !abierto && setDialogo(null)}
+        >
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Rechazar solicitud #{seleccionada.numero}</DialogTitle>
+              <DialogDescription>
+                El Cliente verá el motivo. Esta acción no se puede deshacer.
+              </DialogDescription>
+            </DialogHeader>
+            <label className="grid gap-2 text-sm font-medium">
+              Motivo del rechazo
+              <Textarea value={motivo} onChange={(event) => setMotivo(event.target.value)} />
+            </label>
+            {gestionar.error && (
+              <p
+                role="alert"
+                className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground"
+              >
+                {normalizarError(gestionar.error).mensaje}
+              </p>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDialogo(null)}>
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={!motivo.trim() || gestionar.isPending}
+                onClick={() =>
+                  void ejecutar({ accion: 'rechazar', solicitud_id: seleccionada.id, motivo })
+                }
+              >
+                Confirmar rechazo
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+      {seleccionada && (
+        <Dialog
+          open={dialogo === 'estado'}
+          onOpenChange={(abierto) => !abierto && setDialogo(null)}
+        >
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Cambiar estado de la solicitud #{seleccionada.numero}</DialogTitle>
+              <DialogDescription>
+                Estado actual: {seleccionada.estado.replace(/_/g, ' ')}.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4">
+              <label className="grid gap-2 text-sm font-medium">
+                Nuevo estado
+                <Select
+                  value={estado}
+                  onChange={(event) => setEstado(event.target.value as EstadoSolicitud)}
+                >
+                  {transicionesDisponibles(seleccionada).map((item) => (
+                    <option key={item} value={item}>
+                      {item.replace(/_/g, ' ')}
+                    </option>
+                  ))}
+                </Select>
+              </label>
+              {estado === 'cerrada' && (
+                <p className="rounded-md bg-primary-soft p-3 text-sm text-primary-soft-foreground">
+                  Al cerrar, se le pedirá al Cliente una evaluación corta de satisfacción y empieza
+                  a correr la garantía.
+                </p>
+              )}
+              {estado === 'cancelada' && (
+                <label className="grid gap-2 text-sm font-medium">
+                  Motivo de cancelación
+                  <Textarea value={motivo} onChange={(event) => setMotivo(event.target.value)} />
+                </label>
+              )}
+              {gestionar.error && (
+                <p
+                  role="alert"
+                  className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground"
+                >
+                  {normalizarError(gestionar.error).mensaje}
+                </p>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDialogo(null)}>
+                Cancelar
+              </Button>
+              <Button
+                variant={estado === 'cancelada' ? 'destructive' : 'default'}
+                disabled={gestionar.isPending || (estado === 'cancelada' && !motivo.trim())}
+                onClick={() =>
+                  void ejecutar({
+                    accion: 'cambiar_estado',
+                    solicitud_id: seleccionada.id,
+                    estado,
+                    motivo,
+                  })
+                }
+              >
+                {gestionar.isPending ? 'Guardando…' : 'Aplicar cambio'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+      {seleccionada && (
+        <Dialog
+          open={dialogo === 'reabrir'}
+          onOpenChange={(abierto) => !abierto && setDialogo(null)}
+        >
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Reabrir solicitud #{seleccionada.numero}</DialogTitle>
+              <DialogDescription>
+                Vuelve a estado asignada con el mismo operador; se anula la fecha de cierre y la
+                garantía hasta que se cierre de nuevo.
+              </DialogDescription>
+            </DialogHeader>
+            {gestionar.error && (
+              <p
+                role="alert"
+                className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground"
+              >
+                {normalizarError(gestionar.error).mensaje}
+              </p>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDialogo(null)}>
+                Cancelar
+              </Button>
+              <Button
+                disabled={gestionar.isPending}
+                onClick={() => void ejecutar({ accion: 'reabrir', solicitud_id: seleccionada.id })}
+              >
+                {gestionar.isPending ? 'Reabriendo…' : 'Reabrir solicitud'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
       {(solicitudes.error ?? operadores.error ?? gestionar.error) && (
         <p

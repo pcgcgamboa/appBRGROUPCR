@@ -8,6 +8,8 @@ type WorkspacePanelProps = {
   description?: string
   icon: LucideIcon
   actions?: ReactNode
+  /** Indicador junto al título (p. ej. el estado de la solicitud). */
+  status?: ReactNode
   /** Si se indica, el panel muestra una X para cerrarlo en la esquina superior derecha. */
   onClose?: () => void
   closeLabel?: string
@@ -21,6 +23,7 @@ export function WorkspacePanel({
   description,
   icon: Icon,
   actions,
+  status,
   onClose,
   closeLabel,
   children,
@@ -54,7 +57,10 @@ export function WorkspacePanel({
               <Icon className="size-5" />
             </span>
             <div className="min-w-0">
-              <h2 className="font-semibold">{title}</h2>
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="font-semibold">{title}</h2>
+                {status}
+              </div>
               {description && <p className="text-sm text-muted-foreground">{description}</p>}
             </div>
           </div>

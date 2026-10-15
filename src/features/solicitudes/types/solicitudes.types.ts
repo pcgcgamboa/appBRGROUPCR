@@ -18,6 +18,13 @@ export interface SolicitudAdmin {
   detalle: string
   /** Si es una solicitud de garantía: la solicitud original que reclama. */
   original: { numero: number } | null
+  /** Equipo del cliente sobre el que se solicita el servicio (si aplica). */
+  equipo: {
+    nombre: string
+    marca: string | null
+    modelo: string | null
+    serie: string | null
+  } | null
   cliente_id: string
   ubicacion_id: string
   prioridad: 'baja' | 'media' | 'alta' | 'urgente' | null

@@ -100,7 +100,7 @@ export function createSupabaseSolicitudRepository(
       const { data, error } = await client
         .from('solicitudes')
         .select(
-          'id, numero, nombre, detalle, cliente_id, ubicacion_id, prioridad, estado, operador_id, motivo_rechazo_cancelacion, sla_horas, sla_vence_en, creado_en, tipo_solicitud_id, original:solicitud_original_id(numero), cliente:clientes(nombre), tipo:tipos_solicitud(nombre), ubicacion:ubicaciones(nombre, provincia, canton, distrito, latitud, longitud), ruta:rutas(latitud, longitud), operador:usuarios!solicitudes_operador_id_fkey(nombre_completo), solicitante:usuarios!solicitudes_solicitante_id_fkey(nombre_completo), validacion:validaciones_cierre(satisfecho, comentario, validado_en), peticiones:solicitud_peticiones_resolucion(id, tipo, motivo, estado, creado_en, comentario_resolucion)',
+          'id, numero, nombre, detalle, cliente_id, ubicacion_id, prioridad, estado, operador_id, motivo_rechazo_cancelacion, sla_horas, sla_vence_en, creado_en, tipo_solicitud_id, original:solicitud_original_id(numero), equipo:equipos_cliente(nombre, marca, modelo, serie), cliente:clientes(nombre), tipo:tipos_solicitud(nombre), ubicacion:ubicaciones(nombre, provincia, canton, distrito, latitud, longitud), ruta:rutas(latitud, longitud), operador:usuarios!solicitudes_operador_id_fkey(nombre_completo), solicitante:usuarios!solicitudes_solicitante_id_fkey(nombre_completo), validacion:validaciones_cierre(satisfecho, comentario, validado_en), peticiones:solicitud_peticiones_resolucion(id, tipo, motivo, estado, creado_en, comentario_resolucion)',
         )
         .order('creado_en', { ascending: false })
       if (error) throw error
