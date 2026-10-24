@@ -58,7 +58,7 @@ describe('ProcessRouteForm — Nombre y Vehículos opcionales (regresión)', () 
     const user = userEvent.setup()
     renderConProviders(<ProcessRouteForm onClose={() => {}} />)
 
-    await screen.findByText('Instalación de cámara', { exact: false })
+    await screen.findByRole('checkbox', { name: /Instalación de cámara/i })
 
     // Nombre se deja en blanco a propósito.
     expect(screen.getByLabelText(/^Nombre/i)).toHaveValue('')
@@ -80,7 +80,7 @@ describe('ProcessRouteForm — Nombre y Vehículos opcionales (regresión)', () 
     prepararDatos()
     renderConProviders(<ProcessRouteForm onClose={() => {}} />)
 
-    await screen.findByText('Instalación de cámara', { exact: false })
+    await screen.findByRole('checkbox', { name: /Instalación de cámara/i })
     expect(screen.getByRole('button', { name: /Guardar ruta/i })).toBeDisabled()
   })
 })

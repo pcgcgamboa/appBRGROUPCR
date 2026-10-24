@@ -46,9 +46,16 @@ function clienteAdmin() {
 // una inserción, de latencia despreciable frente al envío SMTP real. Los callers deben envolver
 // esta llamada en su propio try/catch: un fallo aquí no debe convertir la respuesta de la
 // operación de negocio (ya exitosa) en un error 500.
+/** Contenido editado por el gestor ("Enviar correo al cliente"); reemplaza el texto automático. */
+export interface ContenidoPersonalizado {
+  asunto: string
+  cuerpoTexto: string
+}
+
 export async function iniciarNotificacion(
   solicitudId: string,
   estado: string,
+  contenido?: ContenidoPersonalizado,
 ): Promise<{ pendiente: NotificacionPendiente | null }> {
   const admin = clienteAdmin()
   const { data: config } = await admin
@@ -94,6 +101,9 @@ export async function iniciarNotificacion(
       estado,
       destinatario,
       resultado: 'pendiente',
+      // Queda registrado lo que realmente se envió cuando el gestor editó el contenido.
+      asunto: contenido?.asunto ?? null,
+      cuerpo_texto: contenido?.cuerpoTexto ?? null,
     })
     .select('id')
     .single()
@@ -108,6 +118,8 @@ export async function iniciarNotificacion(
       numero: solicitud.numero,
       nombre: solicitud.nombre,
       clienteNombre: cliente?.nombre ?? '',
+      asunto: contenido?.asunto,
+      cuerpoTexto: contenido?.cuerpoTexto,
       adjuntoPdf,
     },
   }
@@ -164,12 +176,22 @@ export async function enviarNotificacionPendiente(
           },
         ]
       }
+      // Contenido editado por el gestor: texto plano tal cual y su versión HTML escapada, con
+      // los saltos de línea como párrafos/<br>. Sin edición, el texto automático de siempre.
+      const html = pendiente.cuerpoTexto
+        ? pendiente.cuerpoTexto
+            .split(/\n{2,}/)
+            .map((parrafo) => `<p>${escapar(parrafo).replaceAll('\n', '<br>')}</p>`)
+            .join('')
+        : `<p>Hola ${escapar(pendiente.clienteNombre ?? '')},</p><p>La solicitud <strong>#${pendiente.numero} — ${escapar(pendiente.nombre ?? '')}</strong> cambió al estado <strong>${escapar(estadoLegible)}</strong>.</p>`
       await transport.sendMail({
         from,
         to: pendiente.destinatario,
-        subject: `Solicitud #${pendiente.numero}: ${estadoLegible}`,
-        text: `La solicitud #${pendiente.numero} (${pendiente.nombre}) cambió al estado: ${estadoLegible}.`,
-        html: `<p>Hola ${escapar(pendiente.clienteNombre ?? '')},</p><p>La solicitud <strong>#${pendiente.numero} — ${escapar(pendiente.nombre ?? '')}</strong> cambió al estado <strong>${escapar(estadoLegible)}</strong>.</p>`,
+        subject: pendiente.asunto ?? `Solicitud #${pendiente.numero}: ${estadoLegible}`,
+        text:
+          pendiente.cuerpoTexto ??
+          `La solicitud #${pendiente.numero} (${pendiente.nombre}) cambió al estado: ${estadoLegible}.`,
+        html,
         attachments,
       })
     }
@@ -205,9 +227,10 @@ export async function notificarEnSegundoPlano(
   solicitudId: string,
   estado: string,
   correlacionId?: string,
+  contenido?: ContenidoPersonalizado,
 ) {
   try {
-    const { pendiente } = await iniciarNotificacion(solicitudId, estado)
+    const { pendiente } = await iniciarNotificacion(solicitudId, estado, contenido)
     if (pendiente) EdgeRuntime.waitUntil(enviarNotificacionPendiente(pendiente, correlacionId))
   } catch (error) {
     logError(error instanceof Error ? error.message : 'Error desconocido al notificar.', {

@@ -29,6 +29,9 @@ export function RequestProformas({
     (perfil.data?.roles.some((rol) => rol === 'administrador' || rol === 'encargado') ?? false)
   const error =
     listado.error ?? gestion.generar.error ?? gestion.guardar.error ?? gestion.enviar.error
+  // Una sola proforma en borrador a la vez: hasta enviarla no se genera otra (la función
+  // generar_proforma_solicitud también lo exige).
+  const borradorAbierto = listado.data?.find((proforma) => proforma.estado === 'borrador')
   return (
     <section className="space-y-4 rounded-lg border p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -41,14 +44,21 @@ export function RequestProformas({
           </p>
         </div>
         {puedeGestionar && (
-          <Button
-            variant="outline"
-            disabled={gestion.generar.isPending}
-            onClick={() => gestion.generar.mutate()}
-          >
-            <FilePlus2 className="mr-2 size-4" />
-            {gestion.generar.isPending ? 'Calculando…' : 'Generar proforma'}
-          </Button>
+          <div className="flex flex-col items-end gap-1">
+            <Button
+              variant="outline"
+              disabled={gestion.generar.isPending || listado.isLoading || Boolean(borradorAbierto)}
+              onClick={() => gestion.generar.mutate()}
+            >
+              <FilePlus2 className="mr-2 size-4" />
+              {gestion.generar.isPending ? 'Calculando…' : 'Generar proforma'}
+            </Button>
+            {borradorAbierto && (
+              <span className="text-xs text-muted-foreground">
+                Envíe la proforma #{borradorAbierto.numero} (borrador) antes de generar otra.
+              </span>
+            )}
+          </div>
         )}
       </div>
       {error && (

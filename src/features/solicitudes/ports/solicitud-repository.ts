@@ -95,6 +95,9 @@ export interface GestionInput {
   operador_id?: string
   estado?: EstadoSolicitud
   motivo?: string
+  /** notificar_cliente: contenido editado antes de enviar. */
+  asunto?: string
+  mensaje?: string
   peticion_id?: string
   aprobar?: boolean
 }
@@ -137,6 +140,8 @@ export interface SolicitudRepository {
   misSolicitudes(usuarioId?: string): Promise<MiSolicitud[]>
   /** Todas las solicitudes de la organización del Cliente, con evaluación, garantía y reporte. */
   solicitudesPortalCliente(clienteId: string): Promise<SolicitudPortalCliente[]>
+  /** Archiva (o desarchiva) una solicitud finalizada solo para el usuario actual. */
+  archivar(input: { solicitudId: string; archivada: boolean }): Promise<void>
   materiales(solicitudId: string): Promise<MaterialSolicitud[]>
   agregarMaterial(input: AgregarMaterialInput): Promise<void>
   comunicaciones(solicitudId?: string): Promise<Comunicacion[]>

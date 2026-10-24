@@ -8,6 +8,7 @@ import {
   Settings2,
 } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Badge } from '@/components/atoms/badge'
 import { Button } from '@/components/atoms/button'
 import { Input } from '@/components/atoms/input'
@@ -45,10 +46,30 @@ export function ProgramacionPage() {
   const operadores = useOperadores()
   const programar = useProgramarSolicitud()
   const panelRef = useRef<HTMLDivElement>(null)
+  // "Programar" en la bandeja → "Crear ruta nueva" llega con ?nuevaRuta=<solicitud>&operador=…
+  // y abre el formulario con esa solicitud ya incluida.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [solicitudInicial] = useState(() => {
+    const id = searchParams.get('nuevaRuta')
+    return id ? { id, operadorId: searchParams.get('operador') } : undefined
+  })
 
   const [vista, setVista] = useState<'calendario' | 'listado'>('calendario')
-  const [editando, setEditando] = useState<RutaProceso | null | undefined>(undefined)
-  const [fechaInicial, setFechaInicial] = useState<string>()
+  const [editando, setEditando] = useState<RutaProceso | null | undefined>(
+    solicitudInicial ? null : undefined,
+  )
+  const [fechaInicial, setFechaInicial] = useState<string | undefined>(
+    () => searchParams.get('fecha') ?? undefined,
+  )
+  const [conSolicitudInicial, setConSolicitudInicial] = useState(Boolean(solicitudInicial))
+
+  function cerrarFormulario() {
+    setEditando(undefined)
+    if (conSolicitudInicial) {
+      setConSolicitudInicial(false)
+      setSearchParams({}, { replace: true })
+    }
+  }
   const [estado, setEstado] = useState('activas')
   const [operadorFilter, setOperadorFilter] = useState('')
   const [solicitudId, setSolicitudId] = useState('')
@@ -102,6 +123,7 @@ export function ProgramacionPage() {
   const paginadas = filtradas.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   function abrirFormulario(ruta: RutaProceso | null, fecha?: string) {
+    setConSolicitudInicial(false)
     setEditando(ruta)
     setFechaInicial(fecha)
     requestAnimationFrame(() =>
@@ -158,13 +180,17 @@ export function ProgramacionPage() {
           icon={Settings2}
           title={editando ? `Editar programación ${editando.codigo}` : 'Nueva programación'}
           description="Seleccione las solicitudes, el responsable, los participantes y los vehículos de la ruta."
-          onClose={() => setEditando(undefined)}
+          onClose={cerrarFormulario}
         >
           <ProcessRouteForm
-            key={editando?.id ?? `nueva-${fechaInicial ?? 'hoy'}`}
+            key={
+              editando?.id ??
+              `nueva-${fechaInicial ?? 'hoy'}-${conSolicitudInicial ? solicitudInicial?.id : ''}`
+            }
             ruta={editando ?? undefined}
             fechaInicial={fechaInicial}
-            onClose={() => setEditando(undefined)}
+            solicitudInicial={conSolicitudInicial ? solicitudInicial : undefined}
+            onClose={cerrarFormulario}
           />
         </WorkspacePanel>
       )}
@@ -334,6 +360,9 @@ export function ProgramacionPage() {
                       <div>
                         <p className="text-sm text-muted-foreground">
                           {r.codigo} · {r.fecha_programada}
+                          {r.fecha_fin && r.fecha_fin !== r.fecha_programada
+                            ? ` al ${r.fecha_fin}`
+                            : ''}
                         </p>
                         <h2 className="font-semibold">{r.nombre}</h2>
                       </div>

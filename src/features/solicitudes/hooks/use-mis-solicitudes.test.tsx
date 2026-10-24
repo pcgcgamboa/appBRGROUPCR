@@ -25,6 +25,7 @@ const solicitudEjemplo: MiSolicitud = {
   creado_en: '2026-09-01T10:00:00Z',
   sla_vence_en: null,
   tipo: { nombre: 'Mantenimiento' },
+  archivo: [],
 }
 
 describe('useMisSolicitudes', () => {

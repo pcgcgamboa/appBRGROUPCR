@@ -1,3 +1,4 @@
+import { toast } from 'sonner'
 import { FileText, Paperclip, UploadCloud, X } from 'lucide-react'
 import { type FormEvent, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/atoms/button'
@@ -47,6 +48,7 @@ export function RequestGeneralDataForm({
     })
     setArchivos([])
     if (archivoInput.current) archivoInput.current.value = ''
+    toast.success(`Datos de la solicitud #${solicitud.numero} guardados.`)
     onSaved()
   }
 

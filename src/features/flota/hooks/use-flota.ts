@@ -43,7 +43,12 @@ export function useGuardarRutaProceso() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: RutaProcesoInput) => flotaRepository.guardarRutaProceso(input),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['rutas-proceso'] }),
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['rutas-proceso'] }),
+        // La lista de solicitudes para ruta marca las que ya están en una ("Ya está en la ruta …").
+        queryClient.invalidateQueries({ queryKey: ['solicitudes-rutas'] }),
+      ]),
   })
 }
 

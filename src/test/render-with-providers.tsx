@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, renderHook } from '@testing-library/react'
 import type { PropsWithChildren, ReactElement } from 'react'
+import { MemoryRouter } from 'react-router-dom'
 
 // Wrapper deliberadamente liviano: NO reutiliza `AppProviders` (src/app/providers.tsx) porque ese
 // arrastra `SessionProvider` (sesión real de Supabase) y un `QueryClient` compartido entre
@@ -19,8 +20,14 @@ function crearQueryClient() {
   })
 }
 
+// MemoryRouter: las páginas reales siempre se montan dentro del router (useSearchParams,
+// useNavigate…), así que los tests también.
 function Wrapper({ children }: PropsWithChildren) {
-  return <QueryClientProvider client={crearQueryClient()}>{children}</QueryClientProvider>
+  return (
+    <QueryClientProvider client={crearQueryClient()}>
+      <MemoryRouter>{children}</MemoryRouter>
+    </QueryClientProvider>
+  )
 }
 
 export function renderConProviders(ui: ReactElement) {

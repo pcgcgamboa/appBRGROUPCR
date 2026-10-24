@@ -47,6 +47,15 @@ export function useActualizarGarantia() {
   })
 }
 
+export function useActualizarIaRecomendaciones() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { activa?: boolean; tiempoEsperaSegundos?: number }) =>
+      configuracionRepository.actualizarIaRecomendaciones(input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['configuracion-operativa'] }),
+  })
+}
+
 const correoQueryKey = ['configuracion-correo']
 
 export function useConfiguracionCorreo() {

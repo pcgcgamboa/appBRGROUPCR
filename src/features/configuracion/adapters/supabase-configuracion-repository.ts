@@ -25,10 +25,11 @@ export function createSupabaseConfiguracionRepository(
 ): ConfiguracionRepository {
   return {
     async obtenerOperativa() {
-      if (!client) return { garantia_dias: 30 }
+      if (!client)
+        return { garantia_dias: 30, ia_recomendaciones_activa: false, ia_tiempo_espera_segundos: 6 }
       const { data, error } = await client
         .from('configuracion_operativa')
-        .select('garantia_dias')
+        .select('garantia_dias, ia_recomendaciones_activa, ia_tiempo_espera_segundos')
         .eq('id', true)
         .single()
       if (error) throw error
@@ -43,6 +44,23 @@ export function createSupabaseConfiguracionRepository(
         .from('configuracion_operativa')
         .update({
           garantia_dias: dias,
+          actualizado_por: data.user.id,
+          actualizado_en: new Date().toISOString(),
+        })
+        .eq('id', true)
+      if (error) throw error
+    },
+    async actualizarIaRecomendaciones({ activa, tiempoEsperaSegundos }) {
+      if (!client) throw new Error('Supabase no está configurado.')
+      const { data } = await client.auth.getUser()
+      if (!data.user) throw new Error('Sesión no válida.')
+      const { error } = await client
+        .from('configuracion_operativa')
+        .update({
+          ...(activa === undefined ? {} : { ia_recomendaciones_activa: activa }),
+          ...(tiempoEsperaSegundos === undefined
+            ? {}
+            : { ia_tiempo_espera_segundos: tiempoEsperaSegundos }),
           actualizado_por: data.user.id,
           actualizado_en: new Date().toISOString(),
         })

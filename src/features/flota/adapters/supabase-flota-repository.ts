@@ -37,7 +37,7 @@ export function createSupabaseFlotaRepository(client: SupabaseClient | null): Fl
       const { data, error } = await requerirCliente()
         .from('rutas_proceso')
         .select(
-          'id,codigo,nombre,descripcion,fecha_programada,estado,responsable_id,responsable:usuarios!rutas_proceso_responsable_id_fkey(nombre_completo),ruta_solicitudes(solicitud_id,orden,solicitud:solicitudes(numero,nombre)),ruta_vehiculos(vehiculo_id,es_principal,vehiculo:vehiculos(placa,tipo,kilometraje_actual)),ruta_participantes(usuario_id,viatico,detalle_viatico,usuario:usuarios(nombre_completo))',
+          'id,codigo,nombre,descripcion,fecha_programada,fecha_fin,estado,responsable_id,responsable:usuarios!rutas_proceso_responsable_id_fkey(nombre_completo),ruta_solicitudes(solicitud_id,orden,solicitud:solicitudes(numero,nombre)),ruta_vehiculos(vehiculo_id,es_principal,vehiculo:vehiculos(placa,tipo,kilometraje_actual)),ruta_participantes(usuario_id,viatico,detalle_viatico,usuario:usuarios(nombre_completo))',
         )
         .order('fecha_programada', { ascending: false })
       if (error) throw error
@@ -107,6 +107,7 @@ export function createSupabaseFlotaRepository(client: SupabaseClient | null): Fl
         p_solicitudes: input.solicitudes,
         p_vehiculos: input.vehiculos,
         p_participantes: input.participantes,
+        p_fecha_fin: input.fecha_fin,
       })
       if (error) throw error
       return data as string

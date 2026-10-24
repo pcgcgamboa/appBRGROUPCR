@@ -27,6 +27,9 @@ const ClientesPage = lazy(() =>
 const MarcaPage = lazy(() =>
   import('@/components/pages/admin/marca-page').then((m) => ({ default: m.MarcaPage })),
 )
+const GeneralPage = lazy(() =>
+  import('@/components/pages/admin/general-page').then((m) => ({ default: m.GeneralPage })),
+)
 const CorreoPage = lazy(() =>
   import('@/components/pages/admin/correo-page').then((m) => ({ default: m.CorreoPage })),
 )
@@ -238,6 +241,7 @@ export function AppRouter() {
                 <Route path="roles" element={<RolesPage />} />
                 <Route path="marca" element={<MarcaPage />} />
                 <Route path="correo" element={<CorreoPage />} />
+                <Route path="general" element={<GeneralPage />} />
               </Route>
             </Route>
 

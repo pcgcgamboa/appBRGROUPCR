@@ -1,6 +1,6 @@
 export interface NotificacionInterna {
   id: number
-  tipo: 'bolsa_empleo' | 'cliente'
+  tipo: 'bolsa_empleo' | 'cliente' | 'solicitud'
   titulo: string
   mensaje: string
   entidad_tipo: string

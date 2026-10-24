@@ -38,8 +38,9 @@ export function EncargadoDashboardPage() {
           <Bell className="mr-2 size-4" />
           Notificaciones
           {notificacionesPendientes > 0 && (
-            <span className="ml-2 rounded-full bg-destructive px-2 py-0.5 text-xs text-destructive-foreground">
-              {notificacionesPendientes > 99 ? '99+' : notificacionesPendientes}
+            <span className="ml-1">
+              ({notificacionesPendientes > 99 ? '99+' : notificacionesPendientes}
+              <span className="sr-only"> sin leer</span>)
             </span>
           )}
         </TabsTrigger>

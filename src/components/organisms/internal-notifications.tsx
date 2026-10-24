@@ -45,7 +45,7 @@ export function InternalNotifications() {
         <div>
           <h2 className="font-semibold">Notificaciones internas</h2>
           <p className="text-sm text-muted-foreground">
-            Cambios de Clientes y bolsa de empleo pendientes de revisión.
+            Solicitudes nuevas, cambios de Clientes y bolsa de empleo pendientes de revisión.
           </p>
         </div>
       </div>
@@ -77,6 +77,7 @@ export function InternalNotifications() {
           <option value="todos">Todos los tipos</option>
           <option value="bolsa_empleo">Bolsa de empleo</option>
           <option value="cliente">Clientes</option>
+          <option value="solicitud">Solicitudes</option>
         </Select>
         <Select
           value={estado}
@@ -127,7 +128,7 @@ export function InternalNotifications() {
                   variant="outline"
                   className="h-9"
                   disabled={marcar.isPending}
-                  onClick={() => void marcar.mutateAsync({ id: item.id, leida: !leida })}
+                  onClick={() => marcar.mutate({ id: item.id, leida: !leida })}
                 >
                   <CheckCheck className="mr-2 size-4" />
                   {leida ? 'Marcar no leída' : 'Marcar leída'}

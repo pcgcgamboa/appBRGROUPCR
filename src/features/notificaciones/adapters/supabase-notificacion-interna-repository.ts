@@ -36,7 +36,9 @@ export function createSupabaseNotificacionInternaRepository(
       const consulta = leida
         ? client
             .from('notificaciones_internas_lecturas')
-            .upsert({ notificacion_id: id, usuario_id: auth.user.id })
+            // `ignoreDuplicates` → ON CONFLICT DO NOTHING: la tabla solo otorga
+            // select/insert/delete, y un DO UPDATE exigiría privilegio UPDATE.
+            .upsert({ notificacion_id: id, usuario_id: auth.user.id }, { ignoreDuplicates: true })
         : client
             .from('notificaciones_internas_lecturas')
             .delete()

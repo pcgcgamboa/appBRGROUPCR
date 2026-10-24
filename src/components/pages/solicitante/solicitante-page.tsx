@@ -1,4 +1,6 @@
 import {
+  Archive,
+  ArchiveRestore,
   ChevronDown,
   Eye,
   FileText,
@@ -29,16 +31,19 @@ import { ThOrdenable } from '@/components/atoms/th-ordenable'
 import { useUrlFirmadaReporteCliente } from '@/features/cliente/hooks/use-cliente'
 import { useEnviarSolicitud } from '@/features/solicitudes/hooks/use-borrador-solicitud'
 import {
+  useArchivarSolicitud,
   useMisSolicitudes,
   useSolicitudesPortalCliente,
 } from '@/features/solicitudes/hooks/use-mis-solicitudes'
 import {
   descripcionEquipo,
+  estaArchivada,
   etiquetaEstado,
   garantiaEnCurso,
   garantiaVigente,
   pendienteDeEvaluar,
   puedeAplicarGarantia,
+  puedeArchivar,
   rutaReporte,
 } from '@/features/solicitudes/lib/portal-cliente'
 import type {
@@ -93,6 +98,7 @@ export function SolicitantePage({
   const urlReporte = useUrlFirmadaReporteCliente()
   const [creando, setCreando] = useState(false)
   const enviarSolicitud = useEnviarSolicitud()
+  const archivarSolicitud = useArchivarSolicitud()
   const [garantiaDe, setGarantiaDe] = useState<SolicitudPortalCliente | null>(null)
   // Un solo panel abierto en toda la tabla: el detalle (o la edición del borrador) o los mensajes
   // de UNA solicitud. Abrir cualquiera de los dos en otra fila cierra el que estaba abierto.
@@ -106,6 +112,8 @@ export function SolicitantePage({
   const [estado, setEstado] = useState('todos')
   const [ubicacion, setUbicacion] = useState('todas')
   const [equipo, setEquipo] = useState('todos')
+  // Las archivadas no salen en "Mis solicitudes"; solo se consultan en esta vista aparte.
+  const [vista, setVista] = useState<'activas' | 'archivadas'>('activas')
 
   const portal = useMemo(() => deOrganizacion.data ?? [], [deOrganizacion.data])
   const opcionesUbicacion = useMemo(
@@ -140,6 +148,7 @@ export function SolicitantePage({
     const base: MiSolicitud[] = solicitudes.data ?? []
     return base.filter((item) => {
       const fila = comoPortal(item)
+      if (estaArchivada(item) !== (vista === 'archivadas')) return false
       if (estado !== 'todos' && item.estado !== estado) return false
       if (ubicacion !== 'todas' && fila?.ubicacion_id !== ubicacion) return false
       if (equipo === SIN_EQUIPO && fila?.equipo_id) return false
@@ -151,7 +160,7 @@ export function SolicitantePage({
         .toLocaleLowerCase('es')
         .includes(termino)
     })
-  }, [solicitudes.data, busqueda, estado, ubicacion, equipo])
+  }, [solicitudes.data, busqueda, estado, ubicacion, equipo, vista])
 
   const {
     datosOrdenados: solicitudesOrdenadas,
@@ -159,7 +168,9 @@ export function SolicitantePage({
     direccion,
     ordenarPor,
   } = useOrdenamiento(filtradas, accesoresOrdenamiento)
-  const porEvaluar = modoCliente ? portal.filter(pendienteDeEvaluar).length : 0
+  const porEvaluar = modoCliente
+    ? portal.filter((item) => !estaArchivada(item) && pendienteDeEvaluar(item)).length
+    : 0
   const panelEnTabla = panel && solicitudesOrdenadas.some((item) => item.id === panel.id)
   useDesplazarAlMostrar(panelEnTabla ? `${panel.id}-${panel.modo}` : null, panelAbiertoRef)
   const columnas = modoCliente ? COLUMNAS_CLIENTE : COLUMNAS
@@ -183,6 +194,18 @@ export function SolicitantePage({
 
   function evaluar(fila: SolicitudPortalCliente) {
     setEvaluando(fila)
+  }
+
+  async function alternarArchivo(solicitud: MiSolicitud) {
+    const archivada = !estaArchivada(solicitud)
+    await archivarSolicitud.mutateAsync({ solicitudId: solicitud.id, archivada })
+    // La fila sale de la vista actual: su panel abierto ya no tendría dónde mostrarse.
+    if (panel?.id === solicitud.id) setPanel(null)
+    toast.success(
+      archivada
+        ? `Solicitud #${solicitud.numero} archivada. Puede consultarla en "Archivadas".`
+        : `Solicitud #${solicitud.numero} restaurada a Mis solicitudes.`,
+    )
   }
 
   async function enviarAlProveedor(solicitud: MiSolicitud) {
@@ -209,7 +232,13 @@ export function SolicitantePage({
               : 'Cree una solicitud y consulte su estado de atención.'
           }
         />
-        <Button onClick={() => setCreando((actual) => !actual)}>
+        <Button
+          onClick={() => {
+            // Abrir el formulario de nueva solicitud cierra el panel de cualquier otra solicitud.
+            if (!creando) setPanel(null)
+            setCreando((actual) => !actual)
+          }}
+        >
           {creando ? <X className="mr-2 size-4" /> : <Plus className="mr-2 size-4" />}
           {creando ? 'Cerrar formulario' : 'Nueva solicitud'}
         </Button>
@@ -230,12 +259,12 @@ export function SolicitantePage({
           onClose={() => setCreando(false)}
         />
       )}
-      {enviarSolicitud.error && (
+      {(enviarSolicitud.error || archivarSolicitud.error) && (
         <p
           role="alert"
           className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground"
         >
-          {normalizarError(enviarSolicitud.error).mensaje}
+          {normalizarError(enviarSolicitud.error ?? archivarSolicitud.error).mensaje}
         </p>
       )}
       {(solicitudes.error || urlReporte.error) && (
@@ -283,7 +312,18 @@ export function SolicitantePage({
           )}
         </DialogContent>
       </Dialog>
-      <div className="grid gap-3 rounded-lg border bg-card p-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 rounded-lg border bg-card p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <Select
+          aria-label="Ver solicitudes activas o archivadas"
+          value={vista}
+          onChange={(event) => {
+            setVista(event.target.value as typeof vista)
+            setPanel(null)
+          }}
+        >
+          <option value="activas">Mis solicitudes</option>
+          <option value="archivadas">Archivadas</option>
+        </Select>
         <Input
           type="search"
           aria-label="Buscar solicitudes"
@@ -521,6 +561,21 @@ export function SolicitantePage({
                               Reporte
                             </Button>
                           )}
+                          {(puedeArchivar(solicitud) || estaArchivada(solicitud)) && (
+                            <Button
+                              variant="ghost"
+                              className="h-9"
+                              disabled={archivarSolicitud.isPending}
+                              onClick={() => void alternarArchivo(solicitud)}
+                            >
+                              {estaArchivada(solicitud) ? (
+                                <ArchiveRestore className="mr-2 size-4" />
+                              ) : (
+                                <Archive className="mr-2 size-4" />
+                              )}
+                              {estaArchivada(solicitud) ? 'Desarchivar' : 'Archivar'}
+                            </Button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -584,7 +639,9 @@ export function SolicitantePage({
                 <td colSpan={totalColumnas} className="px-4 py-8 text-center text-muted-foreground">
                   {hayFiltros
                     ? 'No hay solicitudes para los filtros seleccionados.'
-                    : 'No hay solicitudes registradas.'}
+                    : vista === 'archivadas'
+                      ? 'No tiene solicitudes archivadas.'
+                      : 'No hay solicitudes registradas.'}
                 </td>
               </tr>
             )}

@@ -24,6 +24,21 @@ const estilos: Record<
 }
 // Exportadas (sin cambiar su lógica) para poder probarlas directo en
 // route-planning-calendar.test.ts, sin montar el componente completo.
+/** Días (yyyy-mm-dd) que cubre una ruta; tope de 62 por si un rango quedara mal capturado. */
+function diasDeRuta(ruta: RutaProceso) {
+  const dias: string[] = []
+  const [anio, mes, dia] = ruta.fecha_programada.split('-').map(Number)
+  const actual = new Date(anio, mes - 1, dia)
+  const fin = ruta.fecha_fin ?? ruta.fecha_programada
+  while (dias.length < 62) {
+    const id = fechaId(actual)
+    if (id > fin) break
+    dias.push(id)
+    actual.setDate(actual.getDate() + 1)
+  }
+  return dias
+}
+
 export function fechaId(d: Date) {
   return [
     d.getFullYear(),
@@ -73,7 +88,7 @@ export function RoutePlanningCalendar({
   const porDia = useMemo(
     () =>
       rutas.reduce((mapa, ruta) => {
-        mapa.set(ruta.fecha_programada, [...(mapa.get(ruta.fecha_programada) ?? []), ruta])
+        for (const dia of diasDeRuta(ruta)) mapa.set(dia, [...(mapa.get(dia) ?? []), ruta])
         return mapa
       }, new Map<string, RutaProceso[]>()),
     [rutas],
@@ -107,7 +122,10 @@ export function RoutePlanningCalendar({
   const finId = fechaId(finResumen)
   const rutasResumen = diaActivo
     ? (porDia.get(diaActivo) ?? [])
-    : rutas.filter((ruta) => ruta.fecha_programada >= inicioId && ruta.fecha_programada <= finId)
+    : rutas.filter(
+        (ruta) =>
+          ruta.fecha_programada <= finId && (ruta.fecha_fin ?? ruta.fecha_programada) >= inicioId,
+      )
   const semanaFin = dias[6]
   const etiquetaSemana = `${semanaInicio.toLocaleDateString('es-CR', {
     day: 'numeric',

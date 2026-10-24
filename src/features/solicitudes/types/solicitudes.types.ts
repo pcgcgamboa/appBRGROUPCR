@@ -87,6 +87,8 @@ export interface MiSolicitud {
   ubicacion_id: string | null
   equipo_id: string | null
   tipo: { nombre: string } | null
+  /** Archivo del usuario actual (la RLS solo devuelve sus filas): vacío = no archivada. */
+  archivo: { archivada_en: string }[]
 }
 
 /** Fila de "Mis solicitudes" en el portal del Cliente: todas las solicitudes de su organización. */

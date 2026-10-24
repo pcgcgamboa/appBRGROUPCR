@@ -1,4 +1,5 @@
-﻿import { type FormEvent, useState } from 'react'
+import { toast } from 'sonner'
+import { type FormEvent, useState } from 'react'
 import { Button } from '@/components/atoms/button'
 import { Input } from '@/components/atoms/input'
 import { Select } from '@/components/atoms/select'
@@ -37,6 +38,7 @@ export function RequestServiceFollowUp({
       detalle,
     })
     setDetalle('')
+    toast.success('Interacción de garantía registrada.')
   }
   async function guardarVisita(event: FormEvent) {
     event.preventDefault()
@@ -47,6 +49,7 @@ export function RequestServiceFollowUp({
     })
     setLlegada('')
     setIndicaciones('')
+    toast.success('Visita programada.')
   }
 
   if (seguimiento.isLoading)

@@ -10,6 +10,10 @@ export const marcaPredeterminada: ConfiguracionMarca = {
 
 export interface ConfiguracionOperativa {
   garantia_dias: number
+  /** Configuración → General: recomendaciones con IA (Gemini) habilitadas. */
+  ia_recomendaciones_activa: boolean
+  /** Tiempo máximo de una consulta a la IA (2–60 s); pasado, se cancela y quedan las reglas. */
+  ia_tiempo_espera_segundos: number
 }
 
 export interface ConfiguracionCorreo {

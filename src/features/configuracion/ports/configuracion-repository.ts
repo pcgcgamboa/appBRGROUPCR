@@ -22,6 +22,10 @@ export interface ConfiguracionRepository {
   actualizarMarca(input: ActualizarMarcaInput): Promise<ConfiguracionMarca>
   obtenerOperativa(): Promise<ConfiguracionOperativa>
   actualizarGarantia(dias: number): Promise<void>
+  actualizarIaRecomendaciones(input: {
+    activa?: boolean
+    tiempoEsperaSegundos?: number
+  }): Promise<void>
   obtenerCorreo(): Promise<ConfiguracionCorreo>
   actualizarCorreo(input: ConfiguracionCorreo): Promise<void>
 }

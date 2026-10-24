@@ -1,4 +1,7 @@
-import type { SolicitudPortalCliente } from '@/features/solicitudes/types/solicitudes.types'
+import type {
+  MiSolicitud,
+  SolicitudPortalCliente,
+} from '@/features/solicitudes/types/solicitudes.types'
 
 /** La garantía se puede aplicar solo sobre una solicitud cerrada con garantía vigente. */
 export function garantiaVigente(solicitud: SolicitudPortalCliente) {
@@ -18,6 +21,15 @@ const FINALIZADAS = ['cerrada', 'cancelada', 'rechazada']
 /** Solicitud de garantía abierta sobre esta solicitud (la base de datos admite una a la vez). */
 export function garantiaEnCurso(solicitud: SolicitudPortalCliente) {
   return solicitud.garantias.find((garantia) => !FINALIZADAS.includes(garantia.estado)) ?? null
+}
+
+/** Solo se archivan solicitudes finalizadas (la RLS de solicitudes_archivadas exige lo mismo). */
+export function puedeArchivar(solicitud: Pick<MiSolicitud, 'estado'>) {
+  return FINALIZADAS.includes(solicitud.estado)
+}
+
+export function estaArchivada(solicitud: Pick<MiSolicitud, 'archivo'>) {
+  return solicitud.archivo.length > 0
 }
 
 export function puedeAplicarGarantia(solicitud: SolicitudPortalCliente) {

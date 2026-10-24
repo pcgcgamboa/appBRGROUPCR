@@ -39,3 +39,6 @@ verify_jwt = true
 
 [functions.registrar-avance]
 verify_jwt = true
+
+[functions.recomendar-ia]
+verify_jwt = true

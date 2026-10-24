@@ -22,6 +22,9 @@ interface Peticion {
   operador_id?: string
   estado?: Estado
   motivo?: string
+  /** notificar_cliente: contenido editado por el gestor (si falta, se usa el texto automático). */
+  asunto?: string
+  mensaje?: string
 }
 
 Deno.serve(async (request) => {
@@ -164,8 +167,11 @@ Deno.serve(async (request) => {
 
     if (payload.accion === 'cambiar_estado') {
       if (!payload.estado) return respuesta({ error: 'El nuevo estado es requerido.' }, 400)
+      // "creada" = devolver al Cliente para ajustes: el motivo le indica qué debe corregir.
       if (
-        (payload.estado === 'cancelada' || payload.estado === 'rechazada') &&
+        (payload.estado === 'cancelada' ||
+          payload.estado === 'rechazada' ||
+          payload.estado === 'creada') &&
         !payload.motivo?.trim()
       )
         return respuesta({ error: 'El motivo es obligatorio.' }, 400)
@@ -186,7 +192,22 @@ Deno.serve(async (request) => {
       // estado actual de la solicitud, en vez de disparar un correo automático en cada cambio de
       // estado. Reutiliza notificarEnSegundoPlano tal cual (respeta el interruptor global y el
       // modo_envio de configuracion_correo) — ver _shared/notificaciones.ts.
-      await notificarEnSegundoPlano(payload.solicitud_id, solicitud.estado, correlacionId)
+      // El gestor puede editar asunto y mensaje antes de enviar; ambos van juntos o ninguno.
+      const asunto = payload.asunto?.trim()
+      const mensaje = payload.mensaje?.trim()
+      if (Boolean(asunto) !== Boolean(mensaje))
+        return respuesta({ error: 'Indique asunto y mensaje del correo.' }, 400)
+      if ((asunto?.length ?? 0) > 200 || (mensaje?.length ?? 0) > 5000)
+        return respuesta(
+          { error: 'El asunto admite 200 caracteres y el mensaje 5000 como máximo.' },
+          400,
+        )
+      await notificarEnSegundoPlano(
+        payload.solicitud_id,
+        solicitud.estado,
+        correlacionId,
+        asunto && mensaje ? { asunto, cuerpoTexto: mensaje } : undefined,
+      )
       return respuesta({ solicitud_id: payload.solicitud_id })
     }
 

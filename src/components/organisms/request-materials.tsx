@@ -1,3 +1,4 @@
+import { toast } from 'sonner'
 import { PackagePlus } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/atoms/button'
@@ -41,6 +42,7 @@ export function RequestMaterials({ solicitudId }: { solicitudId: string }) {
     setMaterialId('')
     setCantidad('1')
     setCosto('')
+    toast.success('Elemento de inventario asociado a la solicitud.')
   }
 
   const entradaValida =

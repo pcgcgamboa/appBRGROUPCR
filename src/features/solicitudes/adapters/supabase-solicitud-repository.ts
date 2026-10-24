@@ -279,7 +279,7 @@ export function createSupabaseSolicitudRepository(
       const { data, error } = await client
         .from('solicitudes')
         .select(
-          'id, numero, nombre, detalle, estado, prioridad, creado_en, sla_vence_en, tipo_solicitud_id, ubicacion_id, equipo_id, tipo:tipos_solicitud(nombre)',
+          'id, numero, nombre, detalle, estado, prioridad, creado_en, sla_vence_en, tipo_solicitud_id, ubicacion_id, equipo_id, tipo:tipos_solicitud(nombre), archivo:solicitudes_archivadas(archivada_en)',
         )
         .eq('solicitante_id', usuarioId)
         .order('creado_en', { ascending: false })
@@ -292,12 +292,33 @@ export function createSupabaseSolicitudRepository(
       const { data, error } = await client
         .from('solicitudes')
         .select(
-          'id, numero, nombre, detalle, estado, prioridad, creado_en, sla_vence_en, cerrada_en, tipo_solicitud_id, ubicacion_id, equipo_id, garantia_vence_en, tipo:tipos_solicitud(nombre), operador:usuarios!solicitudes_operador_id_fkey(nombre_completo), ubicacion:ubicaciones(nombre, provincia, canton, distrito, otras_senas), equipo:equipos_cliente(nombre, marca, modelo, serie), original:solicitud_original_id(numero, nombre), garantias:solicitudes!solicitud_original_id(numero, estado), avances(creado_en, reportes_atencion(ruta_storage_pdf, estado_equipo_final, recomendaciones, checklist_requiere_seguimiento, creado_en)), validacion:validaciones_cierre(satisfecho, comentario, calificacion, llego_a_tiempo, recomendaria_tecnico, validado_en)',
+          'id, numero, nombre, detalle, estado, prioridad, creado_en, sla_vence_en, cerrada_en, tipo_solicitud_id, ubicacion_id, equipo_id, garantia_vence_en, tipo:tipos_solicitud(nombre), operador:usuarios!solicitudes_operador_id_fkey(nombre_completo), ubicacion:ubicaciones(nombre, provincia, canton, distrito, otras_senas), equipo:equipos_cliente(nombre, marca, modelo, serie), original:solicitud_original_id(numero, nombre), garantias:solicitudes!solicitud_original_id(numero, estado), avances(creado_en, reportes_atencion(ruta_storage_pdf, estado_equipo_final, recomendaciones, checklist_requiere_seguimiento, creado_en)), validacion:validaciones_cierre(satisfecho, comentario, calificacion, llego_a_tiempo, recomendaria_tecnico, validado_en), archivo:solicitudes_archivadas(archivada_en)',
         )
         .eq('cliente_id', clienteId)
         .order('creado_en', { ascending: false })
       if (error) throw error
       return data as unknown as SolicitudPortalCliente[]
+    },
+
+    async archivar({ solicitudId, archivada }) {
+      if (!client) throw new Error('Supabase no está configurado.')
+      const { data: auth, error: authError } = await client.auth.getUser()
+      if (authError || !auth.user) throw new Error('La sesión no es válida.')
+      const consulta = archivada
+        ? client
+            .from('solicitudes_archivadas')
+            // ON CONFLICT DO NOTHING: la tabla no otorga UPDATE (ver la migración).
+            .upsert(
+              { solicitud_id: solicitudId, usuario_id: auth.user.id },
+              { ignoreDuplicates: true },
+            )
+        : client
+            .from('solicitudes_archivadas')
+            .delete()
+            .eq('solicitud_id', solicitudId)
+            .eq('usuario_id', auth.user.id)
+      const { error } = await consulta
+      if (error) throw error
     },
 
     async materiales(solicitudId: string): Promise<MaterialSolicitud[]> {

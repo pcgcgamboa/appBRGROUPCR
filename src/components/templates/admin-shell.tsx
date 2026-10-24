@@ -16,6 +16,7 @@ import {
   PanelLeftOpen,
   Shield,
   Settings,
+  SlidersHorizontal,
   Tags,
   Users,
 } from 'lucide-react'
@@ -49,6 +50,7 @@ export type AdminSection =
   | 'roles'
   | 'marca'
   | 'correo'
+  | 'general'
 
 const navigation: { id: AdminSection; label: ClaveTraduccion; icon: typeof Boxes }[] = [
   { id: 'solicitudes', label: 'requests', icon: ClipboardList },
@@ -65,6 +67,7 @@ const configurationNavigation: {
   label: ClaveTraduccion
   icon: typeof Boxes
 }[] = [
+  { id: 'general', label: 'general', icon: SlidersHorizontal },
   { id: 'tipos', label: 'types', icon: Tags },
   { id: 'roles', label: 'roles', icon: Shield },
   { id: 'usuarios', label: 'users', icon: Users },
@@ -103,15 +106,25 @@ export function AdminShell({ children }: { children: ReactNode }) {
             }
           >
             <Icon className={cn('size-4 shrink-0', !collapsed && 'mr-2')} aria-hidden="true" />
-            <span className={cn(collapsed && 'lg:sr-only')}>{t(label)}</span>
+            <span className={cn(collapsed && 'lg:sr-only')}>
+              {t(label)}
+              {id === 'notificaciones' && notificacionesPendientes > 0 && (
+                <span aria-hidden="true">
+                  {' '}
+                  ({notificacionesPendientes > 99 ? '99+' : notificacionesPendientes})
+                </span>
+              )}
+            </span>
             {id === 'notificaciones' && notificacionesPendientes > 0 && (
               <>
-                <span
-                  aria-hidden="true"
-                  className="ml-auto grid min-w-6 place-items-center rounded-full bg-destructive px-1.5 text-xs text-destructive-foreground"
-                >
-                  {notificacionesPendientes > 99 ? '99+' : notificacionesPendientes}
-                </span>
+                {collapsed && (
+                  <span
+                    aria-hidden="true"
+                    className="ml-auto hidden min-w-6 place-items-center rounded-full bg-destructive px-1.5 text-xs text-destructive-foreground lg:grid"
+                  >
+                    {notificacionesPendientes > 99 ? '99+' : notificacionesPendientes}
+                  </span>
+                )}
                 <span className="sr-only">
                   , {notificacionesPendientes > 99 ? '99+' : notificacionesPendientes} {t('unread')}
                 </span>

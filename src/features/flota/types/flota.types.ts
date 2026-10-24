@@ -7,6 +7,8 @@ export interface RutaProceso {
   nombre: string
   descripcion: string | null
   fecha_programada: string
+  /** Último día de una ruta de varios días; null = la ruta dura solo `fecha_programada`. */
+  fecha_fin: string | null
   estado: EstadoRutaProceso
   responsable_id: string
   responsable: { nombre_completo: string } | null
@@ -42,6 +44,7 @@ export interface RutaProcesoInput {
   nombre: string
   descripcion: string
   fecha: string
+  fecha_fin: string | null
   estado: EstadoRutaProceso
   responsable_id: string
   solicitudes: string[]

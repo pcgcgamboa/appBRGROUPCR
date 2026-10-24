@@ -21,12 +21,23 @@ export function createSupabaseRutasRepository(client: SupabaseClient | null): Ru
       const { data, error } = await requerirCliente()
         .from('solicitudes')
         .select(
-          'id, numero, nombre, estado, operador_id, cliente:clientes(nombre), ubicacion:ubicaciones(provincia, canton, distrito, otras_senas, latitud, longitud), ruta:rutas(solicitud_id, vehiculo_id, provincia, canton, distrito, otras_senas, latitud, longitud, estado_vehiculo, estado_checkpoint, vehiculo:vehiculos(placa, tipo), ruta_operarios(operario_id, estado, operario:usuarios(nombre_completo)))',
+          'id, numero, nombre, estado, prioridad, sla_vence_en, operador_id, operador:usuarios!solicitudes_operador_id_fkey(nombre_completo), ruta_proceso:ruta_solicitudes(ruta_id, ruta:rutas_proceso(codigo, nombre)), cliente_id, programacion:programacion_solicitudes(fecha_programada), cliente:clientes(nombre), ubicacion:ubicaciones(provincia, canton, distrito, otras_senas, latitud, longitud), ruta:rutas(solicitud_id, vehiculo_id, provincia, canton, distrito, otras_senas, latitud, longitud, estado_vehiculo, estado_checkpoint, vehiculo:vehiculos(placa, tipo), ruta_operarios(operario_id, estado, operario:usuarios(nombre_completo)))',
         )
         .in('estado', ['asignada', 'en_atencion', 'en_espera_materiales', 'atendida'])
         .order('creado_en', { ascending: false })
       if (error) throw error
-      return data as unknown as SolicitudParaRuta[]
+      // ruta_solicitudes.solicitud_id es único: PostgREST puede devolver la relación como objeto
+      // o como arreglo según detecte el uno-a-uno; se normaliza a objeto o null.
+      // programacion_solicitudes.solicitud_id también es clave primaria: mismo caso.
+      const unoAUno = <T>(valor: unknown) =>
+        (Array.isArray(valor) ? (valor[0] ?? null) : (valor ?? null)) as T
+      return (
+        data as unknown as (SolicitudParaRuta & { ruta_proceso: unknown; programacion: unknown })[]
+      ).map((item) => ({
+        ...item,
+        ruta_proceso: unoAUno<SolicitudParaRuta['ruta_proceso']>(item.ruta_proceso),
+        programacion: unoAUno<SolicitudParaRuta['programacion']>(item.programacion),
+      }))
     },
 
     async guardarControlRuta(input: ControlRutaInput): Promise<void> {

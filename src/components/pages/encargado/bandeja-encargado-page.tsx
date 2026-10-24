@@ -20,10 +20,8 @@ import {
   UserPlus,
   Users,
   X,
-  XCircle,
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { toast } from 'sonner'
 import { Badge } from '@/components/atoms/badge'
 import { Button } from '@/components/atoms/button'
 import { Select } from '@/components/atoms/select'
@@ -55,6 +53,10 @@ import type {
 } from '@/features/solicitudes/types/solicitudes.types'
 import { useSession } from '@/features/auth/hooks/use-session'
 import { RequestTechnicians } from '@/components/organisms/request-technicians'
+import { ClientEmailDialog } from '@/components/organisms/client-email-dialog'
+import { OperatorRecommendation } from '@/components/organisms/operator-recommendation'
+import { RequestStatusFlow } from '@/components/molecules/request-status-flow'
+import { etiquetaEstadoSolicitud, posicionEstado } from '@/features/solicitudes/lib/estados'
 import { RequestGeneralDataForm } from '@/components/organisms/request-general-data-form'
 import { RequestMaterials } from '@/components/organisms/request-materials'
 import { RequestTimeline } from '@/components/organisms/request-timeline'
@@ -67,6 +69,7 @@ import { QuickScheduleDialog } from '@/components/organisms/quick-schedule-dialo
 import { ThOrdenable } from '@/components/atoms/th-ordenable'
 import { useOrdenamiento } from '@/hooks/use-ordenamiento'
 import { normalizarError } from '@/lib/errores'
+import { cn } from '@/lib/utils'
 
 function normalizarBusqueda(value: string) {
   return value
@@ -75,12 +78,37 @@ function normalizarBusqueda(value: string) {
     .toLocaleLowerCase('es')
 }
 
+// Misma tabla que public.transicion_estado_valida, salvo "asignada" desde "enviada" (se hace con
+// Asignar) y "rechazada": el panel ya no rechaza; para pedir ajustes se devuelve al Cliente.
 const transiciones: Partial<Record<EstadoSolicitud, EstadoSolicitud[]>> = {
-  enviada: ['cancelada'],
-  asignada: ['en_atencion', 'cancelada'],
-  en_atencion: ['en_espera_materiales', 'atendida', 'cancelada'],
+  enviada: ['creada', 'cancelada'],
+  asignada: ['en_atencion', 'creada', 'cancelada'],
+  en_atencion: ['en_espera_materiales', 'atendida', 'asignada', 'cancelada'],
   en_espera_materiales: ['en_atencion', 'atendida', 'cancelada'],
   atendida: ['cerrada', 'en_atencion', 'cancelada'],
+}
+
+type TipoTransicion = 'avanzar' | 'retroceder' | 'devolver' | 'cancelar'
+
+const GRUPOS_TRANSICION: { tipo: TipoTransicion; titulo: string }[] = [
+  { tipo: 'avanzar', titulo: 'Avanzar a' },
+  { tipo: 'retroceder', titulo: 'Retroceder a' },
+  { tipo: 'devolver', titulo: 'Devolver al Cliente' },
+  { tipo: 'cancelar', titulo: 'Cancelar' },
+]
+
+function tipoTransicion(actual: EstadoSolicitud, destino: EstadoSolicitud): TipoTransicion {
+  if (destino === 'cancelada') return 'cancelar'
+  if (destino === 'creada') return 'devolver'
+  return posicionEstado(destino) > posicionEstado(actual) ? 'avanzar' : 'retroceder'
+}
+
+function etiquetaTransicion(actual: EstadoSolicitud, destino: EstadoSolicitud) {
+  if (destino === 'creada') return 'Devolver como borrador para que el Cliente la ajuste'
+  if (destino === 'cancelada') return 'Cancelar la solicitud'
+  if (actual === 'en_espera_materiales' && destino === 'en_atencion')
+    return 'En atención (reanudar)'
+  return etiquetaEstadoSolicitud(destino)
 }
 
 // El cierre ya no espera la validación del Cliente: este evalúa el servicio después del cierre.
@@ -125,7 +153,7 @@ export function BandejaEncargadoPage() {
   const [operadorId, setOperadorId] = useState('')
   const [estado, setEstado] = useState<EstadoSolicitud>('asignada')
   const [motivo, setMotivo] = useState('')
-  const [dialogo, setDialogo] = useState<'asignar' | 'rechazar' | 'estado' | 'reabrir' | null>(null)
+  const [dialogo, setDialogo] = useState<'asignar' | 'estado' | 'reabrir' | 'correo' | null>(null)
   const [seccion, setSeccion] = useState('documentos')
   const [comentarioPeticion, setComentarioPeticion] = useState('')
   const [creando, setCreando] = useState(false)
@@ -163,17 +191,6 @@ export function BandejaEncargadoPage() {
     await gestionar.mutateAsync(input)
     setDialogo(null)
     setSeleccionada(null)
-  }
-
-  // A demanda, sin cerrar el panel: a diferencia de las demás acciones, no cambia el estado de la
-  // solicitud, así que no tiene sentido descartar la vista tras enviarlo.
-  async function notificarCliente(solicitudId: string) {
-    try {
-      await gestionar.mutateAsync({ accion: 'notificar_cliente', solicitud_id: solicitudId })
-      toast.success('El correo al cliente quedó en proceso de envío.')
-    } catch (error) {
-      toast.error(normalizarError(error).mensaje)
-    }
   }
 
   const ordenadas = useMemo(
@@ -289,8 +306,25 @@ export function BandejaEncargadoPage() {
             icon={Settings2}
             title={`Gestionar #${seleccionada.numero}: ${seleccionada.nombre}`}
             status={
-              <span className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-xs font-semibold capitalize text-primary-foreground">
-                Estado: {seleccionada.estado.replace(/_/g, ' ')}
+              <span className="inline-flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-xs font-semibold capitalize text-primary-foreground">
+                  Estado: {etiquetaEstadoSolicitud(seleccionada.estado)}
+                </span>
+                {transicionesDisponibles(seleccionada).length > 0 && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="h-7 px-2 text-xs"
+                    onClick={() => {
+                      setEstado(transicionesDisponibles(seleccionada)[0])
+                      setMotivo('')
+                      setDialogo('estado')
+                    }}
+                  >
+                    <RefreshCw className="mr-1 size-3" />
+                    Cambiar estado
+                  </Button>
+                )}
               </span>
             }
             description="Actualice la solicitud, su asignación, estado y recursos asociados."
@@ -306,34 +340,6 @@ export function BandejaEncargadoPage() {
                     {puedeAsignar ? 'Asignar' : 'Reasignar'}
                   </Button>
                 )}
-                {puedeAsignar && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="text-destructive hover:bg-destructive-soft"
-                    onClick={() => {
-                      setMotivo('')
-                      setDialogo('rechazar')
-                    }}
-                  >
-                    <XCircle className="mr-2 size-4" />
-                    Rechazar
-                  </Button>
-                )}
-                {transicionesDisponibles(seleccionada).length > 0 && (
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => {
-                      setEstado(transicionesDisponibles(seleccionada)[0])
-                      setMotivo('')
-                      setDialogo('estado')
-                    }}
-                  >
-                    <RefreshCw className="mr-2 size-4" />
-                    Cambiar estado
-                  </Button>
-                )}
                 {seleccionada.estado === 'cerrada' && (
                   <Button size="sm" variant="secondary" onClick={() => setDialogo('reabrir')}>
                     <RotateCcw className="mr-2 size-4" />
@@ -344,7 +350,7 @@ export function BandejaEncargadoPage() {
                   variant="outline"
                   size="sm"
                   disabled={gestionar.isPending}
-                  onClick={() => void notificarCliente(seleccionada.id)}
+                  onClick={() => setDialogo('correo')}
                 >
                   <Mail className="mr-2 size-4" />
                   Enviar correo al cliente
@@ -557,6 +563,15 @@ export function BandejaEncargadoPage() {
                   <option value="urgente">Urgente (24 h)</option>
                 </Select>
               </label>
+              {seleccionada.estado === 'enviada' && (
+                <OperatorRecommendation
+                  solicitud={seleccionada}
+                  solicitudes={solicitudes.data ?? []}
+                  operadores={operadores.data ?? []}
+                  operadorElegido={operadorId}
+                  onElegir={setOperadorId}
+                />
+              )}
               <label className="grid gap-2 text-sm font-medium">
                 Operador
                 <Select value={operadorId} onChange={(event) => setOperadorId(event.target.value)}>
@@ -610,47 +625,6 @@ export function BandejaEncargadoPage() {
       )}
       {seleccionada && (
         <Dialog
-          open={dialogo === 'rechazar'}
-          onOpenChange={(abierto) => !abierto && setDialogo(null)}
-        >
-          <DialogContent className="sm:max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Rechazar solicitud #{seleccionada.numero}</DialogTitle>
-              <DialogDescription>
-                El Cliente verá el motivo. Esta acción no se puede deshacer.
-              </DialogDescription>
-            </DialogHeader>
-            <label className="grid gap-2 text-sm font-medium">
-              Motivo del rechazo
-              <Textarea value={motivo} onChange={(event) => setMotivo(event.target.value)} />
-            </label>
-            {gestionar.error && (
-              <p
-                role="alert"
-                className="rounded-md bg-destructive-soft p-3 text-sm text-destructive-soft-foreground"
-              >
-                {normalizarError(gestionar.error).mensaje}
-              </p>
-            )}
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setDialogo(null)}>
-                Cancelar
-              </Button>
-              <Button
-                variant="destructive"
-                disabled={!motivo.trim() || gestionar.isPending}
-                onClick={() =>
-                  void ejecutar({ accion: 'rechazar', solicitud_id: seleccionada.id, motivo })
-                }
-              >
-                Confirmar rechazo
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
-      {seleccionada && (
-        <Dialog
           open={dialogo === 'estado'}
           onOpenChange={(abierto) => !abierto && setDialogo(null)}
         >
@@ -658,23 +632,46 @@ export function BandejaEncargadoPage() {
             <DialogHeader>
               <DialogTitle>Cambiar estado de la solicitud #{seleccionada.numero}</DialogTitle>
               <DialogDescription>
-                Estado actual: {seleccionada.estado.replace(/_/g, ' ')}.
+                Estado actual: {etiquetaEstadoSolicitud(seleccionada.estado)}. Elija hacia dónde
+                avanza o retrocede.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4">
-              <label className="grid gap-2 text-sm font-medium">
-                Nuevo estado
-                <Select
-                  value={estado}
-                  onChange={(event) => setEstado(event.target.value as EstadoSolicitud)}
-                >
-                  {transicionesDisponibles(seleccionada).map((item) => (
-                    <option key={item} value={item}>
-                      {item.replace(/_/g, ' ')}
-                    </option>
-                  ))}
-                </Select>
-              </label>
+              <RequestStatusFlow estado={seleccionada.estado} />
+              <div role="radiogroup" aria-label="Nuevo estado" className="grid gap-3">
+                {GRUPOS_TRANSICION.map(({ tipo, titulo }) => {
+                  const opciones = transicionesDisponibles(seleccionada).filter(
+                    (item) => tipoTransicion(seleccionada.estado, item) === tipo,
+                  )
+                  if (!opciones.length) return null
+                  return (
+                    <div key={tipo} className="grid gap-2">
+                      <p className="text-xs font-semibold uppercase text-muted-foreground">
+                        {titulo}
+                      </p>
+                      {opciones.map((item) => (
+                        <button
+                          key={item}
+                          type="button"
+                          role="radio"
+                          aria-checked={estado === item}
+                          onClick={() => setEstado(item)}
+                          className={cn(
+                            'min-h-11 rounded-md border px-3 py-2 text-left text-sm first-letter:uppercase transition-colors',
+                            estado === item
+                              ? tipo === 'cancelar'
+                                ? 'border-destructive bg-destructive-soft text-destructive-soft-foreground'
+                                : 'border-primary bg-primary-soft text-primary-soft-foreground'
+                              : 'hover:bg-accent',
+                          )}
+                        >
+                          {etiquetaTransicion(seleccionada.estado, item)}
+                        </button>
+                      ))}
+                    </div>
+                  )
+                })}
+              </div>
               {estado === 'cerrada' && (
                 <p className="rounded-md bg-primary-soft p-3 text-sm text-primary-soft-foreground">
                   Al cerrar, se le pedirá al Cliente una evaluación corta de satisfacción y empieza
@@ -685,6 +682,22 @@ export function BandejaEncargadoPage() {
                 <label className="grid gap-2 text-sm font-medium">
                   Motivo de cancelación
                   <Textarea value={motivo} onChange={(event) => setMotivo(event.target.value)} />
+                </label>
+              )}
+              {estado === 'creada' && (
+                <label className="grid gap-2 text-sm font-medium">
+                  ¿Qué debe ajustar el Cliente?
+                  <Textarea
+                    value={motivo}
+                    placeholder="Ej.: adjunte una foto del equipo y confirme la ubicación."
+                    onChange={(event) => setMotivo(event.target.value)}
+                  />
+                  <span className="text-xs font-normal text-muted-foreground">
+                    El Cliente lo verá en el seguimiento de su solicitud. Al reenviarla, el plazo de
+                    atención vuelve a correr desde el nuevo envío.
+                    {seleccionada.estado === 'asignada' &&
+                      ' Se retirarán el operador asignado, la fecha programada y la ruta; se vuelven a definir cuando la reenvíe.'}
+                  </span>
                 </label>
               )}
               {gestionar.error && (
@@ -702,7 +715,10 @@ export function BandejaEncargadoPage() {
               </Button>
               <Button
                 variant={estado === 'cancelada' ? 'destructive' : 'default'}
-                disabled={gestionar.isPending || (estado === 'cancelada' && !motivo.trim())}
+                disabled={
+                  gestionar.isPending ||
+                  ((estado === 'cancelada' || estado === 'creada') && !motivo.trim())
+                }
                 onClick={() =>
                   void ejecutar({
                     accion: 'cambiar_estado',
@@ -712,7 +728,11 @@ export function BandejaEncargadoPage() {
                   })
                 }
               >
-                {gestionar.isPending ? 'Guardando…' : 'Aplicar cambio'}
+                {gestionar.isPending
+                  ? 'Guardando…'
+                  : estado === 'creada'
+                    ? 'Devolver al Cliente'
+                    : 'Aplicar cambio'}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -939,6 +959,10 @@ export function BandejaEncargadoPage() {
             }}
           />
         </div>
+      )}
+      {seleccionada && dialogo === 'correo' && (
+        // A demanda, sin cerrar el panel: no cambia el estado de la solicitud.
+        <ClientEmailDialog solicitud={seleccionada} onClose={() => setDialogo(null)} />
       )}
       {programando && (
         <QuickScheduleDialog solicitud={programando} onClose={() => setProgramando(null)} />
